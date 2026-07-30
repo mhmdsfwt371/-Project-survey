@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1"/>
-<title>المسح الميداني — قارئات نُسُك ١٤٤٨هـ</title>
+<title>قارئات نُسُك — المسح الميداني ١٤٤٨هـ</title>
 <style>
 /* required styles */
 
@@ -913,6 +913,7 @@ table.mg .sid{color:var(--gold);font-weight:700}
 <meta name="mobile-web-app-capable" content="yes"/>
 <meta name="apple-mobile-web-app-capable" content="yes"/>
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
+<meta name="apple-mobile-web-app-title" content="قارئات نُسُك"/>
 <link rel="apple-touch-icon" href="icon-192.png"/>
 </head>
 <body>
@@ -931,7 +932,7 @@ window.addEventListener('error', function(e){
 <div id="app">
   <header>
     <div class="t">
-      <div class="eyebrow">قارئات نُسُك ١٤٤٨هـ <span style="color:var(--muted);letter-spacing:0;font-weight:600">· نسخة cea517d0</span></div>
+      <div class="eyebrow">قارئات نُسُك ١٤٤٨هـ <span style="color:var(--muted);letter-spacing:0;font-weight:600">· نسخة 26b65d8b</span></div>
       <h1 id="ttl">المسح الميداني</h1>
     </div>
     <button class="pill" id="modeBtn" type="button">المسح</button>
@@ -1018,6 +1019,19 @@ window.addEventListener('error', function(e){
             زامن الآن</button>
           <div id="syHint" style="font-size:11px;color:var(--muted);line-height:1.7;
             margin-top:9px"></div>
+        </div>
+        <div style="background:var(--panel);border:1px solid var(--line);border-radius:12px;
+          padding:14px 15px;margin-bottom:18px">
+          <div style="font-size:10px;letter-spacing:.18em;color:var(--gold);font-weight:700;
+            margin-bottom:11px">النسخ الاحتياطي والدمج</div>
+          <button class="btn p" id="bkBtn" type="button" style="margin-bottom:10px">
+            ⬇ نسخة احتياطية كاملة</button>
+          <button class="btn s" id="mgBtn" type="button">⬆ دمج نسخة زميل / استعادة</button>
+          <input id="mergeFile" type="file" accept=".json,application/json" hidden/>
+          <div style="font-size:11px;color:var(--muted);line-height:1.8;margin-top:9px">
+            النسخة تشمل كل المسوحات والتركيبات والمواقع المقترحة بصورها.
+            الدمج يضيف الجديد، وعند التعارض يكسب الأحدث مع الاحتفاظ بصور وسجلّ الطرفين.
+          </div>
         </div>
         <p style="font-size:12.5px;color:var(--muted);line-height:1.9;margin:0 0 16px">
           التصدير اليدوي أدناه بديل مؤقت للمزامنة — في النسخة النهائية يرفع التطبيق
@@ -1241,7 +1255,7 @@ const _INERT = {onclick:null,textContent:'',innerHTML:'',value:'',hidden:true,
   querySelectorAll(){return []},appendChild(){},prepend(){},addEventListener(){},
   focus(){},closest(){return null},remove(){}};
 const $ = s=>document.querySelector(s)||Object.create(_INERT);
-const st = id => { const r=recs[id]; if(r) return r.fstat || 'done'; return PENDING.has(id) ? 'pending' : 'new'; };
+const st = id => (recs[id]||{}).fstat || (PENDING.has(id) ? 'pending' : 'new');
 const ist = id => (inss[id] && inss[id].status) || 'لم يبدأ';
 const colOf = id => SC[st(id)];
 const slbl  = k  => (appMode==='install' && k==='done') ? 'جاهز للتركيب' : SL[k];
@@ -1985,6 +1999,7 @@ async function doSave(){
   rec.log = rec.log || [];
   rec.log.push({d:rec.date, by:rec.by});
   rec.rev = rec.log.length;
+  rec.fstat = rec.fstat || 'done';   // حفظ المسح = تمت الزيارة
 
   if(!rec.access) rec.access='تم الوصول';
   if(rec.access!=='تم الوصول'){ rec.status='blocked'; }
@@ -2619,12 +2634,17 @@ $('#clr').onclick=async()=>{
 
 /* ---------------- nav / zones ---------------- */
 let _curV='vMap', _nav=false;
+function updFab(){
+  const f=$('#fab'); if(!f||!f.style) return;
+  const sheetOpen = !$('#sheet').hidden;
+  f.style.display = (appMode!=='install' && _curV==='vMap' && !sheetOpen) ? '' : 'none';
+}
 function show(v){
   document.querySelectorAll('.view').forEach(s=>s.classList.toggle('on',s.id===v));
   document.querySelectorAll('nav button').forEach(b=>b.classList.toggle('on',b.dataset.v===v));
   if(v==='vMap') setTimeout(()=>map.invalidateSize(),60);
   if(!_nav && v!==_curV){ try{ history.pushState({v:v},''); }catch(e){} }
-  _curV=v;
+  _curV=v; updFab();
 }
 try{ history.replaceState({v:'vMap'},''); }catch(e){}
 window.addEventListener('error', function(e){
@@ -2700,10 +2720,10 @@ function openGoSheet(){
     b.onclick=()=>goToRegion(t);
     box.appendChild(b);
   });
-  $('#sheet').hidden=false;
+  $('#sheet').hidden=false; updFab();
 }
 function goToRegion(t){
-  $('#sheet').hidden=true;
+  $('#sheet').hidden=true; updFab();
   show('vMap');
   const pts=DB.d.filter(r=>r[21]===t&&r[5]).map(r=>[r[5],r[6]]);
   if(pts.length) map.fitBounds(L.latLngBounds(pts).pad(.06));
@@ -2716,9 +2736,82 @@ async function setMode(m){
   $('#modeBtn').textContent = m==='install' ? 'التركيب' : 'المسح';
   try{ await window.storage.set('mode', m, false); }catch(e){}
   statusFilter='';
+  updFab();
   drawMap(); drawList(); drawMgr();
 }
 $('#modeBtn').onclick=()=>setMode(appMode==='install'?'survey':'install');
+
+/* ---------------- backup & merge ---------------- */
+function buildBackup(){
+  return JSON.stringify({app:'nusuk-survey', at:new Date().toISOString(),
+    by:me||'', recs:recs, inss:inss, props:props});
+}
+window.buildBackup = buildBackup;
+window.doBackup = function(){
+  try{
+    const s=buildBackup();
+    const dd=new Date(), p2=n=>String(n).padStart(2,'0');
+    const name='nusuk-backup-'+dd.getFullYear()+p2(dd.getMonth()+1)+p2(dd.getDate())+
+      '-'+p2(dd.getHours())+p2(dd.getMinutes())+(me?'-'+me.replace(/\s+/g,'_'):'')+'.json';
+    const a=document.createElement('a');
+    a.href=URL.createObjectURL(new Blob([s],{type:'application/json'}));
+    a.download=name; document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(()=>{ try{URL.revokeObjectURL(a.href);}catch(e){} },4000);
+    toast('نسخة احتياطية جاهزة ✓ '+(s.length/1048576).toFixed(1)+' م.ب');
+  }catch(e){ toast('تعذّر إنشاء النسخة',1); }
+};
+function mergedRec(loc,inc){
+  const newer=((inc&&inc.date)||'')>((loc&&loc.date)||'')?inc:loc;
+  const older=newer===inc?loc:inc;
+  const m=Object.assign({},older,newer);
+  m.photos=Object.assign({},(older||{}).photos||{},(newer||{}).photos||{});
+  m.fix=Object.assign({},(older||{}).fix||{},(newer||{}).fix||{});
+  m.v=Object.assign({},(older||{}).v||{},(newer||{}).v||{});
+  const seen={},L=[];
+  ((loc&&loc.log)||[]).concat((inc&&inc.log)||[]).forEach(e=>{
+    const k=(e.d||'')+'|'+(e.s||'')+'|'+(e.by||''); if(!seen[k]){seen[k]=1;L.push(e);} });
+  L.sort((a,b)=>String(a.d||'').localeCompare(String(b.d||'')));
+  if(L.length){ m.log=L; m.rev=L.length; }
+  if(!m.loc && (older||{}).loc) m.loc=older.loc;
+  if(!m.gps && (older||{}).gps) m.gps=older.gps;
+  return m;
+}
+function stableStr(o){
+  if(o===null||typeof o!=='object') return JSON.stringify(o);
+  if(Array.isArray(o)) return '['+o.map(stableStr).join(',')+']';
+  return '{'+Object.keys(o).sort().map(k=>JSON.stringify(k)+':'+stableStr(o[k])).join(',')+'}';
+}
+window.mergeBackupText = async function(txt){
+  let p; try{ p=JSON.parse(txt); }catch(e){ toast('الملف غير صالح',1); return; }
+  if(!p || p.app!=='nusuk-survey'){ toast('الملف ليس نسخة احتياطية من هذا التطبيق',1); return; }
+  let add=0,upd=0,same=0,fail=0;
+  async function pass(locMap,incMap,saver){
+    for(const id of Object.keys(incMap||{})){
+      const inc=incMap[id]; if(!inc||typeof inc!=='object') continue;
+      const loc=locMap[id];
+      if(!loc){ const m0=mergedRec(null,inc); if(await saver(id,m0)){ locMap[id]=m0; add++; } else fail++; continue; }
+      const m=mergedRec(loc,inc);
+      if(stableStr(m)!==stableStr(loc)){
+        if(await saver(id,m)){ locMap[id]=m; upd++; } else fail++;
+      } else same++;
+    }
+  }
+  await pass(recs,p.recs,saveRec);
+  await pass(inss,p.inss,saveIns);
+  await pass(props,p.props,saveProp);
+  drawMap(); drawList(); drawMgr(); drawOut(); drawSync();
+  toast('اكتمل الدمج ✓ جديد '+add+' · محدَّث '+upd+' · مطابق '+same+
+        (fail?' · فشل حفظ '+fail:''), fail?1:0);
+};
+$('#bkBtn').onclick = ()=>window.doBackup();
+$('#mgBtn').onclick = ()=>{ const f=$('#mergeFile'); if(f&&f.click) f.click(); };
+$('#mergeFile').onchange = async ev=>{
+  const f=ev.target.files && ev.target.files[0]; if(!f) return;
+  toast('جارٍ قراءة الملف…');
+  try{ const t=await f.text(); await window.mergeBackupText(t); }
+  catch(e){ toast('تعذّر قراءة الملف',1); }
+  ev.target.value='';
+};
 
 (async function init(){
   await loadAll(); await loadMe();
@@ -2726,7 +2819,7 @@ $('#modeBtn').onclick=()=>setMode(appMode==='install'?'survey':'install');
   try{ const r=await window.storage.get('mode',false); if(r) appMode=r.value; }catch(e){}
   window.appMode = appMode;
   $('#modeBtn').textContent = appMode==='install' ? 'التركيب' : 'المسح';
-  drawQ(); drawSync();
+  drawQ(); drawSync(); updFab();
   drawMap(); drawList(); drawOut(); drawMgr();
   map.fitBounds(L.latLngBounds(DB.d.map(r=>[r[5],r[6]])).pad(.06));
   locate();
