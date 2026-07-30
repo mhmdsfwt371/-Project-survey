@@ -210,6 +210,15 @@ table.mg .sid{color:var(--gold);font-weight:700}
 .tag{padding:2px 8px;border-radius:999px;font-size:10px;font-weight:800}
 .scroll{overflow-x:auto;-webkit-overflow-scrolling:touch}
 @media (prefers-reduced-motion:reduce){*{transition:none!important}}
+#zBar,#cBar{display:flex;flex-wrap:wrap;gap:7px;margin:0 0 10px}
+#zBar .zc{flex:1;min-width:72px;padding:10px 8px;border-radius:11px;background:rgba(255,255,255,.05);
+  border:1px solid rgba(255,255,255,.14);color:var(--cream,#E8E3D6);font-weight:800;
+  font-size:12.5px;cursor:pointer;font-family:inherit}
+#zBar .zc.on{background:#C9A24B;color:#08201A;border-color:#C9A24B}
+#cBar .cc{padding:7px 11px;border-radius:999px;background:transparent;border:1.4px solid var(--cc);
+  color:var(--cc);font-weight:800;font-size:11.5px;cursor:pointer;font-family:inherit}
+#cBar .cc.on{background:var(--cc);color:#08201A}
+#zBar .n,#cBar .n{opacity:.8;font-weight:700;font-size:10.5px}
 </style>
 <link rel="manifest" href="manifest.webmanifest"/>
 <meta name="theme-color" content="#08201A"/>
@@ -248,6 +257,8 @@ table.mg .sid{color:var(--gold);font-weight:700}
             <span class="dot" style="background:#C9A24B"></span>مهامي أنا فقط
             <span class="n" id="mineN">0</span></button>
         </div>
+        <div id="zBar"></div>
+        <div id="cBar"></div>
         <input class="srch" id="q" placeholder="ابحث بالمعرّف أو الاسم…" type="search"/>
         <div id="list"></div>
       </div>
@@ -460,10 +471,42 @@ const map = L.map('map',{preferCanvas:true,zoomControl:false}).setView([21.38,39
 L.control.zoom({position:'topleft'}).addTo(map);
 L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',
   {maxZoom:19,subdomains:'abcd',attribution:'&copy; OSM, &copy; CARTO'}).addTo(map);
-const cv = L.canvas({padding:.4});
+const cv = L.canvas({padding:.4,tolerance:14});
 const layer = L.layerGroup().addTo(map);
 let marks = {};
 
+const COARSE = !!(window.matchMedia && matchMedia('(pointer:coarse)').matches);
+let zSel='', cSel='';
+const CAT={
+ cmp:{k:'cmp',l:'مخيمات',i:'⛺',c:'#3ED598'},
+ cor:{k:'cor',l:'ممرات',i:'🛣️',c:'#4FA3FF'},
+ jam:{k:'jam',l:'منطقة الجمرات',i:'🌉',c:'#E8873A'},
+ cam:{k:'cam',l:'كاميرات الوزارة',i:'📷',c:'#C77DFF'},
+ trn:{k:'trn',l:'محطات القطار',i:'🚆',c:'#F2C960'},
+ nam:{k:'nam',l:'مسجد نمرة',i:'🕌',c:'#38B2AC'},
+ hsg:{k:'hsg',l:'منشآت التسكين',i:'🏢',c:'#B8C4BF'}
+};
+function szOf(r){
+  const z=DB.z[r[2]], n=r[1]||'';
+  if(z==='عرفات'||z==='مسجد نمرة') return 'عرفات';
+  if(z==='منى'||z==='الجمرات'||z==='منشآت التسكين') return 'منى';
+  if(n.indexOf('عرفات')>=0) return 'عرفات';
+  if(n.indexOf('مزدلفة')>=0) return 'مزدلفة';
+  return 'منى';
+}
+function catOf(r){
+  const z=DB.z[r[2]], t=DB.t[r[3]];
+  if(z==='الجمرات') return CAT.jam;
+  if(z==='مسجد نمرة') return CAT.nam;
+  if(z==='قطار المشاعر') return CAT.trn;
+  if(z==='منشآت التسكين') return CAT.hsg;
+  if(t==='كاميرا') return CAT.cam;
+  if(t==='ممر') return CAT.cor;
+  return CAT.cmp;
+}
+function catLine(r){ const c=catOf(r); return c.i+' '+c.l+' — '+szOf(r)+' · '; }
+window.setZ=function(z){ zSel=(zSel===z?'':z); cSel=''; drawList(); drawMap(); };
+window.setC=function(c){ cSel=(cSel===c?'':c); drawList(); drawMap(); };
 function ptypeOf(r){
   const fx=(((recs[r[0]]||{}).fix)||{}).ptype||'';
   const v=fx||r[23]||'';
@@ -489,19 +532,24 @@ function drawMap(){
   const z=map.getZoom(), b=map.getBounds().pad(.2);
   DB.d.forEach(r=>{
     if(PENDING.has(r[0]) && !(recs[r[0]]||{}).gps) return;
+    if(zSel && szOf(r)!==zSel) return;
+    if(cSel && catOf(r).k!==cSel) return;
     const light = z<13 || !b.contains([r[5],r[6]]);
     const c = colOf(r[0]);
     const m = (r[7] && !light)
       ? L.polygon(r[7].map(p=>[p[1],p[0]]),
           {renderer:cv,color:c,weight:1.3,fillColor:c,fillOpacity:.32})
       : L.circleMarker([r[5],r[6]],
-          {renderer:cv,radius:light?3:5,weight:light?1:1.3,
+          {renderer:cv,radius:light?(COARSE?5:3):(COARSE?9:5),
+           weight:light?1:(COARSE?2.2:1.3),
            color:c,fillColor:c,fillOpacity:.6});
     const kv=(k,v)=>v?'<span class="pk">'+k+':</span> '+esc(v)+'<br/>':'';
     const dir='https://www.google.com/maps/dir/?api=1&destination='+r[5]+','+r[6];
     m.bindPopup(
       '<b style="color:#C9A24B">'+esc(r[0])+'</b><br/>'+
       '<span class="pn">'+esc(r[1])+'</span><br/>'+
+      '<span style="color:'+catOf(r).c+';font-weight:800;font-size:11px">'+
+        catOf(r).i+' '+catOf(r).l+' — '+szOf(r)+'</span><br/>'+
       kv('الشاخصة', r[9])+
       kv('المربع', r[8])+
       kv('الشركة', r[10])+
@@ -535,8 +583,10 @@ function drawMap(){
 }
 let _zt=null;
 map.on('zoomend moveend',()=>{
-  clearTimeout(_zt); _zt=setTimeout(drawMap,150);
+  clearTimeout(_zt);
+  _zt=setTimeout(()=>{ if(!(map._popup && map._popup.isOpen())) drawMap(); },150);
 });
+map.on('popupclose',()=>{ clearTimeout(_zt); _zt=setTimeout(drawMap,180); });
 let myPos=null;
 function locate(){
   if(!navigator.geolocation) return;
@@ -556,6 +606,8 @@ function drawList(){
   const dist = r => myPos ? metres(r[5],r[6],myPos[0],myPos[1]) : 0;
   const items = DB.d.filter(r=>
        (appMode!=='install' || !mineOnly || ((inss[r[0]]||{}).who||'')===me)
+    && (!zSel || szOf(r)===zSel)
+    && (!cSel || catOf(r).k===cSel)
     && (!statusFilter || (appMode==='install' ? true : st(r[0])===statusFilter))
     && (!q || r[0].toLowerCase().includes(q) || r[1].toLowerCase().includes(q)
            || (r[9]||'').toLowerCase().includes(q)
@@ -581,6 +633,22 @@ function drawList(){
   document.querySelectorAll('#filt div').forEach(d=>
     d.setAttribute('aria-pressed', String((d.dataset.s||'')===statusFilter)));
 
+  const zb=$('#zBar'), cb=$('#cBar');
+  if(zb&&cb){
+    const zc={}; DB.d.forEach(r=>{ const z=szOf(r); zc[z]=(zc[z]||0)+1; });
+    const zs=['منى','عرفات'].concat(Object.keys(zc).filter(z=>z!=='منى'&&z!=='عرفات'));
+    zb.innerHTML='<button type="button" class="zc'+(zSel===''?' on':'')+
+      '" onclick="setZ(\'\')">الكل <span class="n">'+DB.d.length.toLocaleString('ar-EG')+'</span></button>'+
+      zs.map(z=>'<button type="button" class="zc'+(zSel===z?' on':'')+
+        '" onclick="setZ(\''+z+'\')">'+z+' <span class="n">'+
+        (zc[z]||0).toLocaleString('ar-EG')+'</span></button>').join('');
+    const cc={}; DB.d.forEach(r=>{ if(zSel && szOf(r)!==zSel) return;
+      const c0=catOf(r); (cc[c0.k]=cc[c0.k]||{c:c0,n:0}).n++; });
+    cb.innerHTML=Object.values(cc).map(x=>
+      '<button type="button" class="cc'+(cSel===x.c.k?' on':'')+
+      '" style="--cc:'+x.c.c+'" onclick="setC(\''+x.c.k+'\')">'+
+      x.c.i+' '+x.c.l+' <span class="n">'+x.n.toLocaleString('ar-EG')+'</span></button>').join('');
+  }
   const box=$('#list');
   const pl = Object.values(props)
     .filter(p=> !q || p.id.toLowerCase().includes(q) || (p.label||'').toLowerCase().includes(q));
@@ -596,12 +664,13 @@ function drawList(){
   if(!items.length && !pl.length){
     box.innerHTML='<div class="empty">لا توجد مواقع مطابقة.</div>'; return; }
   box.innerHTML = phtml + items.slice(0,300).map(r=>
-    '<button class="card" type="button" onclick="(window.appMode===\'install\'?openInstall:openForm)(\''+r[0]+'\')">'+
+    '<button class="card" type="button" style="border-inline-start:3px solid '+catOf(r).c+
+    '" onclick="(window.appMode===\'install\'?openInstall:openForm)(\''+r[0]+'\')">'+
     '<span class="dot" style="background:'+colOf(r[0])+'"></span>'+
     '<span class="b"><span class="id">'+esc(r[0])+'</span>'+
     '<span class="nm">'+esc(r[1])+'</span>'+
     ptBadge(r)+
-    '<span class="mt">'+(appMode==='install'
+    '<span class="mt">'+catLine(r)+(appMode==='install'
         ? ist(r[0])+((inss[r[0]]||{}).sched?' · مجدول '+esc(inss[r[0]].sched):'')
         : DB.w[r[4]]+' · '+SL[st(r[0])]+(r[10]?' · '+esc(r[10]):''))+'</span></span>'+
     (myPos?'<span class="dist">'+(dist(r)<1000?Math.round(dist(r))+' م'
