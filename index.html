@@ -877,8 +877,8 @@ table.mg .sid{color:var(--gold);font-weight:700}
 @media (prefers-reduced-motion:reduce){*{transition:none!important}}
 .mkC{background:none!important;border:0!important}
 .mkC i{display:block;width:100%;height:100%;transform:rotate(45deg);
-  border:2.2px solid #4FA3FF;border-radius:2.5px;
-  box-shadow:0 0 0 1.5px rgba(0,0,0,.7),0 0 7px rgba(79,163,255,.55)}
+  border:2.2px solid currentColor;border-radius:2.5px;
+  box-shadow:0 0 0 1.5px rgba(0,0,0,.7)}
 #mBar{position:absolute;top:10px;inset-inline:10px 56px;z-index:820;display:flex;gap:6px;
   overflow-x:auto;-webkit-overflow-scrolling:touch;padding-bottom:3px;scrollbar-width:none}
 #mBar::-webkit-scrollbar{display:none}
@@ -931,7 +931,7 @@ window.addEventListener('error', function(e){
 <div id="app">
   <header>
     <div class="t">
-      <div class="eyebrow">قارئات نُسُك ١٤٤٨هـ <span style="color:var(--muted);letter-spacing:0;font-weight:600">· نسخة c53cbfde</span></div>
+      <div class="eyebrow">قارئات نُسُك ١٤٤٨هـ <span style="color:var(--muted);letter-spacing:0;font-weight:600">· نسخة cea517d0</span></div>
       <h1 id="ttl">المسح الميداني</h1>
     </div>
     <button class="pill" id="modeBtn" type="button">المسح</button>
@@ -952,7 +952,7 @@ window.addEventListener('error', function(e){
       </div>
       <div class="wrap">
         <div id="mineRow" style="display:none;margin-bottom:10px">
-          <button class="chip" id="mineBtn" type="button" aria-pressed="true"
+          <button class="chip" id="mineBtn" type="button" aria-pressed="false"
             style="width:100%;justify-content:flex-start">
             <span class="dot" style="background:#C9A24B"></span>مهامي أنا فقط
             <span class="n" id="mineN">0</span></button>
@@ -1148,7 +1148,7 @@ DB.d = [...DB.g, ...DB.p, ...(DB.q||[])];
 const PENDING = new Set((DB.q||[]).map(r=>r[0]));
 const SC = {new:'#E8C34B', draft:'#E8873A', done:'#4BC9F5', blocked:'#3AD6A0',
             proposed:'#C77DFF', pending:'#7FB3FF'};
-const SL = {new:'لم يُزر', draft:'مجدولة', done:'تمت الزيارة', blocked:'تم التركيب',
+const SL = {new:'لم يُزر', draft:'مجدول للتركيب', done:'تمت الزيارة', blocked:'تم التركيب',
             proposed:'مقترح — بانتظار الاعتماد', pending:'بانتظار تحديد الموقع'};
 
 const QP = {
@@ -1179,7 +1179,7 @@ let recs = {};        // site_id -> survey record
 let inss = {};        // site_id -> installation record
 let props = {};       // proposed sites discovered in the field
 let appMode = 'survey';   // survey | install
-const IC = {'لم يبدأ':'#6E7C77','مجدول':'#4BC9F5','قيد التركيب':'#E8C34B',
+const IC = {'لم يبدأ':'#9FB3AC','مجدول':'#4BC9F5','قيد التركيب':'#E8C34B',
             'مُركّب':'#3AD6A0','متعذّر':'#E05252'};
 let me = '';          // current surveyor name
 let current = null;
@@ -1190,7 +1190,7 @@ async function loadMe(){
 }
 async function askMe(first){
   const v = prompt(first?'اكتب اسمك — سيُسجَّل مع كل مسح تحفظه:':'تعديل اسم الفني:', me||'');
-  if(v===null || !v.trim()) { if(first) $('#meBtn').textContent='حدّد اسمك'; return; }
+  if(v==null || !String(v).trim()) { if(first) $('#meBtn').textContent='حدّد اسمك'; return; }
   me = v.trim();
   try{ await window.storage.set('me', me, false); }catch(e){}
   $('#meBtn').textContent = me;
@@ -1243,7 +1243,8 @@ const _INERT = {onclick:null,textContent:'',innerHTML:'',value:'',hidden:true,
 const $ = s=>document.querySelector(s)||Object.create(_INERT);
 const st = id => { const r=recs[id]; if(r) return r.fstat || 'done'; return PENDING.has(id) ? 'pending' : 'new'; };
 const ist = id => (inss[id] && inss[id].status) || 'لم يبدأ';
-const colOf = id => appMode==='install' ? (IC[ist(id)]||'#6E7C77') : SC[st(id)];
+const colOf = id => SC[st(id)];
+const slbl  = k  => (appMode==='install' && k==='done') ? 'جاهز للتركيب' : SL[k];
 function toast(m,warn,color){
   const t=$('#toast'); t.textContent=m; t.className='toast on'+(warn?' warn':'');
   t.style.background = color || '';
@@ -1264,10 +1265,10 @@ const COARSE = !!(window.matchMedia && matchMedia('(pointer:coarse)').matches);
 function posOf(r){ const l=(recs[r[0]]||{}).loc; return l?[l.a,l.o]:[r[5],r[6]]; }
 window.setFstat = async function(id,k){
   const rec = recs[id] || {status:'draft', v:{}, photos:{}, id:id};
-  rec.fstat = rec.fstat===k ? '' : k;
+  rec.fstat = rec.fstat===k ? (k==='done' ? '' : 'done') : k;
   const now=new Date().toISOString().slice(0,16).replace('T',' ');
   rec.date=now; rec.by=me||rec.by||'';
-  rec.log=(rec.log||[]).concat([{d:now, s:'الحالة: '+(rec.fstat?SL[rec.fstat]:'لم يُزر'), by:rec.by}]);
+  rec.log=(rec.log||[]).concat([{d:now, s:'الحالة: '+(rec.fstat?slbl(rec.fstat):'لم يُزر'), by:rec.by}]);
   const empty = !rec.fstat && !Object.keys(rec.v||{}).length &&
                 !Object.keys(rec.photos||{}).length && !rec.gps && !rec.loc &&
                 !Object.keys(rec.fix||{}).length;
@@ -1279,15 +1280,20 @@ window.setFstat = async function(id,k){
     recs[id]=rec;
   }
   map.closePopup(); drawMap(); drawList();
-  toast(rec.fstat ? ('الحالة الآن: '+SL[rec.fstat]) : 'رجعت الحالة: لم يُزر',
+  toast(rec.fstat ? ('الحالة الآن: '+slbl(rec.fstat)) : 'رجعت الحالة: لم يُزر',
         0, SC[rec.fstat||'new']);
 };
 let moveId=null, focusId=null;
 function renderMBar(){
   const el=$('#mBar'); if(!el||!el.style) return;
-  if(appMode==='install'){ el.style.display='none'; return; }
   el.style.display='flex';
-  const base=DB.d.filter(r=>(!zSel||szOf(r)===zSel)&&(!cSel||catOf(r).k===cSel));
+  const inst = appMode==='install';
+  const base=DB.d.filter(r=>{
+    if(zSel && szOf(r)!==zSel) return false;
+    if(cSel && catOf(r).k!==cSel) return false;
+    const S0=st(r[0]);
+    return inst ? (S0==='done'||S0==='draft'||S0==='blocked') : (S0!=='draft'&&S0!=='blocked');
+  });
   const tot=base.length||1;
   const cnt={new:0,draft:0,done:0,blocked:0};
   base.forEach(r=>{ const k=st(r[0]); if(cnt[k]!=null) cnt[k]++; });
@@ -1301,7 +1307,8 @@ function renderMBar(){
     '<button type="button" class="ms all'+(statusFilter===''?' on':'')+
       '" onclick="setStat(\'\')">الكل <span class="n">'+
       base.length.toLocaleString('ar-EG')+'</span></button>'+
-    mk('new','لم يُزر')+mk('draft','مجدولة')+mk('done','تمت الزيارة')+mk('blocked','تم التركيب');
+    (inst ? mk('done','جاهز للتركيب')+mk('draft','مجدول')+mk('blocked','تم التركيب')
+          : mk('new','لم يُزر')+mk('done','تمت الزيارة'));
 }
 window.setStat=function(k){ statusFilter = statusFilter===k?'':k; drawMap(); drawList(); };
 window.goMap=function(id,ev){
@@ -1390,7 +1397,10 @@ function drawMap(){
     if(r[0]!==focusId){
       if(zSel && szOf(r)!==zSel) return;
       if(cSel && catOf(r).k!==cSel) return;
-      if(appMode!=='install' && statusFilter && st(r[0])!==statusFilter) return;
+      const S0=st(r[0]);
+      if(appMode==='install'){ if(S0!=='done'&&S0!=='draft'&&S0!=='blocked') return; }
+      else if(S0==='draft'||S0==='blocked') return;
+      if(statusFilter && S0!==statusFilter) return;
     }
     const P0 = posOf(r);
     const light = z<13 || !b.contains(P0);
@@ -1404,7 +1414,7 @@ function drawMap(){
       : isCor
       ? L.marker(P0,{keyboard:false,icon:L.divIcon({className:'mkC',
           iconSize:[ds,ds],iconAnchor:[ds/2,ds/2],popupAnchor:[0,-ds/2],
-          html:'<i style="background:'+c+'"></i>'})})
+          html:'<i style="background:'+c+';color:'+c+'"></i>'})})
       : L.circleMarker(P0,
           {renderer:cv,radius:light?(COARSE?5:3):(COARSE?9:5),
            weight:light?1:(COARSE?2.2:1.3),
@@ -1422,15 +1432,17 @@ function drawMap(){
       '<span class="pk">التصنيف:</span> '+ptHtml(r)+'<br/>'+
       kv('المنطقة', r[21])+
       '<span class="pk">الحالة:</span> <b style="color:'+colOf(r[0])+'">'+
-        (appMode==='install' ? esc(ist(r[0])) : SL[st(r[0])])+'</b>'+
+        slbl(st(r[0]))+'</b>'+
       (moved?'<br/><span style="color:#7FB3FF;font-size:10px">📍 موقع معدَّل ميدانيًا</span>':'')+
-      (appMode!=='install' ? '<div class="pst">'+
-        [['draft','مجدولة'],['done','تمت الزيارة'],['blocked','تم التركيب']].map(function(o){
+      '<div class="pst">'+
+        (appMode==='install'
+          ? [['draft','مجدول'],['blocked','تم التركيب']]
+          : [['done','تمت الزيارة']]).map(function(o){
           const on=(recs[r[0]]||{}).fstat===o[0];
           return '<a href="#" class="go'+(on?' on':'')+'" style="border-color:'+SC[o[0]]+
             ';color:'+(on?'#08201A':SC[o[0]])+(on?';background:'+SC[o[0]]:'')+
             '" onclick="setFstat(\''+r[0]+'\',\''+o[0]+'\');return false">'+o[1]+'</a>';
-        }).join('')+'</div>' : '')+
+        }).join('')+'</div>'+
       '<div class="pbtns">'+
         '<a class="go dir" target="_blank" rel="noopener" href="'+dir+'">اتجاهات</a>'+
         '<a class="go" href="#" onclick="startMove(\''+r[0]+'\');return false">تحريك</a>'+
@@ -1476,7 +1488,7 @@ function locate(){
 }
 
 /* ---------------- list ---------------- */
-let statusFilter=''; let mineOnly=true;
+let statusFilter=''; let mineOnly = false;
 function drawList(){
   const q = ($('#q').value||'').trim().toLowerCase();
   const dist = r => { if(!myPos) return 0; const P0=posOf(r); return metres(P0[0],P0[1],myPos[0],myPos[1]); };
@@ -1484,18 +1496,18 @@ function drawList(){
        (appMode!=='install' || !mineOnly || ((inss[r[0]]||{}).who||'')===me)
     && (!zSel || szOf(r)===zSel)
     && (!cSel || catOf(r).k===cSel)
-    && (!statusFilter || (appMode==='install' ? true : st(r[0])===statusFilter))
+    && (appMode==='install' ? ['done','draft','blocked'].includes(st(r[0])) : !['draft','blocked'].includes(st(r[0])))
+    && (!statusFilter || st(r[0])===statusFilter)
     && (!q || r[0].toLowerCase().includes(q) || r[1].toLowerCase().includes(q)
            || (r[9]||'').toLowerCase().includes(q)
            || (r[10]||'').toLowerCase().includes(q)))
     .sort((a,b)=> myPos ? dist(a)-dist(b) : a[0].localeCompare(b[0]));
   window._lastItems = items;
   const c = {new:0,draft:0,done:0,blocked:0};
-  if(appMode==='install'){
-    const m={'لم يبدأ':'new','مجدول':'draft','قيد التركيب':'draft','مُركّب':'done','متعذّر':'blocked'};
-    DB.d.forEach(r=>{ const k=m[ist(r[0])]||'new'; c[k]++; });
-  } else DB.d.forEach(r=>c[st(r[0])]++);
-  $('#kTot').textContent = DB.d.length.toLocaleString('ar-EG');
+  DB.d.forEach(r=>c[st(r[0])]++);
+  const inst = appMode==='install';
+  $('#kTot').textContent = (inst ? c.done+c.draft+c.blocked
+                                 : DB.d.length-c.draft-c.blocked).toLocaleString('ar-EG');
   $('#kNew').textContent=c.new.toLocaleString('ar-EG');
   $('#kDraft').textContent=c.draft.toLocaleString('ar-EG');
   $('#kDone').textContent=c.done.toLocaleString('ar-EG');
@@ -1504,14 +1516,16 @@ function drawList(){
   $('#mineN').textContent = DB.d.filter(r=>
       ((inss[r[0]]||{}).who||'')===me).length.toLocaleString('ar-EG');
   $('#mineBtn').setAttribute('aria-pressed', String(mineOnly));
-  $('#lNew').textContent  = appMode==='install' ? 'لم يبدأ'    : 'لم يُزر';
-  $('#lDraft').textContent= appMode==='install' ? 'قيد التركيب' : 'مجدولة';
-  $('#lDone').textContent = appMode==='install' ? 'مُركّب'      : 'تمت الزيارة';
-  $('#lBlock').textContent= appMode==='install' ? 'متعذّر'      : 'تم التركيب';
-  $('#kNew').style.color  = appMode==='install' ? 'var(--grey)'  : '#E8C34B';
-  $('#kDraft').style.color= appMode==='install' ? 'var(--amber)' : '#E8873A';
-  $('#kDone').style.color = appMode==='install' ? 'var(--green)' : '#4BC9F5';
-  $('#kBlock').style.color= appMode==='install' ? 'var(--red)'   : '#3AD6A0';
+  $('#lNew').textContent  = 'لم يُزر';
+  $('#lDraft').textContent= 'مجدول للتركيب';
+  $('#lDone').textContent = inst ? 'جاهز للتركيب' : 'تمت الزيارة';
+  $('#lBlock').textContent= 'تم التركيب';
+  $('#kNew').style.color  = '#E8C34B';
+  $('#kDraft').style.color= '#E8873A';
+  $('#kDone').style.color = '#4BC9F5';
+  $('#kBlock').style.color= '#3AD6A0';
+  const hcell=(sel,on)=>{ const p=$(sel).closest('[data-s]'); if(p&&p.style) p.style.display=on?'':'none'; };
+  hcell('#kNew',!inst); hcell('#kDraft',inst); hcell('#kBlock',inst);
   document.querySelectorAll('#filt div').forEach(d=>
     d.setAttribute('aria-pressed', String((d.dataset.s||'')===statusFilter)));
 
@@ -1553,7 +1567,7 @@ function drawList(){
     '<span class="nm">'+esc(r[1])+'</span>'+
     ptBadge(r)+
     '<span class="mt">'+catLine(r)+(appMode==='install'
-        ? ist(r[0])+((inss[r[0]]||{}).sched?' · مجدول '+esc(inss[r[0]].sched):'')
+        ? slbl(st(r[0]))+((inss[r[0]]||{}).sched?' · موعد '+esc(inss[r[0]].sched):'')
         : DB.w[r[4]]+' · '+SL[st(r[0])]+(r[10]?' · '+esc(r[10]):''))+'</span></span>'+
     '<span class="gm" title="اعرضه على الخريطة" onclick="goMap(\''+r[0]+'\',event)">📍</span>'+
     (myPos?'<span class="dist">'+(dist(r)<1000?Math.round(dist(r))+' م'
@@ -2067,7 +2081,16 @@ window.openInstall = function(id){
     rec.log=(rec.log||[]).concat([{d:now, s:rec.status, by:rec.by}]);
     if(rec.status==='مُركّب') rec.done_date=now.slice(0,10);
     if(!await saveIns(id, rec)) return;
-    inss[id]=rec; drawMap(); drawList(); drawMgr();
+    inss[id]=rec;
+    if(rec.status==='مُركّب'){
+      const fr2 = recs[id] || {status:'draft', v:{}, photos:{}, id:id};
+      if(fr2.fstat!=='blocked'){
+        fr2.fstat='blocked'; fr2.date=now; fr2.by=rec.by;
+        fr2.log=(fr2.log||[]).concat([{d:now, s:'الحالة: تم التركيب', by:rec.by}]);
+        if(await saveRec(id, fr2)) recs[id]=fr2;
+      }
+    }
+    drawMap(); drawList(); drawMgr();
     toast('تم التحديث — '+rec.status);
     setTimeout(()=>show('vList'),700);
   };
@@ -2692,6 +2715,7 @@ async function setMode(m){
   appMode=m; window.appMode=m;
   $('#modeBtn').textContent = m==='install' ? 'التركيب' : 'المسح';
   try{ await window.storage.set('mode', m, false); }catch(e){}
+  statusFilter='';
   drawMap(); drawList(); drawMgr();
 }
 $('#modeBtn').onclick=()=>setMode(appMode==='install'?'survey':'install');
