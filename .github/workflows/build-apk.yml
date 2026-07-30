@@ -27,8 +27,16 @@ jobs:
       - name: Prepare Android SDK for Bubblewrap
         run: |
           echo "ANDROID_HOME=$ANDROID_HOME"
-          yes | sdkmanager "build-tools;34.0.0" > /dev/null
-          sudo ln -sf "$ANDROID_HOME/cmdline-tools/latest/bin" "$ANDROID_HOME/bin"
+          ls "$ANDROID_HOME/cmdline-tools" || true
+          CMDLINE="$ANDROID_HOME/cmdline-tools/latest"
+          if [ ! -d "$CMDLINE" ]; then
+            CMDLINE=$(ls -d "$ANDROID_HOME"/cmdline-tools/* | head -1)
+          fi
+          echo "Using cmdline-tools at: $CMDLINE"
+          "$CMDLINE/bin/sdkmanager" --version
+          yes | "$CMDLINE/bin/sdkmanager" --licenses > /dev/null 2>&1 || true
+          "$CMDLINE/bin/sdkmanager" "build-tools;34.0.0" > /dev/null
+          sudo ln -sf "$CMDLINE/bin" "$ANDROID_HOME/bin"
           ls "$ANDROID_HOME" | head
 
       - name: Bubblewrap config (non-interactive)
