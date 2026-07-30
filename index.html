@@ -464,6 +464,26 @@ const cv = L.canvas({padding:.4});
 const layer = L.layerGroup().addTo(map);
 let marks = {};
 
+function ptypeOf(r){
+  const fx=(((recs[r[0]]||{}).fix)||{}).ptype||'';
+  const v=fx||r[23]||'';
+  if(v.indexOf('داخل')>=0) return 'داخل';
+  if(v.indexOf('خارج')>=0) return 'خارج';
+  return '';
+}
+function ptHtml(r){
+  const p=ptypeOf(r);
+  if(p==='داخل') return '<b style="color:#C77DFF">حجاج داخل</b>';
+  if(p==='خارج') return '<b style="color:#3ED598">حجاج خارج</b>';
+  return '<i style="color:#9AA7A2">يُحدَّد ميدانيًا</i>';
+}
+function ptBadge(r){
+  const p=ptypeOf(r);
+  const s='display:inline-block;margin:3px 0 1px;padding:2px 9px;border-radius:999px;font-size:10.5px;font-weight:800;width:max-content;';
+  if(p==='داخل') return '<span style="'+s+'background:rgba(199,125,255,.16);border:1px solid #C77DFF;color:#C77DFF">حجاج داخل</span>';
+  if(p==='خارج') return '<span style="'+s+'background:rgba(62,213,152,.14);border:1px solid #3ED598;color:#3ED598">حجاج خارج</span>';
+  return '<span style="'+s+'background:rgba(154,167,162,.12);border:1px dashed #9AA7A2;color:#9AA7A2">التصنيف يُحدَّد ميدانيًا</span>';
+}
 function drawMap(){
   layer.clearLayers(); marks={};
   const z=map.getZoom(), b=map.getBounds().pad(.2);
@@ -485,6 +505,7 @@ function drawMap(){
       kv('الشاخصة', r[9])+
       kv('المربع', r[8])+
       kv('الشركة', r[10])+
+      '<span class="pk">التصنيف:</span> '+ptHtml(r)+'<br/>'+
       kv('المنطقة', r[21])+
       '<span class="pk">الحالة:</span> '+
         (appMode==='install' ? esc(ist(r[0])) : SL[st(r[0])])+
@@ -579,6 +600,7 @@ function drawList(){
     '<span class="dot" style="background:'+colOf(r[0])+'"></span>'+
     '<span class="b"><span class="id">'+esc(r[0])+'</span>'+
     '<span class="nm">'+esc(r[1])+'</span>'+
+    ptBadge(r)+
     '<span class="mt">'+(appMode==='install'
         ? ist(r[0])+((inss[r[0]]||{}).sched?' · مجدول '+esc(inss[r[0]].sched):'')
         : DB.w[r[4]]+' · '+SL[st(r[0])]+(r[10]?' · '+esc(r[10]):''))+'</span></span>'+
@@ -741,6 +763,11 @@ window.openForm = function(id){
       '<b style="color:#C77DFF">مشغّل حجاج الداخل غير مسجّل</b><br/>'+
       '<span style="color:var(--muted)">اقرأه من لوحة المخيم أو اسأل مسؤول الموقع</span>'+
       '</div>':'')+
+    ((!ptype && !((((recs[id]||{}).fix)||{}).ptype))?'<div style="margin-top:8px;background:rgba(154,167,162,.12);'+
+      'border:1px dashed #9AA7A2;border-radius:8px;padding:9px 11px;font-size:11.5px;line-height:1.6">'+
+      '<b style="color:#E8E3D6">تصنيف الحجاج غير مسجّل — يُحدَّد ميدانيًا</b><br/>'+
+      '<span style="color:var(--muted)">حدّده من قسم «بيانات مسجّلة» بالأسفل: حجاج داخل أم حجاج خارج</span>'+
+      '</div>':'')+
     (host?'<div style="margin-top:8px;background:rgba(232,135,58,.16);border:1px solid #E8873A;'+
       'border-radius:8px;padding:9px 11px;font-size:11.5px;line-height:1.6">'+
       '<b style="color:#E8873A">جهة إستضافة سيادية: '+esc(host)+'</b><br/>'+
@@ -869,17 +896,42 @@ window.openForm = function(id){
         row.querySelector('.red').textContent='تم التعديل'; }
     });
     kn.onclick=e=>{
+      const pv=e.target.closest('.ptv');
+      if(pv){
+        const row=pv.closest('.rv'), val=pv.dataset.v;
+        rec.fix.ptype=val;
+        row.querySelector('.rvv').textContent=val;
+        row.classList.add('fixed');
+        const rb=row.querySelector('.red');
+        rb.textContent='تم التعديل'; rb.classList.remove('on');
+        return;
+      }
       const b=e.target.closest('.red'); if(!b) return;
       const row=b.closest('.rv'), k=b.dataset.k;
       const cur=rec.fix[k] || row.querySelector('.rvv').textContent.trim();
       const box=row.querySelector('.rvv');
       if(b.classList.contains('on')){
+        if(k==='ptype'){
+          const fx=rec.fix.ptype||'';
+          if(fx){ box.textContent=fx; row.classList.add('fixed'); b.textContent='تم التعديل'; }
+          else if(cur && cur!=='غير مسجّل'){ box.textContent=cur; b.textContent='تعديل'; }
+          else { box.innerHTML='<i style="color:var(--muted)">غير مسجّل</i>'; b.textContent='أضف'; }
+          b.classList.remove('on'); return;
+        }
         const inp=box.querySelector('input'); const val=(inp?inp.value:'').trim();
         if(val){ rec.fix[k]=val; box.textContent=val; row.classList.add('fixed');
                  b.textContent='تم التعديل'; }
         else { delete rec.fix[k]; box.textContent=cur; row.classList.remove('fixed');
                b.textContent='تعديل'; }
         b.classList.remove('on');
+      } else if(k==='ptype'){
+        const ps='padding:6px 13px;border-radius:999px;font-size:11.5px;font-weight:800;cursor:pointer;';
+        box.innerHTML=
+          '<button type="button" class="ptv" data-v="حجاج داخل" style="'+ps+
+            'background:rgba(199,125,255,.16);border:1px solid #C77DFF;color:#C77DFF;margin-inline-end:7px">حجاج داخل</button>'+
+          '<button type="button" class="ptv" data-v="حجاج خارج" style="'+ps+
+            'background:rgba(62,213,152,.14);border:1px solid #3ED598;color:#3ED598">حجاج خارج</button>';
+        b.textContent='إلغاء'; b.classList.add('on');
       } else {
         box.innerHTML='<input type="text" value="'+esc(cur==='غير مسجّل'?'':cur)+'"/>';
         box.querySelector('input').focus();
@@ -1341,7 +1393,7 @@ function dl(name,blob){
   a.href=URL.createObjectURL(blob); a.download=name; a.click();
   setTimeout(()=>URL.revokeObjectURL(a.href),4000);
 }
-const FIELD_AR = {square:'رقم المربع',sign:'رقم الشاخصة',len_m:'الطول (م)',
+const FIELD_AR = {ptype:'تصنيف الحجاج',square:'رقم المربع',sign:'رقم الشاخصة',len_m:'الطول (م)',
  wid_m:'العرض (م)',hgt_m:'الارتفاع (م)',tents:'عدد الغرف',gates:'عدد البوابات',
  shared:'بوابة مشتركة',power:'مصدر الكهرباء',pdist:'مسافة الكهرباء (م)',
  cable:'مسار الكابل (م)',
@@ -1420,7 +1472,7 @@ $('#expXls').onclick=()=>{
     coOf(r), p?(r.v||{}).stype||'':r.type||'', p?'—':r.work||'', SL[r.status], p?'نعم':'لا',
     r.survey_date||'',
     (r.chal||[]).join(' | '),
-    Object.keys(r.fix||{}).map(k=>k+'='+r.fix[k]).join(' | '),
+    Object.keys(r.fix||{}).map(k=>(FIELD_AR[k]||k)+'='+r.fix[k]).join(' | '),
     r.fit||'', r.access||(p?'تم الوصول':''),
     p?(r.lat.toFixed(6)+', '+r.lon.toFixed(6)):(r.gps||''), r.pin||'',
     r.acc||'', r.by||'', r.date||'', r.rev||1,
@@ -1511,7 +1563,7 @@ $('#expPdf').onclick=()=>{
       '<tr><td class="k">الصلاحية</td><td>'+esc(r.fit||'—')+'</td></tr>'+
       '<tr><td class="k">تحديات التركيب</td><td>'+esc((r.chal||[]).join('، ')||'—')+'</td></tr>'+
       (Object.keys(r.fix||{}).length?'<tr><td class="k">تصحيحات</td><td>'+
-        esc(Object.keys(r.fix).map(k=>k+': '+r.fix[k]).join('، '))+'</td></tr>':'')+
+        esc(Object.keys(r.fix).map(k=>(FIELD_AR[k]||k)+': '+r.fix[k]).join('، '))+'</td></tr>':'')+
       '<tr><td class="k">إحداثيات الموقع</td><td>'+
         esc(p?(r.lat.toFixed(6)+', '+r.lon.toFixed(6)):(r.gps||'—'))+'</td></tr>'+
       '<tr><td class="k">نقطة التركيب</td><td>'+esc(r.pin||'—')+'</td></tr>'+
