@@ -4,6 +4,22 @@
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1"/>
 <title>قارئات نُسُك — المسح الميداني ١٤٤٨هـ</title>
+<link rel="manifest" href="manifest.webmanifest"/>
+<meta name="theme-color" content="#08201A"/>
+<meta name="mobile-web-app-capable" content="yes"/>
+<meta name="apple-mobile-web-app-capable" content="yes"/>
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
+<meta name="apple-mobile-web-app-title" content="قارئات نُسُك"/>
+<link rel="apple-touch-icon" href="icon-192.png"/>
+<script>
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', function(){
+    navigator.serviceWorker.register('sw.js').catch(function(e){
+      console.log('sw registration failed', e);
+    });
+  });
+}
+</script>
 <style>
 /* required styles */
 
@@ -913,13 +929,6 @@ html[data-theme="light"]{
 html[data-theme="light"] .leaflet-container{background:#E8E4D8}
 html[data-theme="light"] .leaflet-bar a{background:#fff;color:#333}
 </style>
-<link rel="manifest" href="manifest.webmanifest"/>
-<meta name="theme-color" content="#08201A"/>
-<meta name="mobile-web-app-capable" content="yes"/>
-<meta name="apple-mobile-web-app-capable" content="yes"/>
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
-<meta name="apple-mobile-web-app-title" content="قارئات نُسُك"/>
-<link rel="apple-touch-icon" href="icon-192.png"/>
 </head>
 <body>
 <script>
@@ -938,7 +947,7 @@ window.addEventListener('error', function(e){
 <div id="app">
   <header>
     <div class="t">
-      <div class="eyebrow">قارئات نُسُك ١٤٤٨هـ <span style="color:var(--muted);letter-spacing:0;font-weight:600">· نسخة 69a6c193</span></div>
+      <div class="eyebrow">قارئات نُسُك ١٤٤٨هـ <span style="color:var(--muted);letter-spacing:0;font-weight:600">· نسخة fce63ba8</span></div>
       <h1 id="ttl">المسح الميداني</h1>
     </div>
     <button class="pill" id="modeBtn" type="button">المسح</button>
@@ -2878,15 +2887,6 @@ $('#thBtn').onclick=()=>setTheme(curTheme==='light'?'dark':'light');
   map.fitBounds(L.latLngBounds(DB.d.map(r=>[r[5],r[6]])).pad(.06));
   locate();
 })();
-</script>
-<script>
-if ('serviceWorker' in navigator) {
-  window.addEventListener('load', function(){
-    navigator.serviceWorker.register('sw.js').catch(function(e){
-      console.log('sw registration failed', e);
-    });
-  });
-}
 </script>
 </body>
 </html>
