@@ -1,5 +1,5 @@
 /* Nusuk Survey — offline shell cache */
-const CACHE = 'nusuk-survey-ab30a2e7';
+const CACHE = 'nusuk-survey-45e5d63b';
 const SHELL = [
   './',
   './index.html',
@@ -30,17 +30,45 @@ self.addEventListener('activate', function (e) {
   );
 });
 
+function fetchWithTimeout(req, ms) {
+  return new Promise(function (resolve, reject) {
+    const t = setTimeout(function () { reject(new Error('timeout')); }, ms);
+    fetch(req).then(function (res) { clearTimeout(t); resolve(res); },
+                    function (err) { clearTimeout(t); reject(err); });
+  });
+}
+
 self.addEventListener('fetch', function (e) {
   const req = e.request;
   if (req.method !== 'GET') return;
 
-  // map tiles: network first, no caching (they are huge and change per view)
+  // map tiles: network only, never cached
   if (req.url.indexOf('basemaps.cartocdn.com') !== -1) {
     e.respondWith(fetch(req).catch(function () { return new Response('', { status: 504 }); }));
     return;
   }
 
-  // everything else: cache first, then network, then cached index for navigations
+  // the app itself (navigations + index.html): NETWORK FIRST with 3.5s timeout,
+  // fall back to cache — so new versions arrive on next open, and offline still works
+  const isShellPage = req.mode === 'navigate' || req.url.indexOf('index.html') !== -1;
+  if (isShellPage) {
+    e.respondWith(
+      fetchWithTimeout(req, 3500).then(function (res) {
+        if (res && res.status === 200) {
+          const copy = res.clone();
+          caches.open(CACHE).then(function (c) { c.put(req, copy); });
+        }
+        return res;
+      }).catch(function () {
+        return caches.match(req).then(function (hit) {
+          return hit || caches.match('./index.html');
+        });
+      })
+    );
+    return;
+  }
+
+  // everything else (libs, icons): cache first, then network
   e.respondWith(
     caches.match(req).then(function (hit) {
       if (hit) return hit;
@@ -50,10 +78,7 @@ self.addEventListener('fetch', function (e) {
           caches.open(CACHE).then(function (c) { c.put(req, copy); });
         }
         return res;
-      }).catch(function () {
-        if (req.mode === 'navigate') return caches.match('./index.html');
-        return new Response('', { status: 504 });
-      });
+      }).catch(function () { return new Response('', { status: 504 }); });
     })
   );
 });
