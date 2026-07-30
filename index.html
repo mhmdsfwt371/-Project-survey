@@ -210,6 +210,9 @@ table.mg .sid{color:var(--gold);font-weight:700}
 .tag{padding:2px 8px;border-radius:999px;font-size:10px;font-weight:800}
 .scroll{overflow-x:auto;-webkit-overflow-scrolling:touch}
 @media (prefers-reduced-motion:reduce){*{transition:none!important}}
+.mkC{background:none!important;border:0!important}
+.mkC i{display:block;width:100%;height:100%;transform:rotate(45deg);
+  border:1.7px solid #4FA3FF;border-radius:2px;box-shadow:0 0 0 1px rgba(0,0,0,.55)}
 #zBar,#cBar{display:flex;flex-wrap:wrap;gap:7px;margin:0 0 10px}
 #zBar .zc{flex:1;min-width:72px;padding:10px 8px;border-radius:11px;background:rgba(255,255,255,.05);
   border:1px solid rgba(255,255,255,.14);color:var(--cream,#E8E3D6);font-weight:800;
@@ -536,9 +539,15 @@ function drawMap(){
     if(cSel && catOf(r).k!==cSel) return;
     const light = z<13 || !b.contains([r[5],r[6]]);
     const c = colOf(r[0]);
+    const isCor = catOf(r).k==='cor';
+    const ds = light ? (COARSE?15:12) : (COARSE?22:17);
     const m = (r[7] && !light)
       ? L.polygon(r[7].map(p=>[p[1],p[0]]),
           {renderer:cv,color:c,weight:1.3,fillColor:c,fillOpacity:.32})
+      : isCor
+      ? L.marker([r[5],r[6]],{keyboard:false,icon:L.divIcon({className:'mkC',
+          iconSize:[ds,ds],iconAnchor:[ds/2,ds/2],popupAnchor:[0,-ds/2],
+          html:'<i style="background:'+c+'"></i>'})})
       : L.circleMarker([r[5],r[6]],
           {renderer:cv,radius:light?(COARSE?5:3):(COARSE?9:5),
            weight:light?1:(COARSE?2.2:1.3),
