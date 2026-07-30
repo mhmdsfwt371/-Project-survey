@@ -1,0 +1,39 @@
+{
+  "packageId": "com.msafwat.nusuk",
+  "host": "mhmdsfwt371.github.io",
+  "name": "قارئات نُسُك",
+  "launcherName": "قارئات نُسُك",
+  "display": "standalone",
+  "themeColor": "#08201A",
+  "navigationColor": "#08201A",
+  "navigationColorDark": "#08201A",
+  "navigationDividerColor": "#08201A",
+  "navigationDividerColorDark": "#08201A",
+  "backgroundColor": "#0A2038",
+  "enableNotifications": false,
+  "startUrl": "/-Project-survey/",
+  "iconUrl": "https://mhmdsfwt371.github.io/-Project-survey/icon-512.png",
+  "maskableIconUrl": "https://mhmdsfwt371.github.io/-Project-survey/icon-512.png",
+  "splashScreenFadeOutDuration": 300,
+  "signingKey": {
+    "path": "./android.keystore",
+    "alias": "nusuk"
+  },
+  "appVersionName": "1.0.0",
+  "appVersionCode": 1,
+  "shortcuts": [],
+  "generatorApp": "bubblewrap-cli",
+  "webManifestUrl": "https://mhmdsfwt371.github.io/-Project-survey/manifest.webmanifest",
+  "fallbackType": "customtabs",
+  "features": {},
+  "alphaDependencies": {
+    "enabled": false
+  },
+  "enableSiteSettingsShortcut": true,
+  "isChromeOSOnly": false,
+  "orientation": "default",
+  "fingerprints": [],
+  "additionalTrustedOrigins": [],
+  "retainedBundles": [],
+  "fullScopeUrl": "https://mhmdsfwt371.github.io/-Project-survey/"
+}
