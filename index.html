@@ -216,6 +216,23 @@ table.mg .sid{color:var(--gold);font-weight:700}
 .mkC i{display:block;width:100%;height:100%;transform:rotate(45deg);
   border:2.2px solid #4FA3FF;border-radius:2.5px;
   box-shadow:0 0 0 1.5px rgba(0,0,0,.7),0 0 7px rgba(79,163,255,.55)}
+#vMap{position:relative}
+#mBar{position:absolute;top:10px;inset-inline:10px 56px;z-index:820;display:flex;gap:6px;
+  overflow-x:auto;-webkit-overflow-scrolling:touch;padding-bottom:3px;scrollbar-width:none}
+#mBar::-webkit-scrollbar{display:none}
+#mBar .ms{flex:0 0 auto;padding:6px 11px;border-radius:999px;font-family:inherit;cursor:pointer;
+  font-size:11px;font-weight:800;border:1.4px solid var(--sc,#C9A24B);color:var(--sc,#C9A24B);
+  background:rgba(8,32,26,.88)}
+#mBar .ms.on{background:var(--sc,#C9A24B);color:#08201A}
+#mBar .ms .n{opacity:.85;font-weight:700;font-size:10px}
+.tback{display:inline-block;background:none;border:1px solid var(--line);color:var(--gold);
+  border-radius:999px;padding:5px 14px;font-size:12px;font-weight:800;cursor:pointer;
+  font-family:inherit;margin-bottom:9px}
+.card .gm{flex:0 0 auto;font-size:17px;padding:4px 3px;cursor:pointer}
+#lxRow{display:flex;gap:8px;margin:0 0 10px}
+#lxRow button{flex:1;padding:9px 6px;border-radius:10px;border:1px solid var(--line);
+  background:rgba(255,255,255,.05);color:var(--cream);font-weight:800;font-size:11.5px;
+  cursor:pointer;font-family:inherit}
 .pst{display:flex;gap:5px;margin-top:8px}
 .pst .go{flex:1;text-align:center;font-size:10.5px;padding:5px 4px;border-radius:8px;
   border:1.3px solid;background:transparent;font-weight:800;text-decoration:none}
@@ -240,7 +257,7 @@ table.mg .sid{color:var(--gold);font-weight:700}
 <div id="app">
   <header>
     <div class="t">
-      <div class="eyebrow">قارئات نُسُك ١٤٤٨هـ <span style="color:var(--muted);letter-spacing:0;font-weight:600">· نسخة b1edf9be</span></div>
+      <div class="eyebrow">قارئات نُسُك ١٤٤٨هـ <span style="color:var(--muted);letter-spacing:0;font-weight:600">· نسخة 3e92dffc</span></div>
       <h1 id="ttl">المسح الميداني</h1>
     </div>
     <button class="pill" id="modeBtn" type="button">المسح</button>
@@ -249,7 +266,7 @@ table.mg .sid{color:var(--gold);font-weight:700}
   </header>
 
   <main>
-    <section class="view on" id="vMap"><div id="map"></div></section>
+    <section class="view on" id="vMap"><div id="map"></div><div id="mBar"></div></section>
 
     <section class="view" id="vList">
       <div class="stats" id="filt">
@@ -268,6 +285,10 @@ table.mg .sid{color:var(--gold);font-weight:700}
         </div>
         <div id="zBar"></div>
         <div id="cBar"></div>
+        <div id="lxRow">
+          <button id="lxXls" type="button">⬇ إكسل — القائمة الحالية</button>
+          <button id="lxPdf" type="button">🖨 PDF — القائمة الحالية</button>
+        </div>
         <input class="srch" id="q" placeholder="ابحث بالمعرّف أو الاسم…" type="search"/>
         <div id="list"></div>
       </div>
@@ -544,7 +565,37 @@ window.setFstat = async function(id,k){
   toast(rec.fstat ? ('الحالة الآن: '+SL[rec.fstat]) : 'رجعت الحالة: لم يُزر',
         0, SC[rec.fstat||'new']);
 };
-let moveId=null;
+let moveId=null, focusId=null;
+function renderMBar(){
+  const el=$('#mBar'); if(!el||!el.style) return;
+  if(appMode==='install'){ el.style.display='none'; return; }
+  el.style.display='flex';
+  const base=DB.d.filter(r=>(!zSel||szOf(r)===zSel)&&(!cSel||catOf(r).k===cSel));
+  const tot=base.length||1;
+  const cnt={new:0,draft:0,done:0,blocked:0};
+  base.forEach(r=>{ const k=st(r[0]); if(cnt[k]!=null) cnt[k]++; });
+  const mk=(k,l)=>{
+    const n=cnt[k], pc=Math.round(n*100/tot), on=statusFilter===k;
+    return '<button type="button" class="ms'+(on?' on':'')+'" style="--sc:'+SC[k]+
+      '" onclick="setStat(\''+k+'\')">'+l+
+      ' <span class="n">'+n.toLocaleString('ar-EG')+' ('+pc.toLocaleString('ar-EG')+'٪)</span></button>';
+  };
+  el.innerHTML =
+    '<button type="button" class="ms all'+(statusFilter===''?' on':'')+
+      '" onclick="setStat(\'\')">الكل <span class="n">'+
+      base.length.toLocaleString('ar-EG')+'</span></button>'+
+    mk('new','لم يُزر')+mk('draft','مجدولة')+mk('done','تمت الزيارة')+mk('blocked','تم التركيب');
+}
+window.setStat=function(k){ statusFilter = statusFilter===k?'':k; drawMap(); drawList(); };
+window.goMap=function(id,ev){
+  if(ev){ ev.stopPropagation(); ev.preventDefault(); }
+  const r=DB.d.find(x=>x[0]===id); if(!r) return;
+  focusId=id; show('vMap');
+  setTimeout(()=>{ map.invalidateSize();
+    map.setView(posOf(r), Math.max(map.getZoom(),17), {animate:false});
+    drawMap(); const m=marks[id]; if(m) m.openPopup();
+  }, 90);
+};
 window.startMove = function(id){
   moveId=id; map.closePopup();
   toast('اضغط على الخريطة في المكان الجديد للنقطة');
@@ -619,8 +670,11 @@ function drawMap(){
   const z=map.getZoom(), b=map.getBounds().pad(.2);
   DB.d.forEach(r=>{
     if(PENDING.has(r[0]) && !(recs[r[0]]||{}).gps) return;
-    if(zSel && szOf(r)!==zSel) return;
-    if(cSel && catOf(r).k!==cSel) return;
+    if(r[0]!==focusId){
+      if(zSel && szOf(r)!==zSel) return;
+      if(cSel && catOf(r).k!==cSel) return;
+      if(appMode!=='install' && statusFilter && st(r[0])!==statusFilter) return;
+    }
     const P0 = posOf(r);
     const light = z<13 || !b.contains(P0);
     const c = colOf(r[0]);
@@ -684,13 +738,14 @@ function drawMap(){
       '</div>');
     layer.addLayer(m);
   });
+  renderMBar();
 }
 let _zt=null;
 map.on('zoomend moveend',()=>{
   clearTimeout(_zt);
   _zt=setTimeout(()=>{ if(!(map._popup && map._popup.isOpen())) drawMap(); },150);
 });
-map.on('popupclose',()=>{ clearTimeout(_zt); _zt=setTimeout(drawMap,180); });
+map.on('popupclose',()=>{ focusId=null; clearTimeout(_zt); _zt=setTimeout(drawMap,180); });
 let myPos=null;
 function locate(){
   if(!navigator.geolocation) return;
@@ -717,6 +772,7 @@ function drawList(){
            || (r[9]||'').toLowerCase().includes(q)
            || (r[10]||'').toLowerCase().includes(q)))
     .sort((a,b)=> myPos ? dist(a)-dist(b) : a[0].localeCompare(b[0]));
+  window._lastItems = items;
   const c = {new:0,draft:0,done:0,blocked:0};
   if(appMode==='install'){
     const m={'لم يبدأ':'new','مجدول':'draft','قيد التركيب':'draft','مُركّب':'done','متعذّر':'blocked'};
@@ -782,6 +838,7 @@ function drawList(){
     '<span class="mt">'+catLine(r)+(appMode==='install'
         ? ist(r[0])+((inss[r[0]]||{}).sched?' · مجدول '+esc(inss[r[0]].sched):'')
         : DB.w[r[4]]+' · '+SL[st(r[0])]+(r[10]?' · '+esc(r[10]):''))+'</span></span>'+
+    '<span class="gm" title="اعرضه على الخريطة" onclick="goMap(\''+r[0]+'\',event)">📍</span>'+
     (myPos?'<span class="dist">'+(dist(r)<1000?Math.round(dist(r))+' م'
        :(dist(r)/1000).toFixed(1)+' كم')+'</span>':'')+
     '<span class="ar">‹</span></button>').join('') +
@@ -933,7 +990,9 @@ window.openForm = function(id){
     '</fieldset>';
 
   $('#vForm').innerHTML =
-    '<div class="fh"><div class="id">'+esc(id)+'</div>'+
+    '<div class="fh">'+
+    '<button type="button" class="tback" onclick="show(\'vList\')">→ رجوع</button>'+
+    '<div class="id">'+esc(id)+'</div>'+
     '<div class="nm">'+esc(r[1])+'</div>'+
     '<div class="mt">'+work+' · '+DB.t[ty]+' · '+DB.z[r[2]]+'</div>'+
     (todoOp?'<div style="margin-top:8px;background:rgba(199,125,255,.15);border:1px solid #C77DFF;'+
@@ -1229,7 +1288,9 @@ window.openInstall = function(id){
     esc(e.d)+' — '+esc(e.s)+' — '+esc(e.by||'—')+'</div>').join('');
 
   $('#vForm').innerHTML =
-    '<div class="fh"><div class="id">'+esc(id)+'</div>'+
+    '<div class="fh">'+
+    '<button type="button" class="tback" onclick="show(\'vList\')">→ رجوع</button>'+
+    '<div class="id">'+esc(id)+'</div>'+
     '<div class="nm">'+esc(r[1])+'</div>'+
     '<div class="mt">'+DB.w[r[4]]+' · '+DB.t[r[3]]+' · '+DB.z[r[2]]+'</div>'+
     '<div style="margin-top:8px"><span style="background:'+(IC[rec.status]||'#6E7C77')+
@@ -1641,13 +1702,13 @@ $('#expXls').onclick=()=>{
   const rows=allRows();
   if(!rows.length){ toast('لا توجد مواقع مسوحة بعد',1); return; }
   const keys=[...new Set(rows.flatMap(x=>Object.keys(x.r.v||{})))];
-  const head=['معرّف الموقع','اسم الموقع','المنطقة','شركة الخدمة','النوع','نوع العمل','الحالة','مقترح',
+  const head=['معرّف الموقع','اسم الموقع','المنطقة','شركة الخدمة','النوع','نوع العمل','حالة المسح','حالة الميدان','مقترح',
     'تاريخ المسح','تحديات التركيب','تصحيحات على البيانات المسجّلة',
     'الصلاحية','حالة الوصول','إحداثيات الموقع','نقطة التركيب','دقة القياس',
     'الفني','آخر تعديل','رقم المراجعة','عدد الصور',
     ...keys.map(k=>FIELD_AR[k]||k)];
   const body=rows.map(({r,p})=>[r.id, p?r.label:r.site, p?(r.v||{}).zone||'':r.zone||'',
-    coOf(r), p?(r.v||{}).stype||'':r.type||'', p?'—':r.work||'', SL[r.status], p?'نعم':'لا',
+    coOf(r), p?(r.v||{}).stype||'':r.type||'', p?'—':r.work||'', (({draft:'مسوّدة — بيانات ناقصة',done:'مكتمل',blocked:'متعذّر الوصول'})[r.status]||r.status), p?'—':SL[st(r.id)], p?'نعم':'لا',
     r.survey_date||'',
     (r.chal||[]).join(' | '),
     Object.keys(r.fix||{}).map(k=>(FIELD_AR[k]||k)+'='+r.fix[k]).join(' | '),
@@ -1669,6 +1730,9 @@ $('#expXls').onclick=()=>{
     ['مكتمل', Object.values(recs).filter(r=>r.status==='done').length],
     ['مسوّدة', Object.values(recs).filter(r=>r.status==='draft').length],
     ['متعذّر', Object.values(recs).filter(r=>r.status==='blocked').length],
+    ['مجدولة (حالة ميدانية)', DB.d.filter(r=>st(r[0])==='draft').length],
+    ['تمت الزيارة (حالة ميدانية)', DB.d.filter(r=>st(r[0])==='done').length],
+    ['تم التركيب (حالة ميدانية)', DB.d.filter(r=>st(r[0])==='blocked').length],
     ['مقترح من الميدان', Object.keys(props).length],
     ['مناسب', Object.values(recs).filter(r=>r.fit==='مناسب').length],
     ['مناسب بتعديل', Object.values(recs).filter(r=>r.fit==='مناسب بتعديل').length],
@@ -1814,11 +1878,21 @@ $('#clr').onclick=async()=>{
 };
 
 /* ---------------- nav / zones ---------------- */
+let _curV='vMap', _nav=false;
 function show(v){
   document.querySelectorAll('.view').forEach(s=>s.classList.toggle('on',s.id===v));
   document.querySelectorAll('nav button').forEach(b=>b.classList.toggle('on',b.dataset.v===v));
   if(v==='vMap') setTimeout(()=>map.invalidateSize(),60);
+  if(!_nav && v!==_curV){ try{ history.pushState({v:v},''); }catch(e){} }
+  _curV=v;
 }
+try{ history.replaceState({v:'vMap'},''); }catch(e){}
+window.addEventListener('popstate', e=>{
+  const sh=$('#sheet');
+  if(sh && sh.hidden===false){ sh.hidden=true; try{ history.pushState({v:_curV},''); }catch(x){} return; }
+  const v=(e.state&&e.state.v)||'vMap';
+  _nav=true; show(v); _nav=false;
+});
 document.querySelectorAll('nav button').forEach(b=>b.onclick=()=>show(b.dataset.v));
 $('#q').oninput=drawList;
 $('#q').placeholder='ابحث بالمعرّف أو الشاخصة أو الشركة…';
@@ -1826,9 +1900,49 @@ $('#mineBtn').onclick=()=>{ mineOnly=!mineOnly; drawList(); };
 $('#filt').onclick=e=>{
   const d=e.target.closest('div[data-s]'); if(!d) return;
   statusFilter = (d.dataset.s===statusFilter) ? '' : d.dataset.s;
-  drawList();
+  drawList(); drawMap();
 };
 
+const LX_HEAD=['المعرّف','الاسم','الفئة','المشعر','المنطقة','المربع','الشاخصة',
+  'الشركة','تصنيف الحجاج','حالة الميدان','آخر فني','آخر تعديل','الإحداثيات','موقع معدَّل'];
+function listExportRows(){
+  const items=(window._lastItems&&window._lastItems.length)?window._lastItems:DB.d;
+  return items.map(r=>{
+    const rec=recs[r[0]]||{}; const P0=posOf(r); const c=catOf(r);
+    const p=ptypeOf(r);
+    return [r[0], r[1], c.l, szOf(r), r[21]||'', r[8]||'', r[9]||'',
+      ((rec.fix||{}).company)||r[10]||'', p?('حجاج '+p):'',
+      SL[st(r[0])], rec.by||'', rec.date||'',
+      P0[0].toFixed(6)+', '+P0[1].toFixed(6), rec.loc?'نعم':''];
+  });
+}
+$('#lxXls').onclick=()=>{
+  const body=listExportRows();
+  if(!body.length){ toast('لا توجد مواقع في القائمة الحالية',1); return; }
+  const wb=XLSX.utils.book_new();
+  const ws=XLSX.utils.aoa_to_sheet([LX_HEAD,...body]);
+  ws['!cols']=LX_HEAD.map(h=>({wch:Math.max(12,Math.min(30,String(h).length+8))}));
+  ws['!freeze']={xSplit:0,ySplit:1};
+  XLSX.utils.book_append_sheet(wb,ws,'المواقع');
+  XLSX.writeFile(wb,'قائمة_المواقع.xlsx');
+  toast('تم تصدير '+body.length.toLocaleString('ar-EG')+' موقعًا');
+};
+$('#lxPdf').onclick=()=>{
+  const body=listExportRows();
+  if(!body.length){ toast('لا توجد مواقع في القائمة الحالية',1); return; }
+  const w=window.open('','_blank');
+  if(!w){ toast('اسمح بالنوافذ المنبثقة أولًا',1); return; }
+  w.document.write('<!doctype html><html lang="ar" dir="rtl"><head><meta charset="utf-8"/>'+
+    '<title>قائمة المواقع</title><style>body{font-family:Tahoma,Arial;font-size:11px;margin:18px}'+
+    'table{border-collapse:collapse;width:100%}th,td{border:1px solid #999;padding:4px 6px;text-align:right}'+
+    'th{background:#eee}h2{margin:0 0 4px}</style></head><body>'+
+    '<h2>قائمة المواقع ('+body.length+')</h2>'+
+    '<div style="color:#666;margin-bottom:8px">'+esc(new Date().toLocaleString('ar-EG'))+'</div>'+
+    '<table><tr>'+LX_HEAD.map(h=>'<th>'+h+'</th>').join('')+'</tr>'+
+    body.map(rw=>'<tr>'+rw.map(cc=>'<td>'+esc(String(cc??''))+'</td>').join('')+'</tr>').join('')+
+    '</table></body></html>');
+  w.document.close(); setTimeout(()=>{ try{ w.print(); }catch(e){} },350);
+};
 const REGIONS=[...new Set(DB.d.map(r=>r[21]).filter(Boolean))].sort();
 function openGoSheet(){
   const box=$('#sheetList'); box.innerHTML='';
