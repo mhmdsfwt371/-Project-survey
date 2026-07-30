@@ -155,8 +155,14 @@ textarea.in{min-height:74px;resize:vertical}
   border:1px solid var(--line);border-radius:10px}
 .leaflet-popup-tip{background:var(--panel2)}
 .leaflet-popup-content{margin:11px 13px;font-size:12.5px;direction:rtl;line-height:1.75}
-.leaflet-popup-content .go{display:block;margin-top:8px;background:var(--gold);color:#08201A;
-  text-align:center;padding:8px;border-radius:8px;font-weight:800;text-decoration:none}
+.leaflet-popup-content .pn{font-weight:700;font-size:12.5px;line-height:1.6}
+.leaflet-popup-content .pk{color:var(--muted)}
+.leaflet-popup-content .pbtns{display:flex;gap:7px;margin-top:10px}
+.leaflet-popup-content .go{flex:1;display:block;background:var(--gold);color:#08201A;
+  text-align:center;padding:9px 6px;border-radius:8px;font-weight:800;text-decoration:none;
+  font-size:12px;white-space:nowrap}
+.leaflet-popup-content .go.dir{background:var(--panel);color:var(--gold);
+  border:1px solid var(--gold)}
 #fab{position:fixed;inset-block-end:calc(66px + env(safe-area-inset-bottom));inset-inline-start:16px;
   background:#C77DFF;color:#1A0B26;border:0;border-radius:999px;padding:13px 18px;
   font-weight:800;font-size:13px;cursor:pointer;z-index:800;
@@ -471,21 +477,38 @@ function drawMap(){
       : L.circleMarker([r[5],r[6]],
           {renderer:cv,radius:light?3:5,weight:light?1:1.3,
            color:c,fillColor:c,fillOpacity:.6});
-    const meta = r[10] ? '<br/><span style="color:#8AA79C">'+esc(r[10])+'</span>' : '';
-    m.bindPopup('<b style="color:#C9A24B">'+esc(r[0])+'</b><br/>'+esc(r[1])+meta+
-      '<br/><span style="color:#8AA79C">'+DB.w[r[4]]+' · '+SL[st(r[0])]+'</span>'+
-      '<a class="go" href="#" onclick="openForm(\''+r[0]+'\');return false">افتح نموذج المسح</a>');
+    const kv=(k,v)=>v?'<span class="pk">'+k+':</span> '+esc(v)+'<br/>':'';
+    const dir='https://www.google.com/maps/dir/?api=1&destination='+r[5]+','+r[6];
+    m.bindPopup(
+      '<b style="color:#C9A24B">'+esc(r[0])+'</b><br/>'+
+      '<span class="pn">'+esc(r[1])+'</span><br/>'+
+      kv('الشاخصة', r[9])+
+      kv('المربع', r[8])+
+      kv('الشركة', r[10])+
+      kv('المنطقة', r[21])+
+      '<span class="pk">الحالة:</span> '+
+        (appMode==='install' ? esc(ist(r[0])) : SL[st(r[0])])+
+      '<div class="pbtns">'+
+        '<a class="go dir" target="_blank" rel="noopener" href="'+dir+'">اتجاهات</a>'+
+        '<a class="go" href="#" onclick="(window.appMode===\'install\'?openInstall:openForm)'+
+          '(\''+r[0]+'\');return false">تعديل البيانات</a>'+
+      '</div>');
     layer.addLayer(m); marks[r[0]]=m;
   });
   Object.values(props).forEach(p=>{
     const c=SC.proposed;
     const m=L.circleMarker([p.lat,p.lon],{renderer:cv,radius:8,weight:2.4,color:c,
       fillColor:c,fillOpacity:.35,dashArray:'4,3'});
-    m.bindPopup('<b style="color:#C77DFF">موقع مقترح</b><br/>'+esc(p.id)+
-      '<br/>'+esc(p.label||'')+
-      '<br/><span style="color:#8AA79C">مربع '+esc(p.v.square||'—')+
-      ' · شاخص '+esc(p.v.sign||'—')+'</span>'+
-      '<br/><span style="color:#8AA79C">بانتظار اعتماد المكتب</span>');
+    const dir='https://www.google.com/maps/dir/?api=1&destination='+p.lat+','+p.lon;
+    m.bindPopup('<b style="color:#C77DFF">موقع مقترح</b><br/>'+
+      '<span class="pn">'+esc(p.id)+'</span><br/>'+
+      '<span class="pk">الشاخصة:</span> '+esc((p.v||{}).sign||'—')+'<br/>'+
+      '<span class="pk">المربع:</span> '+esc((p.v||{}).square||'—')+'<br/>'+
+      '<span class="pk">المنطقة:</span> '+esc((p.v||{}).region||'—')+
+      '<div class="pbtns">'+
+        '<a class="go dir" target="_blank" rel="noopener" href="'+dir+'">اتجاهات</a>'+
+        '<a class="go" href="#" onclick="editProp(\''+p.id+'\');return false">تعديل البيانات</a>'+
+      '</div>');
     layer.addLayer(m);
   });
 }
@@ -541,11 +564,13 @@ function drawList(){
   const pl = Object.values(props)
     .filter(p=> !q || p.id.toLowerCase().includes(q) || (p.label||'').toLowerCase().includes(q));
   const phtml = pl.map(p=>
-    '<button class="card" type="button" style="border-color:#C77DFF">'+
+    '<button class="card" type="button" style="border-color:#C77DFF" '+
+    'onclick="editProp(\''+p.id+'\')">'+
     '<span class="dot" style="background:#C77DFF"></span>'+
     '<span class="b"><span class="id" style="color:#C77DFF">'+esc(p.id)+'</span>'+
     '<span class="nm">'+esc(p.label||'')+'</span>'+
-    '<span class="mt">مقترح من الميدان · بانتظار الاعتماد</span></span></button>').join('');
+    '<span class="mt">مقترح من الميدان · اضغط للتعديل</span></span>'+
+    '<span class="ar">‹</span></button>').join('');
 
   if(!items.length && !pl.length){
     box.innerHTML='<div class="empty">لا توجد مواقع مطابقة.</div>'; return; }
@@ -1061,8 +1086,25 @@ window.startNew = function(){
   {enableHighAccuracy:true,timeout:12000});
 };
 
-function openNewForm(la,lo,ac,near){
-  const warn = near.length
+const NEW_PHOTOS = ['صورة الشاخصة بأرقامها واضحة (إلزامية)','لقطة عامة للموقع',
+                    'المدخل','نقطة التركيب المقترحة','أي عائق أو ملاحظة'];
+const CO_NEW = 'شركة جديدة — غير مدرجة';
+
+window.editProp = function(id){
+  const rec = props[id]; if(!rec) return;
+  openNewForm(rec.lat, rec.lon, rec.acc, [], id);
+};
+
+function openNewForm(la,lo,ac,near,editId){
+  const rec = editId ? props[editId] : null;
+  const v = (rec && rec.v) || {};
+
+  const warn = editId
+    ? '<div style="background:rgba(199,125,255,.13);border:1px solid #C77DFF;'+
+      'border-radius:10px;padding:12px 14px;margin-bottom:18px;font-size:12px;'+
+      'color:var(--muted);line-height:1.8">تعديل موقع مقترح سبق إرساله. '+
+      'غيّر ما يلزم واحفظ — أو احذفه إن كان أُنشئ بالخطأ.</div>'
+    : near.length
     ? '<div style="background:rgba(232,195,75,.13);border:1px solid var(--amber);'+
       'border-radius:10px;padding:13px 14px;margin-bottom:18px">'+
       '<div style="color:var(--amber);font-weight:800;font-size:13px;margin-bottom:8px">'+
@@ -1080,8 +1122,9 @@ function openNewForm(la,lo,ac,near){
       'الأرجح أن هذا موقع غير مسجّل فعلًا.</div>';
 
   document.getElementById('vForm').innerHTML =
-    '<div class="fh"><div class="id" style="color:#C77DFF">موقع مقترح جديد</div>'+
-    '<div class="nm">تسجيل موقع غير موجود في السجل</div>'+
+    '<div class="fh"><div class="id" style="color:#C77DFF">'+
+      (editId ? esc(editId) : 'موقع مقترح جديد')+'</div>'+
+    '<div class="nm">'+(editId ? 'تعديل موقع مقترح' : 'تسجيل موقع غير موجود في السجل')+'</div>'+
     '<div class="gps">الإحداثيات: <b>'+la.toFixed(6)+', '+lo.toFixed(6)+'</b> (دقة '+ac+' م)</div></div>'+
     '<form id="nf" class="wrap">'+ warn +
     '<fieldset><legend>هوية الموقع</legend>'+
@@ -1089,7 +1132,9 @@ function openNewForm(la,lo,ac,near){
     field('نوع الموقع','stype','select',['مخيم','ممر','بوابة','محطة','أخرى'],1)+
     field('رقم المربع','square','text',0,1,'من الشاخصة المثبتة في الموقع')+
     field('رقم الشاخصة','sign','text',0,1)+
-    field('شركة تقديم الخدمة','company','text',0,0)+
+    field('شركة تقديم الخدمة','company','select',(DB.co||[]).concat([CO_NEW]),0,
+      'اختر من القائمة — وإن لم تجدها اختر «شركة جديدة»')+
+    '<div id="coNewBox"></div>'+
     field('عدد الخيام أو الغرف','tents','number',0,0)+
     '</fieldset>'+
     '<fieldset><legend>لماذا ليس في السجل؟</legend>'+
@@ -1098,20 +1143,50 @@ function openNewForm(la,lo,ac,near){
        'تغيّر ترقيم الشاخصة','الشاخصة مفقودة أو غير واضحة','سبب آخر'],1)+
     field('شرح مختصر','why','textarea',0,1)+
     '</fieldset>'+
-    '<fieldset><legend>إثبات إلزامي</legend>'+
+    '<fieldset><legend>الصور</legend>'+
+    '<div style="font-size:11.5px;color:var(--muted);line-height:1.7;margin-bottom:11px">'+
+    'الأولى إلزامية — بها يطابق المكتب الموقع. الباقي اختياري وكل صورة تساعد.</div>'+
     '<div class="pg" id="npg">'+
-    ['صورة الشاخصة بأرقامها واضحة','لقطة عامة للموقع'].map((p,i)=>
-      '<label class="ph" data-i="'+i+'" style="grid-column:span 1"><span class="num">'+(i+1)+'</span>'+
+    NEW_PHOTOS.map(function(p,i){
+      return '<label class="ph" data-i="'+i+'"><span class="num">'+(i+1)+'</span>'+
       '<span class="lbl">'+p+'</span>'+
-      '<input type="file" accept="image/*" capture="environment" data-i="'+i+'"/></label>').join('')+
+      '<input type="file" accept="image/*" capture="environment" data-i="'+i+'"/></label>';
+    }).join('')+
     '</div></fieldset>'+
     '</form>'+
     '<div class="bar">'+
     '<button class="btn s" type="button" id="nback">إلغاء</button>'+
-    '<button class="btn p" type="button" id="nsave">إرسال للاعتماد</button>'+
+    (editId?'<button class="btn s" type="button" id="ndel" '+
+      'style="border-color:var(--red);color:var(--red)">حذف</button>':'')+
+    '<button class="btn p" type="button" id="nsave">'+
+      (editId?'حفظ التعديل':'إرسال للاعتماد')+'</button>'+
     '</div>';
 
-  current = {isNew:true, lat:la, lon:lo, acc:ac, photos:{}};
+  current = {isNew:true, editId:editId||null, lat:la, lon:lo, acc:ac,
+             photos: rec ? Object.assign({}, rec.photos) : {}};
+
+  Object.keys(v).forEach(function(k){
+    const el=document.querySelector('#nf [name="'+k+'"]'); if(el) el.value=v[k];
+  });
+  Object.entries(current.photos).forEach(([i,d])=>paintPhoto(+i,d));
+
+  function coNewBox(){
+    const box=document.getElementById('coNewBox');
+    const selEl=document.querySelector('#nf [name="company"]');
+    if(!box||!selEl) return;
+    if(selEl.value===CO_NEW){
+      if(!box.innerHTML){
+        box.innerHTML=field('اسم الشركة الجديدة','company_new','text',0,1,
+          'يصل المكتب كطلب إضافة — ويمكن تصحيحه لاحقًا');
+        const e=document.querySelector('#nf [name="company_new"]');
+        if(e && v.company_new) e.value=v.company_new;
+      }
+    } else box.innerHTML='';
+  }
+  const selEl=document.querySelector('#nf [name="company"]');
+  if(selEl) selEl.onchange=coNewBox;
+  coNewBox();
+
   document.getElementById('npg').addEventListener('change', e=>{
     const inp=e.target; if(!inp.files||!inp.files[0]) return;
     const i=+inp.dataset.i, fr=new FileReader();
@@ -1120,6 +1195,14 @@ function openNewForm(la,lo,ac,near){
   });
   document.getElementById('nback').onclick=()=>show('vList');
   document.getElementById('nsave').onclick=saveNew;
+  const del=document.getElementById('ndel');
+  if(del) del.onclick=async()=>{
+    if(!confirm('حذف هذا الموقع المقترح نهائيًا؟')) return;
+    try{ await window.storage.delete('new:'+editId,false); }catch(e){}
+    delete props[editId];
+    drawMap(); drawList(); drawOut(); drawMgr();
+    toast('تم الحذف'); show('vList');
+  };
   show('vForm');
   document.getElementById('vForm').scrollTop=0;
 }
@@ -1129,21 +1212,30 @@ async function saveNew(){
   f.querySelectorAll('[name]').forEach(el=>{ if(el.value) v[el.name]=el.value; });
   const miss=['region','stype','square','sign','reason','why'].filter(k=>!v[k]);
   if(miss.length){ toast('أكمل الحقول الإلزامية أولًا',1); return; }
+  if(v.company===CO_NEW && !v.company_new){
+    toast('اكتب اسم الشركة الجديدة',1); return; }
   if(!current.photos[0]){ toast('صورة الشاخصة إلزامية للاعتماد',1); return; }
 
+  const editId = current.editId;
   const zi = REGIONS.indexOf(v.region);
   const pre = (v.region||'').includes('عرفات') ? 'ARF' : 'MIN';
-  const n = Object.keys(props).filter(k=>k.includes(pre)).length + 1;
-  const id = 'NEW-'+pre+'-'+String(n).padStart(3,'0');
+  let id = editId;
+  if(!id){
+    const n = Object.keys(props).filter(k=>k.includes(pre)).length + 1;
+    id = 'NEW-'+pre+'-'+String(n).padStart(3,'0');
+  }
+  const prev = props[id] || {};
+  const now = new Date().toISOString().slice(0,16).replace('T',' ');
   const rec = {id, zi:zi<0?0:zi, lat:current.lat, lon:current.lon, acc:current.acc,
     v, photos:current.photos, status:'proposed',
     label:v.region+' — مربع '+v.square+' / شاخصة '+v.sign,
-    date:new Date().toISOString().slice(0,16).replace('T',' ')};
+    date: now, by: me||'غير محدد',
+    log: (prev.log||[]).concat([{d:now, by: me||'غير محدد'}])};
 
   if(!await saveProp(id, rec)) return;
   props[id]=rec;
   drawMap(); drawList(); drawOut(); drawMgr();
-  toast('تم الإرسال — '+id+' بانتظار اعتماد المكتب');
+  toast(editId ? 'تم حفظ التعديل — '+id : 'تم الإرسال — '+id+' بانتظار اعتماد المكتب');
   setTimeout(()=>show('vList'),900);
 }
 function drawMgr(){
