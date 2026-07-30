@@ -1,0 +1,79 @@
+name: Build APK
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Set up Node 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Install Bubblewrap
+        run: npm i -g @bubblewrap/cli
+
+      - name: Bubblewrap config (non-interactive)
+        run: |
+          mkdir -p ~/.bubblewrap
+          printf '{"jdkPath":"%s","androidSdkPath":"%s"}\n' "$JAVA_HOME" "$ANDROID_HOME" > ~/.bubblewrap/config.json
+          cat ~/.bubblewrap/config.json
+
+      - name: Signing key (create once, reuse if committed)
+        run: |
+          if [ ! -f android.keystore ]; then
+            keytool -genkeypair -v -keystore android.keystore -alias nusuk \
+              -keyalg RSA -keysize 2048 -validity 10000 \
+              -storepass nusuk1448 -keypass nusuk1448 \
+              -dname "CN=Nusuk Survey, OU=Field, O=Nusuk, L=Makkah, C=SA"
+            echo "created new keystore"
+          else
+            echo "using keystore from repo"
+          fi
+
+      - name: Generate Android project
+        env:
+          BUBBLEWRAP_KEYSTORE_PASSWORD: nusuk1448
+          BUBBLEWRAP_KEY_PASSWORD: nusuk1448
+        run: bubblewrap update --skipVersionUpgrade
+
+      - name: Build signed APK
+        env:
+          BUBBLEWRAP_KEYSTORE_PASSWORD: nusuk1448
+          BUBBLEWRAP_KEY_PASSWORD: nusuk1448
+        run: bubblewrap build --skipPwaValidation
+
+      - name: Assetlinks file (removes the URL bar later)
+        run: |
+          FP=$(keytool -list -v -keystore android.keystore -alias nusuk -storepass nusuk1448 \
+               | grep 'SHA256:' | head -1 | sed 's/.*SHA256: //')
+          echo "SHA256 fingerprint: $FP"
+          printf '[{"relation":["delegate_permission/common.handle_all_urls"],"target":{"namespace":"android_app","package_name":"com.msafwat.nusuk","sha256_cert_fingerprints":["%s"]}}]\n' "$FP" > assetlinks.json
+          cat assetlinks.json
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: nusuk-apk
+          path: |
+            app-release-signed.apk
+            app-release-bundle.aab
+
+      - name: Upload signing + assetlinks (keep these safe)
+        uses: actions/upload-artifact@v4
+        with:
+          name: signing-and-assetlinks
+          path: |
+            android.keystore
+            assetlinks.json
