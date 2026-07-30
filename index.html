@@ -947,7 +947,7 @@ window.addEventListener('error', function(e){
 <div id="app">
   <header>
     <div class="t">
-      <div class="eyebrow">قارئات نُسُك ١٤٤٨هـ <span style="color:var(--muted);letter-spacing:0;font-weight:600">· نسخة 5863440b</span></div>
+      <div class="eyebrow">قارئات نُسُك ١٤٤٨هـ <span style="color:var(--muted);letter-spacing:0;font-weight:600">· نسخة fb-p1</span></div>
       <h1 id="ttl">المسح الميداني</h1>
     </div>
     <button class="pill" id="modeBtn" type="button">المسح</button>
@@ -1216,7 +1216,13 @@ let current = null;
 
 async function loadMe(){
   try{ const r=await window.storage.get('me',false); if(r) me=r.value; }catch(e){}
-  if(!me){ askMe(true); } else { $('#meBtn').textContent = me; }
+  if(me){ $('#meBtn').textContent = me; }
+  window.__setMe = function(n){
+    if(!n) return;
+    me = String(n).trim();
+    try{ window.storage.set('me', me, false); }catch(e){}
+    try{ $('#meBtn').textContent = me; }catch(e){}
+  };
 }
 async function askMe(first){
   const v = prompt(first?'اكتب اسمك — سيُسجَّل مع كل مسح تحفظه:':'تعديل اسم الفني:', me||'');
@@ -2887,6 +2893,194 @@ $('#thBtn').onclick=()=>setTheme(curTheme==='light'?'dark':'light');
   map.fitBounds(L.latLngBounds(DB.d.map(r=>[r[5],r[6]])).pad(.06));
   locate();
 })();
+</script>
+
+<!-- NSK-FB phase1=auth+users:DONE v1 2026-07-31 | phase2=records-sync:PENDING | phase3=events-feed:PENDING -->
+<style id="fbGateCss">
+#fbGate{position:fixed;inset:0;z-index:99999;display:flex;align-items:center;justify-content:center;background:var(--cream,#17251F);font-family:var(--ar,Tahoma,sans-serif);direction:rtl}
+#fbGate .card{width:min(92vw,360px);background:rgba(128,128,128,.07);border:1px solid var(--line,rgba(201,162,75,.3));border-radius:16px;padding:26px 22px;box-shadow:0 12px 40px rgba(0,0,0,.35)}
+#fbGate h2{margin:0 0 4px;color:var(--gold,#C9A24B);font-size:20px}
+#fbGate .sub{color:var(--grey,#95A39C);font-size:12.5px;margin-bottom:18px}
+#fbGate input{width:100%;box-sizing:border-box;margin-bottom:10px;padding:11px 12px;border-radius:10px;border:1px solid var(--line,#555);background:transparent;color:var(--ink,#F2EFE6);font:inherit;font-size:15px}
+#fbGate input:focus{outline:none;border-color:var(--gold,#C9A24B)}
+#fbGate button{width:100%;padding:12px;border:none;border-radius:10px;background:var(--gold,#C9A24B);color:#111;font:inherit;font-weight:700;font-size:15px;cursor:pointer}
+#fbGate button:disabled{opacity:.55}
+#fbGate .msg{min-height:18px;margin-top:10px;font-size:12.5px;color:#E05252;text-align:center;white-space:pre-wrap;word-break:break-all}
+#fbGate .msg.ok{color:var(--green,#3AD6A0)}
+#fbAcct{position:fixed;inset:0;z-index:99998;display:none;align-items:flex-start;justify-content:center;background:rgba(0,0,0,.45);direction:rtl;font-family:var(--ar,Tahoma,sans-serif)}
+#fbAcct .card{margin-top:10vh;width:min(92vw,360px);background:var(--cream,#17251F);border:1px solid var(--line,#555);border-radius:16px;padding:20px}
+#fbAcct h3{margin:0 0 2px;color:var(--ink,#F2EFE6);font-size:16px}
+#fbAcct .role{color:var(--grey,#95A39C);font-size:12px;margin-bottom:12px}
+#fbAcct input{width:100%;box-sizing:border-box;margin-bottom:8px;padding:10px;border-radius:9px;border:1px solid var(--line,#555);background:transparent;color:var(--ink,#F2EFE6);font:inherit;font-size:14px}
+#fbAcct .btn{width:100%;padding:10px;border:none;border-radius:9px;font:inherit;font-weight:700;cursor:pointer;margin-top:4px}
+#fbAcct .mk{background:var(--green,#3AD6A0);color:#0a2018}
+#fbAcct .out{background:transparent;border:1px solid #E05252;color:#E05252;margin-top:12px}
+#fbAcct .cls{background:transparent;border:1px solid var(--line,#555);color:var(--grey,#95A39C);margin-top:8px}
+#fbAcct .m2{min-height:16px;font-size:12px;margin-top:6px;text-align:center;color:var(--grey,#95A39C)}
+#fbAcct .sec{border-top:1px solid var(--line,#555);margin:12px 0 10px;padding-top:10px;color:var(--gold,#C9A24B);font-size:13px;font-weight:700}
+</style>
+<div id="fbGate"><div class="card">
+  <h2>المسح الميداني — نُسُك ١٤٤٨</h2>
+  <div class="sub">سجّل الدخول للمتابعة</div>
+  <input id="fbEmail" type="email" placeholder="البريد الإلكتروني" autocomplete="username" dir="ltr">
+  <input id="fbPass" type="password" placeholder="كلمة المرور" autocomplete="current-password" dir="ltr">
+  <button id="fbGo" type="button">دخول</button>
+  <div class="msg" id="fbMsg">جارٍ التحميل…</div>
+</div></div>
+<div id="fbAcct"><div class="card">
+  <h3 id="fbAName">—</h3><div class="role" id="fbARole">—</div>
+  <div id="fbAdmin" style="display:none">
+    <div class="sec">إضافة مستخدم جديد</div>
+    <input id="nuName" placeholder="الاسم (يظهر مع كل مسح)">
+    <input id="nuEmail" type="email" placeholder="الإيميل" dir="ltr">
+    <input id="nuPass" type="password" placeholder="كلمة مرور (٦+ أحرف)" dir="ltr">
+    <label style="display:flex;gap:8px;align-items:center;color:var(--grey,#95A39C);font-size:12.5px;margin:2px 0 6px"><input type="checkbox" id="nuEng" style="width:auto;margin:0">صلاحية مهندس (كاملة)</label>
+    <button class="btn mk" id="nuGo" type="button">إنشاء الحساب</button>
+    <div class="m2" id="nuMsg"></div>
+  </div>
+  <button class="btn out" id="fbOut" type="button">تسجيل الخروج</button>
+  <button class="btn cls" id="fbCls" type="button">إغلاق</button>
+</div></div>
+<script>
+/* NSK gate bootstrap (non-module): shows gate + offline failsafe if the SDK never loads */
+(function(){
+  var msg=document.getElementById('fbMsg');
+  window.NSKGATE={
+    unlock:function(p){
+      window.NSK_USER=p;
+      var g=document.getElementById('fbGate'); if(g) g.style.display='none';
+      try{
+        if(window.__setMe){ window.__setMe(p.name); }
+        else{
+          var n=p.name, iv=setInterval(function(){ if(window.__setMe){ clearInterval(iv); window.__setMe(n); } },300);
+          setTimeout(function(){ clearInterval(iv); },6000);
+        }
+      }catch(e){}
+      try{ localStorage.setItem('nsk.user', JSON.stringify(p)); }catch(e){}
+      document.dispatchEvent(new CustomEvent('nsk-auth-ready',{detail:p}));
+    },
+    say:function(t,ok){ if(msg){ msg.textContent=t||''; msg.className='msg'+(ok?' ok':''); } }
+  };
+  setTimeout(function(){
+    if(window.NSK_USER || window.__FB_OK) return;
+    try{
+      var c=localStorage.getItem('nsk.user');
+      if(c){ NSKGATE.say('وضع أوفلاين — دخول بالهوية المحفوظة',true); setTimeout(function(){ NSKGATE.unlock(JSON.parse(c)); },600); }
+      else NSKGATE.say('أول تشغيل يحتاج إنترنت لتسجيل الدخول');
+    }catch(e){}
+  },9000);
+})();
+</script>
+<script type="module">
+import { initializeApp, deleteApp } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js";
+import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, signOut, createUserWithEmailAndPassword, setPersistence, browserLocalPersistence } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js";
+import { getFirestore, initializeFirestore, persistentLocalCache, persistentMultipleTabManager, doc, getDoc, setDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js";
+
+window.__FB_OK = true;
+const firebaseConfig = {
+  apiKey: "AIzaSyAo6s6Btxb7Nl1Eam_UBDNQUfUteNBRhMw",
+  authDomain: "project-survey-60600.firebaseapp.com",
+  projectId: "project-survey-60600",
+  storageBucket: "project-survey-60600.firebasestorage.app",
+  messagingSenderId: "526115444274",
+  appId: "1:526115444274:web:949ec1a0f336bafe09ce2b"
+};
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+let db;
+try{ db = initializeFirestore(app, { localCache: persistentLocalCache({ tabManager: persistentMultipleTabManager() }) }); }
+catch(e){ db = getFirestore(app); }
+window.NSKFB = { app, auth, db, config: firebaseConfig };  /* phase-2 sync hooks onto this */
+
+const $g = id => document.getElementById(id);
+const say = (t,ok)=>window.NSKGATE.say(t,ok);
+
+async function profileFor(user){
+  try{
+    const s = await getDoc(doc(db,'users',user.uid));
+    if(s.exists()){
+      const d = s.data();
+      if(d.active === false) return { blocked:'الحساب موقوف — راجع المهندس' };
+      return { uid:user.uid, email:user.email||d.email||'', name:d.name||user.email, role:d.role||'supervisor' };
+    }
+    return { missing:true };
+  }catch(e){
+    try{ const c=JSON.parse(localStorage.getItem('nsk.user')||'null'); if(c && c.uid===user.uid) return c; }catch(_e){}
+    return { err:(e && e.code) || String(e) };
+  }
+}
+
+function arErr(e){
+  const c=(e && e.code)||'';
+  if(/invalid-credential|wrong-password|user-not-found|invalid-email/.test(c)) return 'الإيميل أو كلمة المرور غير صحيحة';
+  if(/too-many-requests/.test(c)) return 'محاولات كتيرة — استنى دقيقة وجرّب تاني';
+  if(/network-request-failed/.test(c)) return 'مفيش إنترنت — الدخول الأول يحتاج اتصال';
+  return 'فشل الدخول: ' + (c||e);
+}
+
+async function afterUser(user){
+  say('جارٍ التحقق من الحساب…', true);
+  const p = await profileFor(user);
+  if(p.blocked){ say(p.blocked); await signOut(auth); return; }
+  if(p.missing){
+    say('الحساب موجود لكن غير مفعّل بعد.' + String.fromCharCode(10) + 'UID: ' + user.uid);
+    const m=$g('fbMsg'); if(m){ m.style.userSelect='text'; }
+    return;
+  }
+  if(p.err){ say('تعذّر قراءة الصلاحيات: ' + p.err); return; }
+  window.NSKGATE.unlock(p);
+  bindAccountPanel(p);
+}
+
+onAuthStateChanged(auth, u=>{
+  if(u){ afterUser(u); }
+  else{
+    say('');
+    try{ localStorage.removeItem('nsk.user'); }catch(e){}
+    const g=$g('fbGate'); if(g) g.style.display='flex';
+  }
+});
+
+$g('fbGo').onclick = async ()=>{
+  const em=$g('fbEmail').value.trim(), pw=$g('fbPass').value;
+  if(!em || !pw){ say('اكتب الإيميل وكلمة المرور'); return; }
+  $g('fbGo').disabled=true; say('جارٍ الدخول…', true);
+  try{ await setPersistence(auth, browserLocalPersistence); await signInWithEmailAndPassword(auth, em, pw); }
+  catch(e){ say(arErr(e)); }
+  finally{ $g('fbGo').disabled=false; }
+};
+$g('fbPass').addEventListener('keydown', e=>{ if(e.key==='Enter') $g('fbGo').click(); });
+
+function bindAccountPanel(p){
+  const acct=$g('fbAcct');
+  $g('fbAName').textContent = p.name;
+  $g('fbARole').textContent = (p.role==='engineer'?'مهندس':'مشرف') + ' · ' + p.email;
+  $g('fbAdmin').style.display = p.role==='engineer' ? 'block' : 'none';
+  const meBtn=document.getElementById('meBtn');
+  if(meBtn){ meBtn.onclick = ()=>{ acct.style.display='flex'; }; }
+  $g('fbCls').onclick = ()=>{ acct.style.display='none'; };
+  $g('fbOut').onclick = async ()=>{ acct.style.display='none'; try{ await signOut(auth); }catch(e){} location.reload(); };
+  $g('nuGo').onclick = async ()=>{
+    const nm=$g('nuName').value.trim(), em=$g('nuEmail').value.trim(), pw=$g('nuPass').value,
+          role=$g('nuEng').checked?'engineer':'supervisor', m=$g('nuMsg');
+    if(!nm || !em || pw.length<6){ m.textContent='اكمل البيانات — كلمة المرور ٦ أحرف على الأقل'; return; }
+    m.textContent='جارٍ الإنشاء…';
+    const app2 = initializeApp(firebaseConfig, 'nu-'+Date.now());
+    try{
+      const cred = await createUserWithEmailAndPassword(getAuth(app2), em, pw);
+      await setDoc(doc(db,'users',cred.user.uid),
+        { email:em, name:nm, role:role, active:true, createdAt:serverTimestamp(), createdBy:p.uid });
+      m.textContent='✓ تم إنشاء حساب ' + nm;
+      $g('nuName').value=''; $g('nuEmail').value=''; $g('nuPass').value=''; $g('nuEng').checked=false;
+    }catch(e){
+      const c=(e && e.code)||'';
+      m.textContent = /email-already-in-use/.test(c) ? 'الإيميل مستخدم قبل كده'
+        : /invalid-email/.test(c) ? 'الإيميل غير صحيح'
+        : /weak-password/.test(c) ? 'كلمة المرور ضعيفة'
+        : 'فشل: ' + (c||e);
+    }finally{ try{ await deleteApp(app2); }catch(e){} }
+  };
+}
 </script>
 </body>
 </html>

@@ -1,5 +1,5 @@
 /* Nusuk Survey — offline shell cache */
-const CACHE = 'nusuk-survey-5863440b';
+const CACHE = 'nusuk-survey-fb-p1';
 const SHELL = [
   './',
   './index.html',
@@ -38,6 +38,12 @@ function fetchWithTimeout(req, ms) {
 self.addEventListener('fetch', function (e) {
   const req = e.request;
   if (req.method !== 'GET') return;
+
+  // Firebase / Google APIs: network only, never cached (auth + live channels)
+  if (req.url.indexOf('googleapis.com') !== -1 || req.url.indexOf('firebaseapp.com') !== -1 || req.url.indexOf('firebaseio.com') !== -1) {
+    e.respondWith(fetch(req).catch(function () { return new Response('', { status: 504 }); }));
+    return;
+  }
 
   // map tiles: network only, never cached
   if (req.url.indexOf('basemaps.cartocdn.com') !== -1) {
