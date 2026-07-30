@@ -735,9 +735,8 @@ nav button:focus-visible{outline:2px solid var(--gold);outline-offset:-2px}
 .card:focus-visible{outline:2px solid var(--gold)}
 .card .dot{width:10px;height:10px;border-radius:50%;flex:0 0 10px}
 .card .b{flex:1;min-width:0}
-.card .id{font-size:11px;color:var(--gold);font-weight:700}
-.card .nm{font-size:13.5px;margin-top:2px;white-space:nowrap;overflow:hidden;
-  text-overflow:ellipsis}
+.card .id{font-size:11px;color:var(--gold);font-weight:700;direction:ltr;unicode-bidi:isolate;display:block;text-align:start;word-break:break-all;line-height:1.4}
+.card .nm{font-size:13.5px;margin-top:3px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;line-height:1.55}
 .card .mt{font-size:10.5px;color:var(--muted);margin-top:3px}
 .card .ar{color:var(--muted);font-size:18px}
 
@@ -907,6 +906,12 @@ table.mg .sid{color:var(--gold);font-weight:700}
   color:var(--cc);font-weight:800;font-size:11.5px;cursor:pointer;font-family:inherit}
 #cBar .cc.on{background:var(--cc);color:#08201A}
 #zBar .n,#cBar .n{opacity:.8;font-weight:700;font-size:10.5px}
+html[data-theme="light"]{
+  --ink:#F2EFE6;--panel:#FFFFFF;--panel2:#EAE5D6;--line:rgba(120,95,35,.32);
+  --gold:#8A6A1F;--cream:#17251F;--muted:#5C6E66;--grey:#95A39C;
+}
+html[data-theme="light"] .leaflet-container{background:#E8E4D8}
+html[data-theme="light"] .leaflet-bar a{background:#fff;color:#333}
 </style>
 <link rel="manifest" href="manifest.webmanifest"/>
 <meta name="theme-color" content="#08201A"/>
@@ -918,6 +923,7 @@ table.mg .sid{color:var(--gold);font-weight:700}
 </head>
 <body>
 <script>
+try{var _th=localStorage.getItem('nsk-theme');if(_th==='light')document.documentElement.dataset.theme='light';}catch(x){}
 window.addEventListener('error', function(e){
   try{
     var d=document.getElementById('bootErr');
@@ -932,12 +938,13 @@ window.addEventListener('error', function(e){
 <div id="app">
   <header>
     <div class="t">
-      <div class="eyebrow">قارئات نُسُك ١٤٤٨هـ <span style="color:var(--muted);letter-spacing:0;font-weight:600">· نسخة 26b65d8b</span></div>
+      <div class="eyebrow">قارئات نُسُك ١٤٤٨هـ <span style="color:var(--muted);letter-spacing:0;font-weight:600">· نسخة 69a6c193</span></div>
       <h1 id="ttl">المسح الميداني</h1>
     </div>
     <button class="pill" id="modeBtn" type="button">المسح</button>
     <button class="pill" id="meBtn" type="button">المشرف</button>
     <button class="pill" id="goBtn" type="button">مواقع</button>
+    <button class="pill" id="thBtn" type="button" title="فاتح / داكن">🌓</button>
   </header>
 
   <main>
@@ -1256,6 +1263,7 @@ const _INERT = {onclick:null,textContent:'',innerHTML:'',value:'',hidden:true,
   focus(){},closest(){return null},remove(){}};
 const $ = s=>document.querySelector(s)||Object.create(_INERT);
 const st = id => (recs[id]||{}).fstat || (PENDING.has(id) ? 'pending' : 'new');
+const nameOf = r => (((recs[r[0]]||{}).fix||{}).name) || r[1];
 const ist = id => (inss[id] && inss[id].status) || 'لم يبدأ';
 const colOf = id => SC[st(id)];
 const slbl  = k  => (appMode==='install' && k==='done') ? 'جاهز للتركيب' : SL[k];
@@ -1269,13 +1277,16 @@ function esc(s){ return String(s??'').replace(/[<>&"]/g,c=>({'<':'&lt;','>':'&gt
 /* ---------------- map ---------------- */
 const map = L.map('map',{preferCanvas:true,zoomControl:false}).setView([21.38,39.92],12);
 L.control.zoom({position:'topleft'}).addTo(map);
-L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',
+const TILES={dark:'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',
+             light:'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png'};
+let curTheme=(document.documentElement.dataset.theme==='light')?'light':'dark';
+const baseTiles=L.tileLayer(TILES[curTheme],
   {maxZoom:19,subdomains:'abcd',attribution:'&copy; OSM, &copy; CARTO'}).addTo(map);
-const cv = L.canvas({padding:.4,tolerance:14});
+const COARSE = !!(window.matchMedia && matchMedia('(pointer:coarse)').matches);
+const cv = L.canvas({padding:.4,tolerance:COARSE?24:14});
 const layer = L.layerGroup().addTo(map);
 let marks = {};
 
-const COARSE = !!(window.matchMedia && matchMedia('(pointer:coarse)').matches);
 function posOf(r){ const l=(recs[r[0]]||{}).loc; return l?[l.a,l.o]:[r[5],r[6]]; }
 window.setFstat = async function(id,k){
   const rec = recs[id] || {status:'draft', v:{}, photos:{}, id:id};
@@ -1437,7 +1448,7 @@ function drawMap(){
     const dir='https://www.google.com/maps/dir/?api=1&destination='+P0[0]+','+P0[1];
     m.bindPopup(
       '<b style="color:#C9A24B">'+esc(r[0])+'</b><br/>'+
-      '<span class="pn">'+esc(r[1])+'</span><br/>'+
+      '<span class="pn">'+esc(nameOf(r))+'</span><br/>'+
       '<span style="color:'+catOf(r).c+';font-weight:800;font-size:11px">'+
         catOf(r).i+' '+catOf(r).l+' — '+szOf(r)+'</span><br/>'+
       kv('الشاخصة', r[9])+
@@ -1479,7 +1490,7 @@ function drawMap(){
         '<a class="go dir" target="_blank" rel="noopener" href="'+dir+'">اتجاهات</a>'+
         '<a class="go" href="#" onclick="editProp(\''+p.id+'\');return false">تعديل البيانات</a>'+
       '</div>');
-    layer.addLayer(m);
+    layer.addLayer(m); marks['p:'+p.id]=m;
   });
   renderMBar();
 }
@@ -1489,6 +1500,37 @@ map.on('zoomend moveend',()=>{
   _zt=setTimeout(()=>{ if(!(map._popup && map._popup.isOpen())) drawMap(); },150);
 });
 map.on('popupclose',()=>{ focusId=null; clearTimeout(_zt); _zt=setTimeout(drawMap,180); });
+/* شبكة أمان للمس: لو رسّام الكانفس فوّت الضغطة (سفاري iOS)، نحسمها هندسيًا */
+let _hadPopup=false;
+map.on('preclick',()=>{ _hadPopup=!!(map._popup && map._popup.isOpen()); });
+function _ptInRing(ll,ring){
+  let x=ll.lng, y=ll.lat, ins=false;
+  for(let i=0,j=ring.length-1;i<ring.length;j=i++){
+    const xi=ring[i].lng, yi=ring[i].lat, xj=ring[j].lng, yj=ring[j].lat;
+    if(((yi>y)!==(yj>y)) && (x < (xj-xi)*(y-yi)/(yj-yi)+xi)) ins=!ins;
+  }
+  return ins;
+}
+map.on('click', e=>{
+  if(moveId) return;
+  if(_hadPopup){ _hadPopup=false; return; }
+  if(map._popup && map._popup.isOpen()) return;
+  const pt=e.containerPoint; let best=null, bestD=1e9;
+  Object.values(marks).forEach(m=>{
+    let dd=null;
+    if(m.getLatLngs){
+      const rr=m.getLatLngs(); const ring=Array.isArray(rr[0])?rr[0]:rr;
+      if(ring.length>2 && _ptInRing(e.latlng,ring))
+        dd = map.latLngToContainerPoint(m.getBounds().getCenter()).distanceTo(pt)*0.05;
+    } else if(m.getLatLng){
+      dd = map.latLngToContainerPoint(m.getLatLng()).distanceTo(pt);
+      if(dd > (COARSE?30:18)) dd=null;
+    }
+    if(dd!=null && dd<bestD){ bestD=dd; best=m; }
+  });
+  window._lastTap={n:Object.keys(marks).length, hit:!!best, d:Math.round(bestD)};
+  if(best) best.openPopup(best.getLatLngs ? e.latlng : undefined);
+});
 let myPos=null;
 function locate(){
   if(!navigator.geolocation) return;
@@ -1512,7 +1554,7 @@ function drawList(){
     && (!cSel || catOf(r).k===cSel)
     && (appMode==='install' ? ['done','draft','blocked'].includes(st(r[0])) : !['draft','blocked'].includes(st(r[0])))
     && (!statusFilter || st(r[0])===statusFilter)
-    && (!q || r[0].toLowerCase().includes(q) || r[1].toLowerCase().includes(q)
+    && (!q || r[0].toLowerCase().includes(q) || (r[1]+' '+nameOf(r)).toLowerCase().includes(q)
            || (r[9]||'').toLowerCase().includes(q)
            || (r[10]||'').toLowerCase().includes(q)))
     .sort((a,b)=> myPos ? dist(a)-dist(b) : a[0].localeCompare(b[0]));
@@ -1578,7 +1620,7 @@ function drawList(){
     '" onclick="(window.appMode===\'install\'?openInstall:openForm)(\''+r[0]+'\')">'+
     '<span class="dot" style="background:'+colOf(r[0])+'"></span>'+
     '<span class="b"><span class="id">'+esc(r[0])+'</span>'+
-    '<span class="nm">'+esc(r[1])+'</span>'+
+    '<span class="nm">'+esc(nameOf(r))+'</span>'+
     ptBadge(r)+
     '<span class="mt">'+catLine(r)+(appMode==='install'
         ? slbl(st(r[0]))+((inss[r[0]]||{}).sched?' · موعد '+esc(inss[r[0]].sched):'')
@@ -1627,6 +1669,7 @@ window.openForm = function(id){
                : isCamp                      ? (coFinal || 'شركة تقديم الخدمة')
                :                               'أمانة العاصمة المقدسة';
   const KNOWN = [
+    ['name','اسم الموقع', current.r[1]],
     ['square','رقم المربع', sq],
     ['sign','رقم الشاخصة', sg],
     ['ptype','تصنيف الحجاج', ptype?('حجاج '+ptype):''],
@@ -1991,7 +2034,7 @@ async function doSave(){
   const rec=current.rec, f=$('#f');
   rec.v={};
   f.querySelectorAll('[name]').forEach(el=>{ if(el.value) rec.v[el.name]=el.value; });
-  rec.site=current.r[1]; rec.work=DB.w[current.r[4]];
+  rec.site=nameOf(current.r); rec.work=DB.w[current.r[4]];
   rec.zone=DB.z[current.r[2]]; rec.type=DB.t[current.r[3]];
   rec.date=new Date().toISOString().slice(0,16).replace('T',' ');
   rec.survey_date=rec.survey_date || rec.date.slice(0,10);
@@ -2387,7 +2430,7 @@ function dl(name,blob){
   a.href=URL.createObjectURL(blob); a.download=name; a.click();
   setTimeout(()=>URL.revokeObjectURL(a.href),4000);
 }
-const FIELD_AR = {ptype:'تصنيف الحجاج',loc:'الإحداثيات المعدّلة',square:'رقم المربع',sign:'رقم الشاخصة',len_m:'الطول (م)',
+const FIELD_AR = {name:'اسم الموقع',ptype:'تصنيف الحجاج',loc:'الإحداثيات المعدّلة',square:'رقم المربع',sign:'رقم الشاخصة',len_m:'الطول (م)',
  wid_m:'العرض (م)',hgt_m:'الارتفاع (م)',tents:'عدد الغرف',gates:'عدد البوابات',
  shared:'بوابة مشتركة',power:'مصدر الكهرباء',pdist:'مسافة الكهرباء (م)',
  cable:'مسار الكابل (م)',
@@ -2676,7 +2719,7 @@ function listExportRows(){
   return items.map(r=>{
     const rec=recs[r[0]]||{}; const P0=posOf(r); const c=catOf(r);
     const p=ptypeOf(r);
-    return [r[0], r[1], c.l, szOf(r), r[21]||'', r[8]||'', r[9]||'',
+    return [r[0], nameOf(r), c.l, szOf(r), r[21]||'', r[8]||'', r[9]||'',
       ((rec.fix||{}).company)||r[10]||'', p?('حجاج '+p):'',
       SL[st(r[0])], rec.by||'', rec.date||'',
       P0[0].toFixed(6)+', '+P0[1].toFixed(6), rec.loc?'نعم':''];
@@ -2812,6 +2855,17 @@ $('#mergeFile').onchange = async ev=>{
   catch(e){ toast('تعذّر قراءة الملف',1); }
   ev.target.value='';
 };
+
+window.setTheme=function(t){
+  curTheme=(t==='light')?'light':'dark';
+  if(curTheme==='light') document.documentElement.dataset.theme='light';
+  else delete document.documentElement.dataset.theme;
+  try{ localStorage.setItem('nsk-theme',curTheme); }catch(e){}
+  baseTiles.setUrl(TILES[curTheme]);
+  const mt=document.querySelector('meta[name="theme-color"]');
+  if(mt) mt.content = curTheme==='light' ? '#F2EFE6' : '#08201A';
+};
+$('#thBtn').onclick=()=>setTheme(curTheme==='light'?'dark':'light');
 
 (async function init(){
   await loadAll(); await loadMe();
