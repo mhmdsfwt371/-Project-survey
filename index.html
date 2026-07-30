@@ -240,7 +240,7 @@ table.mg .sid{color:var(--gold);font-weight:700}
 <div id="app">
   <header>
     <div class="t">
-      <div class="eyebrow">قارئات نُسُك ١٤٤٨هـ <span style="color:var(--muted);letter-spacing:0;font-weight:600">· نسخة ec5667d3</span></div>
+      <div class="eyebrow">قارئات نُسُك ١٤٤٨هـ <span style="color:var(--muted);letter-spacing:0;font-weight:600">· نسخة b1edf9be</span></div>
       <h1 id="ttl">المسح الميداني</h1>
     </div>
     <button class="pill" id="modeBtn" type="button">المسح</button>
@@ -506,8 +506,9 @@ const $ = s=>document.querySelector(s)||Object.create(_INERT);
 const st = id => { const r=recs[id]; if(r) return r.fstat || 'done'; return PENDING.has(id) ? 'pending' : 'new'; };
 const ist = id => (inss[id] && inss[id].status) || 'لم يبدأ';
 const colOf = id => appMode==='install' ? (IC[ist(id)]||'#6E7C77') : SC[st(id)];
-function toast(m,warn){
+function toast(m,warn,color){
   const t=$('#toast'); t.textContent=m; t.className='toast on'+(warn?' warn':'');
+  t.style.background = color || '';
   clearTimeout(t._h); t._h=setTimeout(()=>t.className='toast',1800);
 }
 function esc(s){ return String(s??'').replace(/[<>&"]/g,c=>({'<':'&lt;','>':'&gt;','&':'&amp;','"':'&quot;'}[c])); }
@@ -540,7 +541,8 @@ window.setFstat = async function(id,k){
     recs[id]=rec;
   }
   map.closePopup(); drawMap(); drawList();
-  toast(rec.fstat ? ('الحالة الآن: '+SL[rec.fstat]) : 'رجعت الحالة: لم يُزر');
+  toast(rec.fstat ? ('الحالة الآن: '+SL[rec.fstat]) : 'رجعت الحالة: لم يُزر',
+        0, SC[rec.fstat||'new']);
 };
 let moveId=null;
 window.startMove = function(id){
