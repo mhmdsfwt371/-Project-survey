@@ -947,7 +947,7 @@ window.addEventListener('error', function(e){
 <div id="app">
   <header>
     <div class="t">
-      <div class="eyebrow">قارئات نُسُك ١٤٤٨هـ <span style="color:var(--muted);letter-spacing:0;font-weight:600">· نسخة fb-p1</span></div>
+      <div class="eyebrow">قارئات نُسُك ١٤٤٨هـ <span style="color:var(--muted);letter-spacing:0;font-weight:600">· نسخة fb-p1b</span></div>
       <h1 id="ttl">المسح الميداني</h1>
     </div>
     <button class="pill" id="modeBtn" type="button">المسح</button>
@@ -2895,51 +2895,51 @@ $('#thBtn').onclick=()=>setTheme(curTheme==='light'?'dark':'light');
 })();
 </script>
 
-<!-- NSK-FB phase1=auth+users:DONE v1 2026-07-31 | phase2=records-sync:PENDING | phase3=events-feed:PENDING -->
+<!-- NSK-FB phase1=auth+users:DONE v1b 2026-07-31 | phase2=records-sync:PENDING | phase3=events-feed:PENDING -->
 <style id="fbGateCss">
 #fbGate{position:fixed;inset:0;z-index:99999;display:flex;align-items:center;justify-content:center;background:var(--cream,#17251F);font-family:var(--ar,Tahoma,sans-serif);direction:rtl}
-#fbGate .card{width:min(92vw,360px);background:rgba(128,128,128,.07);border:1px solid var(--line,rgba(201,162,75,.3));border-radius:16px;padding:26px 22px;box-shadow:0 12px 40px rgba(0,0,0,.35)}
-#fbGate h2{margin:0 0 4px;color:var(--gold,#C9A24B);font-size:20px}
-#fbGate .sub{color:var(--grey,#95A39C);font-size:12.5px;margin-bottom:18px}
-#fbGate input{width:100%;box-sizing:border-box;margin-bottom:10px;padding:11px 12px;border-radius:10px;border:1px solid var(--line,#555);background:transparent;color:var(--ink,#F2EFE6);font:inherit;font-size:15px}
+#fbGate .fbC{display:block;width:min(92vw,360px);background:rgba(128,128,128,.07);border:1px solid var(--line,rgba(201,162,75,.3));border-radius:16px;padding:26px 22px;box-shadow:0 12px 40px rgba(0,0,0,.35);text-align:right}
+#fbGate h2{display:block;margin:0 0 4px;color:var(--gold,#C9A24B);font-size:20px;line-height:1.4}
+#fbGate .fbSub{display:block;color:var(--grey,#95A39C);font-size:12.5px;margin-bottom:18px}
+#fbGate input{display:block;width:100%;box-sizing:border-box;margin:0 0 10px;padding:11px 12px;border-radius:10px;border:1px solid var(--line,#555);background:transparent;color:var(--ink,#F2EFE6);font:inherit;font-size:15px}
 #fbGate input:focus{outline:none;border-color:var(--gold,#C9A24B)}
-#fbGate button{width:100%;padding:12px;border:none;border-radius:10px;background:var(--gold,#C9A24B);color:#111;font:inherit;font-weight:700;font-size:15px;cursor:pointer}
-#fbGate button:disabled{opacity:.55}
-#fbGate .msg{min-height:18px;margin-top:10px;font-size:12.5px;color:#E05252;text-align:center;white-space:pre-wrap;word-break:break-all}
-#fbGate .msg.ok{color:var(--green,#3AD6A0)}
+#fbGate #fbGo{display:block;width:100%;padding:12px;border:none;border-radius:10px;background:var(--gold,#C9A24B);color:#111;font:inherit;font-weight:700;font-size:15px;cursor:pointer}
+#fbGate #fbGo:disabled{opacity:.55}
+#fbGate .fbM{display:block;min-height:18px;margin-top:10px;font-size:12.5px;color:#E05252;text-align:center;white-space:pre-wrap;word-break:break-all}
+#fbGate .fbM.fbMok{color:var(--green,#3AD6A0)}
 #fbAcct{position:fixed;inset:0;z-index:99998;display:none;align-items:flex-start;justify-content:center;background:rgba(0,0,0,.45);direction:rtl;font-family:var(--ar,Tahoma,sans-serif)}
-#fbAcct .card{margin-top:10vh;width:min(92vw,360px);background:var(--cream,#17251F);border:1px solid var(--line,#555);border-radius:16px;padding:20px}
-#fbAcct h3{margin:0 0 2px;color:var(--ink,#F2EFE6);font-size:16px}
-#fbAcct .role{color:var(--grey,#95A39C);font-size:12px;margin-bottom:12px}
-#fbAcct input{width:100%;box-sizing:border-box;margin-bottom:8px;padding:10px;border-radius:9px;border:1px solid var(--line,#555);background:transparent;color:var(--ink,#F2EFE6);font:inherit;font-size:14px}
-#fbAcct .btn{width:100%;padding:10px;border:none;border-radius:9px;font:inherit;font-weight:700;cursor:pointer;margin-top:4px}
-#fbAcct .mk{background:var(--green,#3AD6A0);color:#0a2018}
-#fbAcct .out{background:transparent;border:1px solid #E05252;color:#E05252;margin-top:12px}
-#fbAcct .cls{background:transparent;border:1px solid var(--line,#555);color:var(--grey,#95A39C);margin-top:8px}
-#fbAcct .m2{min-height:16px;font-size:12px;margin-top:6px;text-align:center;color:var(--grey,#95A39C)}
-#fbAcct .sec{border-top:1px solid var(--line,#555);margin:12px 0 10px;padding-top:10px;color:var(--gold,#C9A24B);font-size:13px;font-weight:700}
+#fbAcct .fbC{display:block;margin-top:10vh;width:min(92vw,360px);background:var(--cream,#17251F);border:1px solid var(--line,#555);border-radius:16px;padding:20px;text-align:right}
+#fbAcct h3{display:block;margin:0 0 2px;color:var(--ink,#F2EFE6);font-size:16px}
+#fbAcct .fbRole{display:block;color:var(--grey,#95A39C);font-size:12px;margin-bottom:12px}
+#fbAcct input{display:block;width:100%;box-sizing:border-box;margin:0 0 8px;padding:10px;border-radius:9px;border:1px solid var(--line,#555);background:transparent;color:var(--ink,#F2EFE6);font:inherit;font-size:14px}
+#fbAcct .fbB{display:block;width:100%;padding:10px;border:none;border-radius:9px;font:inherit;font-weight:700;cursor:pointer;margin-top:4px;text-align:center}
+#fbAcct .fbMk{background:var(--green,#3AD6A0);color:#0a2018}
+#fbAcct .fbOutB{background:transparent;border:1px solid #E05252;color:#E05252;margin-top:12px}
+#fbAcct .fbClsB{background:transparent;border:1px solid var(--line,#555);color:var(--grey,#95A39C);margin-top:8px}
+#fbAcct .fbM2{display:block;min-height:16px;font-size:12px;margin-top:6px;text-align:center;color:var(--grey,#95A39C)}
+#fbAcct .fbSec{display:block;border-top:1px solid var(--line,#555);margin:12px 0 10px;padding-top:10px;color:var(--gold,#C9A24B);font-size:13px;font-weight:700}
 </style>
-<div id="fbGate"><div class="card">
+<div id="fbGate"><div class="fbC">
   <h2>المسح الميداني — نُسُك ١٤٤٨</h2>
-  <div class="sub">سجّل الدخول للمتابعة</div>
+  <div class="fbSub">سجّل الدخول للمتابعة</div>
   <input id="fbEmail" type="email" placeholder="البريد الإلكتروني" autocomplete="username" dir="ltr">
   <input id="fbPass" type="password" placeholder="كلمة المرور" autocomplete="current-password" dir="ltr">
   <button id="fbGo" type="button">دخول</button>
-  <div class="msg" id="fbMsg">جارٍ التحميل…</div>
+  <div class="fbM" id="fbMsg">جارٍ التحميل…</div>
 </div></div>
-<div id="fbAcct"><div class="card">
-  <h3 id="fbAName">—</h3><div class="role" id="fbARole">—</div>
+<div id="fbAcct"><div class="fbC">
+  <h3 id="fbAName">—</h3><div class="fbRole" id="fbARole">—</div>
   <div id="fbAdmin" style="display:none">
-    <div class="sec">إضافة مستخدم جديد</div>
+    <div class="fbSec">إضافة مستخدم جديد</div>
     <input id="nuName" placeholder="الاسم (يظهر مع كل مسح)">
     <input id="nuEmail" type="email" placeholder="الإيميل" dir="ltr">
     <input id="nuPass" type="password" placeholder="كلمة مرور (٦+ أحرف)" dir="ltr">
     <label style="display:flex;gap:8px;align-items:center;color:var(--grey,#95A39C);font-size:12.5px;margin:2px 0 6px"><input type="checkbox" id="nuEng" style="width:auto;margin:0">صلاحية مهندس (كاملة)</label>
-    <button class="btn mk" id="nuGo" type="button">إنشاء الحساب</button>
-    <div class="m2" id="nuMsg"></div>
+    <button class="fbB fbMk" id="nuGo" type="button">إنشاء الحساب</button>
+    <div class="fbM2" id="nuMsg"></div>
   </div>
-  <button class="btn out" id="fbOut" type="button">تسجيل الخروج</button>
-  <button class="btn cls" id="fbCls" type="button">إغلاق</button>
+  <button class="fbB fbOutB" id="fbOut" type="button">تسجيل الخروج</button>
+  <button class="fbB fbClsB" id="fbCls" type="button">إغلاق</button>
 </div></div>
 <script>
 /* NSK gate bootstrap (non-module): shows gate + offline failsafe if the SDK never loads */
@@ -2959,7 +2959,7 @@ $('#thBtn').onclick=()=>setTheme(curTheme==='light'?'dark':'light');
       try{ localStorage.setItem('nsk.user', JSON.stringify(p)); }catch(e){}
       document.dispatchEvent(new CustomEvent('nsk-auth-ready',{detail:p}));
     },
-    say:function(t,ok){ if(msg){ msg.textContent=t||''; msg.className='msg'+(ok?' ok':''); } }
+    say:function(t,ok){ if(msg){ msg.textContent=t||''; msg.className='fbM'+(ok?' fbMok':''); } }
   };
   setTimeout(function(){
     if(window.NSK_USER || window.__FB_OK) return;
