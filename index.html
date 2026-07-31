@@ -3426,7 +3426,7 @@ window.NSKCORE={
 <button id="dashFab" type="button" style="display:none">📊 لوحة المتابعة</button>
 <div id="nskDash" dir="rtl"><div class="dWrap" id="dWrap"></div></div>
 
-<!-- NSK-FB phase1=auth+users:DONE v1b | phase2=records-sync:DONE | phase3=events-feed:DONE | viewer-dashboard:DONE v2+charts 2026-07-31 | std-lists+sign-format+approvals:DONE | navy-theme+challenges-report:DONE | map-pick+mobile-polish:DONE v3 2026-07-31 -->
+<!-- NSK-FB phase1=auth+users:DONE v1b | phase2=records-sync:DONE | phase3=events-feed:DONE | viewer-dashboard:DONE v2+charts 2026-07-31 | std-lists+sign-format+approvals:DONE | navy-theme+challenges-report:DONE | map-pick+mobile-polish:DONE v3 | user-admin:DONE 2026-07-31 -->
 <style id="fbGateCss">
 #fbGate{position:fixed;inset:0;z-index:99999;display:flex;align-items:center;justify-content:center;background:var(--cream,#0B1730);font-family:var(--ar,Tahoma,sans-serif);direction:rtl}
 #fbGate .fbC{display:block;width:min(92vw,360px);background:rgba(128,128,128,.07);border:1px solid var(--line,rgba(201,162,75,.3));border-radius:16px;padding:26px 22px;box-shadow:0 12px 40px rgba(0,0,0,.35);text-align:right}
@@ -3472,6 +3472,12 @@ window.NSKCORE={
     </select>
     <button class="fbB fbMk" id="nuGo" type="button">إنشاء الحساب</button>
     <div class="fbM2" id="nuMsg"></div>
+    <div class="fbSec" style="display:flex;align-items:center;gap:8px">
+      <span style="flex:1">المستخدمون <span id="uCnt"></span></span>
+      <button id="uRef" type="button" style="border:1px solid var(--line,#555);background:transparent;color:var(--gold,#C9A24B);border-radius:8px;padding:4px 10px;font:inherit;font-size:11.5px;cursor:pointer">تحديث</button>
+    </div>
+    <div id="uList"><div class="fbM2">جارٍ التحميل…</div></div>
+    <div class="fbM2" id="uMsg"></div>
   </div>
   <button class="fbB fbOutB" id="fbOut" type="button">تسجيل الخروج</button>
   <button class="fbB fbClsB" id="fbCls" type="button">إغلاق</button>
@@ -3509,8 +3515,8 @@ window.NSKCORE={
 </script>
 <script type="module">
 import { initializeApp, deleteApp } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js";
-import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, signOut, createUserWithEmailAndPassword, setPersistence, browserLocalPersistence } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js";
-import { getFirestore, initializeFirestore, persistentLocalCache, persistentMultipleTabManager, doc, getDoc, setDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js";
+import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, signOut, createUserWithEmailAndPassword, setPersistence, browserLocalPersistence, sendPasswordResetEmail } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js";
+import { getFirestore, initializeFirestore, persistentLocalCache, persistentMultipleTabManager, doc, getDoc, setDoc, serverTimestamp, collection, getDocs, updateDoc } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js";
 
 window.__FB_OK = true;
 const firebaseConfig = {
@@ -3607,6 +3613,8 @@ function bindAccountPanel(p){
       await setDoc(doc(db,'users',cred.user.uid),
         { email:em, name:nm, role:role, active:true, createdAt:serverTimestamp(), createdBy:p.uid });
       m.textContent='✓ تم إنشاء حساب ' + nm;
+      try{ if(window.NSKSYNC) NSKSYNC.log('إنشاء حساب: '+nm+' — '+(role==='engineer'?'مهندس':role==='viewer'?'وزارة':'مشرف')); }catch(_e){}
+      try{ loadUsers(); }catch(_e){}
       $g('nuName').value=''; $g('nuEmail').value=''; $g('nuPass').value=''; if($g('nuRole')) $g('nuRole').value='supervisor';
     }catch(e){
       const c=(e && e.code)||'';
@@ -3616,6 +3624,96 @@ function bindAccountPanel(p){
         : 'فشل: ' + (c||e);
     }finally{ try{ await deleteApp(app2); }catch(e){} }
   };
+
+  /* ---- إدارة المستخدمين (مهندس فقط) ---- */
+  const ROLE_AR={supervisor:'مشرف',engineer:'مهندس',viewer:'وزارة'};
+  const eh=s=>String(s==null?'':s).replace(/[<>&"]/g,c=>({'<':'&lt;','>':'&gt;','&':'&amp;','"':'&quot;'}[c]));
+  let USERS=[];
+  const uMsg=(t,ok)=>{ const el=$g('uMsg'); if(el){ el.textContent=t||'';
+    el.style.color= ok?'var(--green,#3AD6A0)':'var(--grey,#95A39C)'; } };
+  const actEng=()=>USERS.filter(u=>u.role==='engineer'&&u.active!==false).length;
+  function drawUsers(){
+    const box=$g('uList'); if(!box) return;
+    const c=$g('uCnt'); if(c) c.textContent='('+USERS.length+')';
+    if(!USERS.length){ box.innerHTML='<div class="fbM2">لا يوجد مستخدمون بعد</div>'; return; }
+    box.innerHTML=USERS.map(u=>{
+      const me=u.uid===p.uid, off=u.active===false;
+      return '<div class="uRow'+(off?' uOff':'')+'" data-uid="'+u.uid+'">'+
+        '<div class="uT"><b>'+eh(u.name||'—')+
+        (me?' <span class="uMe">أنت</span>':'')+
+        (off?' <span class="uSt">موقوف</span>':'')+
+        '</b><i>'+eh(u.email||'')+'</i></div>'+
+        '<div class="uA">'+
+        '<select class="uRole"'+(me?' disabled':'')+'>'+
+          ['supervisor','engineer','viewer'].map(r=>
+            '<option value="'+r+'"'+(u.role===r?' selected':'')+'>'+ROLE_AR[r]+'</option>').join('')+
+        '</select>'+
+        '<button type="button" class="uTg"'+(me?' disabled':'')+'>'+(off?'تفعيل':'إيقاف')+'</button>'+
+        '<button type="button" class="uPw" title="إرسال رابط تعيين كلمة مرور جديدة">كلمة المرور</button>'+
+        '</div></div>';
+    }).join('');
+  }
+  async function loadUsers(){
+    uMsg('جارٍ تحميل المستخدمين…');
+    try{
+      const s=await getDocs(collection(db,'users'));
+      USERS=[]; s.forEach(d=>{ const x=d.data()||{};
+        USERS.push({uid:d.id,name:x.name,email:x.email,role:x.role||'supervisor',active:x.active}); });
+      USERS.sort((a,b)=>String(a.name||'').localeCompare(String(b.name||''),'ar'));
+      drawUsers(); uMsg('');
+    }catch(e){ uMsg('تعذّر تحميل المستخدمين: '+((e&&e.code)||e)); }
+  }
+  const uRefBtn=$g('uRef'); if(uRefBtn) uRefBtn.onclick=loadUsers;
+  const uListEl=$g('uList');
+  if(uListEl){
+    uListEl.onclick=async e=>{
+      const row=e.target.closest('.uRow'); if(!row) return;
+      const u=USERS.find(x=>x.uid===row.dataset.uid); if(!u) return;
+      if(e.target.classList.contains('uTg')){
+        if(u.uid===p.uid){ uMsg('لا يمكنك إيقاف حسابك بنفسك'); return; }
+        const toOff=u.active!==false;
+        if(toOff && u.role==='engineer' && actEng()<=1){ uMsg('لا يمكن إيقاف آخر مهندس نشط'); return; }
+        const nm=u.name||u.email;
+        if(!confirm((toOff?'إيقاف حساب ':'تفعيل حساب ')+nm+'؟'+
+          (toOff?String.fromCharCode(10)+'لن يستطيع الدخول أو المزامنة نهائيًا حتى يُعاد تفعيله.':''))) return;
+        try{
+          await updateDoc(doc(db,'users',u.uid),
+            {active:!toOff, updatedAt:serverTimestamp(), updatedBy:p.uid});
+          u.active=!toOff; drawUsers();
+          uMsg(toOff?'✓ تم الإيقاف':'✓ تم التفعيل',1);
+          try{ if(window.NSKSYNC) NSKSYNC.log((toOff?'إيقاف حساب: ':'تفعيل حساب: ')+nm); }catch(_e){}
+        }catch(err){ uMsg('فشل: '+((err&&err.code)||err)); }
+      }
+      else if(e.target.classList.contains('uPw')){
+        if(!u.email){ uMsg('لا يوجد إيميل مسجّل لهذا الحساب'); return; }
+        if(!confirm('إرسال رابط تعيين كلمة مرور جديدة إلى:'+String.fromCharCode(10)+u.email+'؟')) return;
+        try{
+          await sendPasswordResetEmail(auth, u.email);
+          uMsg('✓ أُرسل الرابط إلى '+u.email,1);
+          try{ if(window.NSKSYNC) NSKSYNC.log('إرسال رابط تغيير كلمة مرور: '+(u.name||u.email)); }catch(_e){}
+        }catch(err){ uMsg('فشل الإرسال: '+((err&&err.code)||err)); }
+      }
+    };
+    uListEl.onchange=async e=>{
+      const sel=e.target.closest('select.uRole'); if(!sel) return;
+      const row=e.target.closest('.uRow'); if(!row) return;
+      const u=USERS.find(x=>x.uid===row.dataset.uid); if(!u) return;
+      const nr=sel.value;
+      if(u.uid===p.uid){ sel.value=u.role; uMsg('غيّر دورك من حساب مهندس آخر'); return; }
+      if(u.role==='engineer' && nr!=='engineer' && u.active!==false && actEng()<=1){
+        sel.value=u.role; uMsg('لا يمكن تغيير دور آخر مهندس نشط'); return; }
+      if(!confirm('تغيير دور '+(u.name||u.email)+' إلى «'+ROLE_AR[nr]+'»؟'+
+        String.fromCharCode(10)+'يسري فورًا على الصلاحيات — ويكتمل عنده بعد إعادة الدخول.')){
+        sel.value=u.role; return; }
+      try{
+        await updateDoc(doc(db,'users',u.uid),
+          {role:nr, updatedAt:serverTimestamp(), updatedBy:p.uid});
+        u.role=nr; drawUsers(); uMsg('✓ تم تغيير الدور إلى '+ROLE_AR[nr],1);
+        try{ if(window.NSKSYNC) NSKSYNC.log('تغيير دور: '+(u.name||u.email)+' ← '+ROLE_AR[nr]); }catch(_e){}
+      }catch(err){ sel.value=u.role; uMsg('فشل: '+((err&&err.code)||err)); }
+    };
+  }
+  if(p.role==='engineer'){ loadUsers(); }
 }
 </script>
 <script type="module">
@@ -4084,6 +4182,28 @@ header{padding-top:calc(10px + env(safe-area-inset-top,0px))}
   #coPickOv{align-items:center;padding:22px}
   #coPickOv .cp-box{border-radius:16px;max-height:78vh}
 }
+</style>
+<style id="nskUsrCss">
+#fbAcct .fbC{max-height:86vh;max-height:88dvh;overflow:auto;overscroll-behavior:contain;
+  padding-bottom:calc(20px + env(safe-area-inset-bottom,0px))}
+#fbAcct .uRow{border:1px solid var(--line,#555);border-radius:10px;padding:9px 10px;margin:0 0 8px}
+#fbAcct .uRow.uOff{opacity:.55}
+#fbAcct .uRow .uT{display:flex;justify-content:space-between;gap:8px;align-items:baseline;margin-bottom:7px}
+#fbAcct .uRow .uT b{color:var(--ink,#071120);font-size:13px}
+#fbAcct .uRow .uT i{color:var(--grey,#6F7D92);font-style:normal;font-size:10.5px;direction:ltr;
+  overflow:hidden;text-overflow:ellipsis;max-width:52%}
+#fbAcct .uMe{background:var(--gold,#C9A24B);color:#071120;border-radius:999px;
+  font-size:9.5px;font-weight:800;padding:1px 7px;vertical-align:1px}
+#fbAcct .uSt{color:#E05252;font-size:10px;font-weight:800}
+#fbAcct .uRow .uA{display:flex;gap:6px}
+#fbAcct .uRow select.uRole{flex:1;min-width:0;padding:7px 6px;border-radius:8px;
+  border:1px solid var(--line,#555);background:transparent;color:var(--ink,#071120);
+  font:inherit;font-size:12px}
+#fbAcct .uRow button{border-radius:8px;border:1px solid var(--line,#555);background:transparent;
+  color:var(--ink,#071120);font:inherit;font-size:11.5px;padding:7px 9px;cursor:pointer;white-space:nowrap}
+#fbAcct .uRow button.uTg:not([disabled]){border-color:#E05252;color:#E05252}
+#fbAcct .uRow.uOff button.uTg{border-color:var(--green,#3AD6A0);color:var(--green,#3AD6A0)}
+#fbAcct .uRow button[disabled]{opacity:.4;cursor:default}
 </style>
 </body>
 </html>
