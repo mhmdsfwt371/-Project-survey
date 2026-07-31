@@ -949,7 +949,7 @@ window.addEventListener('error', function(e){
 <div id="app">
   <header>
     <div class="t">
-      <div class="eyebrow">قارئات نُسُك ١٤٤٨هـ <span style="color:var(--muted);letter-spacing:0;font-weight:600">· نسخة V1-final</span></div>
+      <div class="eyebrow">قارئات نُسُك ١٤٤٨هـ <span style="color:var(--muted);letter-spacing:0;font-weight:600">· نسخة V1.1</span></div>
       <h1 id="ttl">المسح الميداني</h1>
     </div>
     <button class="pill" id="modeBtn" type="button">المسح</button>
@@ -3429,7 +3429,7 @@ window.NSKCORE={
 <button id="dashFab" type="button" style="display:none">📊 لوحة المتابعة</button>
 <div id="nskDash" dir="rtl"><div class="dWrap" id="dWrap"></div></div>
 
-<!-- NSK-FB phase1=auth+users:DONE v1b | phase2=records-sync:DONE | phase3=events-feed:DONE | viewer-dashboard:DONE v2+charts 2026-07-31 | std-lists+sign-format+approvals:DONE | navy-theme+challenges-report:DONE | map-pick+mobile-polish:DONE v3 | user-admin+search-filters-activity:DONE | super-admin:DONE role-matrix:v2 remember-me:DONE boss-heal:DONE | black-theme+close-x:DONE x-contrast:fix | panel-dark-unify:v5b | leaflet-dark+early-scheme:v5c | fab-tap+gold:v5d | dash-export-xlsx-pdf:v6 | dashx-clearance:v6a | dx-above-dash:v6b | terms-shakhes-ap:v6c | names-shakhes:v6d | hide-attrib:v6e | ver:V1-final 2026-07-31 -->
+<!-- NSK-FB phase1=auth+users:DONE v1b | phase2=records-sync:DONE | phase3=events-feed:DONE | viewer-dashboard:DONE v2+charts 2026-07-31 | std-lists+sign-format+approvals:DONE | navy-theme+challenges-report:DONE | map-pick+mobile-polish:DONE v3 | user-admin+search-filters-activity:DONE | super-admin:DONE role-matrix:v2 remember-me:DONE boss-heal:DONE | black-theme+close-x:DONE x-contrast:fix | panel-dark-unify:v5b | leaflet-dark+early-scheme:v5c | fab-tap+gold:v5d | dash-export-xlsx-pdf:v6 | dashx-clearance:v6a | dx-above-dash:v6b | terms-shakhes-ap:v6c | names-shakhes:v6d | hide-attrib:v6e | ver:V1-final | evlog:V1.1 2026-07-31 -->
 <style id="fbGateCss">
 #fbGate{position:fixed;inset:0;z-index:99999;display:flex;align-items:center;justify-content:center;background:var(--cream,#101214);font-family:var(--ar,Tahoma,sans-serif);direction:rtl}
 #fbGate .fbC{display:block;width:min(92vw,360px);background:rgba(128,128,128,.07);border:1px solid var(--line,rgba(201,162,75,.3));border-radius:16px;padding:26px 22px;box-shadow:0 12px 40px rgba(0,0,0,.35);text-align:right}
@@ -3919,6 +3919,62 @@ async function applySnap(kind, snap){
 }
 
 const events=[]; window.NSKEVENTS=events;
+/* --- سجل الأحداث: فلاتر (فترة/شاخص/شركة) + تصدير إكسل --- */
+const evF={from:'',to:'',q:'',co:''};
+function escA(s){ return esc2(String(s==null?'':s)).replace(/"/g,'&quot;'); }
+function evIx(){
+  const C=window.NSKCORE, ix={};
+  try{ C.db().d.forEach(function(r){ ix[r[0]]={name:String(r[1]||''),sign:String(r[9]||''),square:String(r[8]||''),co:String(r[10]||'')}; }); }catch(e){}
+  try{ const rc=C.all('recs'); Object.keys(rc).forEach(function(id){ const r=rc[id]||{};
+    const co=(r.company==='أخرى — غير مدرجة')?(r.company_other||'أخرى'):(r.company||'');
+    if(co){ if(!ix[id]) ix[id]={name:'',sign:'',square:'',co:''}; ix[id].co=co; } }); }catch(e){}
+  return ix;
+}
+function evRich(){
+  const ix=evIx();
+  return events.map(function(ev){
+    const m=(ev.txt||'').match(/NSK-[A-Z]+-[A-Z]+-\d+/);
+    const s=(m && ix[m[0]])||null;
+    return { t:ev.t, by:ev.by, role:ev.role, txt:ev.txt, id:m?m[0]:'',
+             name:s?s.name:'', sign:s?s.sign:'', square:s?s.square:'', co:s?s.co:'' };
+  });
+}
+function evFiltered(){
+  let L=evRich();
+  if(evF.from){ const a=new Date(evF.from+'T00:00:00'); L=L.filter(function(e){ return e.t && e.t>=a; }); }
+  if(evF.to){ const b=new Date(evF.to+'T23:59:59'); L=L.filter(function(e){ return e.t && e.t<=b; }); }
+  if(evF.co) L=L.filter(function(e){ return e.co===evF.co; });
+  const q=(evF.q||'').trim().toLowerCase();
+  if(q) L=L.filter(function(e){ return (e.txt+' '+e.by+' '+e.name+' '+e.sign+' '+e.square+' '+e.co).toLowerCase().indexOf(q)>=0; });
+  return L;
+}
+function evPaint(){
+  const box=$i('evList'); if(!box) return;
+  const L=evFiltered();
+  const cnt=$i('evCnt'); if(cnt) cnt.textContent='('+AR(L.length)+' من '+AR(events.length)+')';
+  if(!L.length){ box.innerHTML='<div class="dEv"><div class="dEmpty">لا أحداث ضمن هذه الفلاتر.</div></div>'; return; }
+  let h='<div class="dEv">';
+  L.forEach(function(ev){
+    const t=ev.t?(ev.t.toLocaleDateString('ar-EG',{day:'numeric',month:'numeric'})+' '+fmtT(ev.t)):'—';
+    h+='<div class="e"><time>'+esc2(t)+'</time><b>'+esc2(ev.by)+'</b><span>'+esc2(ev.txt)
+      +(ev.co?(' <i class="evCo">'+esc2(ev.co)+'</i>'):'')+'</span></div>';
+  });
+  box.innerHTML=h+'</div>';
+}
+function evXlsx(){
+  const X=window.XLSX; if(!X){ toast('أداة إكسل غير مُحمّلة',1); return; }
+  const L=evFiltered();
+  if(!L.length){ toast('لا أحداث ضمن الفلاتر للتصدير',1); return; }
+  const rows=[['التاريخ','الوقت','المستخدم','الدور','الحدث','الموقع','الشاخص','المربع','الشركة']];
+  L.forEach(function(e){
+    rows.push([ e.t?e.t.toLocaleDateString('ar-EG'):'', e.t?fmtT(e.t):'', e.by, e.role, e.txt, e.name, e.sign, e.square, e.co ]);
+  });
+  const wb=X.utils.book_new(); wb.Workbook={Views:[{RTL:true}]};
+  const ws=X.utils.aoa_to_sheet(rows);
+  ws['!cols']=[{wch:11},{wch:8},{wch:18},{wch:9},{wch:42},{wch:38},{wch:12},{wch:10},{wch:26}];
+  X.utils.book_append_sheet(wb, ws, 'سجل الأحداث');
+  X.writeFile(wb, 'سجل_الأحداث_'+new Date().toISOString().slice(0,10)+'.xlsx');
+}
 function start(){
   if(started || !db || !user) return; started=true; chipIdle();
   ['recs','inss','props','colist'].forEach(function(k){
@@ -4303,22 +4359,34 @@ function render(){
   h+='</tbody></table>';
 
   h+='</section><section class="dSec" data-sec="ev">';
-  h+='<h2>آخر الأحداث ('+AR(events.length)+')</h2>';
-  if(!events.length){ h+='<div class="dEv"><div class="dEmpty">لا توجد أحداث بعد — أول تحديث من الميدان سيظهر هنا فورًا.</div></div>'; }
-  else{
-    h+='<div class="dEv">';
-    events.forEach(function(ev){
-      const t=ev.t?(ev.t.toLocaleDateString('ar-EG',{day:'numeric',month:'numeric'})+' '+fmtT(ev.t)):'—';
-      h+='<div class="e"><time>'+esc2(t)+'</time><b>'+esc2(ev.by)+'</b><span>'+esc2(ev.txt)+'</span></div>';
-    });
-    h+='</div>';
-  }
+  h+='<h2>سجل الأحداث <span id="evCnt" style="font-weight:400;font-size:.75em;color:var(--grey,#9AA1AB)"></span></h2>';
+  (function(){
+    const cos={}; evRich().forEach(function(e){ if(e.co) cos[e.co]=1; });
+    let co='<select id="evCo"><option value="">كل الشركات</option>';
+    Object.keys(cos).sort(function(a,b){ return a.localeCompare(b,'ar'); }).forEach(function(c){
+      co+='<option'+(evF.co===c?' selected':'')+' value="'+escA(c)+'">'+esc2(c)+'</option>'; });
+    co+='</select>';
+    h+='<div class="evCtl">'
+      +'<label>من <input type="date" id="evFrom" value="'+escA(evF.from)+'"></label>'
+      +'<label>إلى <input type="date" id="evTo" value="'+escA(evF.to)+'"></label>'
+      +co
+      +'<input type="search" id="evQ" placeholder="بحث بالشاخص أو الموقع أو المستخدم…" value="'+escA(evF.q)+'">'
+      +'<button type="button" id="evXl" class="dBtn">⬇ Excel</button>'
+      +'</div>';
+  })();
+  h+='<div id="evList"></div>';
   h+='</section>';
   $i('dWrap').innerHTML=h;
   $i('dMap').onclick=function(){ window.NSKDASH.close(); };
   $i('dRef').onclick=function(){ render(); };
   var xb=$i('dChalX'); if(xb) xb.onclick=exportChal;
   var eb=$i('dExp'); if(eb) eb.onclick=dxOpen;
+  var eq=$i('evQ'); if(eq){ var _et; eq.oninput=function(){ clearTimeout(_et); var v=eq.value; _et=setTimeout(function(){ evF.q=v; evPaint(); },220); }; }
+  var ef=$i('evFrom'); if(ef) ef.onchange=function(){ evF.from=ef.value; evPaint(); };
+  var eg=$i('evTo'); if(eg) eg.onchange=function(){ evF.to=eg.value; evPaint(); };
+  var ec=$i('evCo'); if(ec) ec.onchange=function(){ evF.co=ec.value; evPaint(); };
+  var ex=$i('evXl'); if(ex) ex.onclick=evXlsx;
+  evPaint();
   $i('dAcct').onclick=function(){ const a=$i('fbAcct'); if(a) a.style.display='flex'; };
   $i('dTheme').onclick=function(){ const t=document.getElementById('thBtn'); if(t) t.click(); };
 }
@@ -4328,7 +4396,10 @@ window.NSKDASH={
       x.className='nskX'; x.setAttribute('aria-label','إغلاق'); x.textContent='×';
       x.onclick=function(){ window.NSKDASH.close(); }; d.appendChild(x); } },
   close:function(){ $i('nskDash').style.display='none'; },
-  refresh:function(){ const d=$i('nskDash'); if(d && d.style.display==='block') render(); }
+  refresh:function(){ const d=$i('nskDash'); if(!d || d.style.display!=='block') return;
+    const a=document.activeElement;
+    if(a && /^ev(Q|From|To|Co)$/.test(a.id||'')){ evPaint(); return; }
+    render(); }
 };
 $i('dashFab').onclick=function(){ window.NSKDASH.open(); };
 </script>
@@ -4432,6 +4503,12 @@ header{padding-top:calc(10px + env(safe-area-inset-top,0px))}
 #fbGate .fbRm input{display:inline-block;width:auto;margin:0;accent-color:var(--gold,#C9A24B)}
 </style>
 <style id="nskUxCss">
+#nskDash .evCtl{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:6px 0 12px}
+#nskDash .evCtl label{display:flex;align-items:center;gap:6px;color:var(--grey,#9AA1AB);font-size:.85rem}
+#nskDash .evCtl input,#nskDash .evCtl select{background:var(--panel,#141619);color:var(--cream,#F1EDE0);border:1px solid rgba(150,158,172,.25);border-radius:10px;padding:7px 10px;font:inherit;color-scheme:dark}
+#nskDash .evCtl #evQ{flex:1;min-width:180px}
+#nskDash .e .evCo{color:var(--gold,#C9A24B);font-style:normal;font-size:.8em;border:1px solid rgba(201,162,75,.35);border-radius:8px;padding:1px 7px;margin-inline-start:6px;white-space:nowrap}
+body.dxPrint .evCtl{display:none!important}
 .nskX{position:absolute;top:10px;inset-inline-end:10px;width:34px;height:34px;border-radius:50%;
   border:1px solid var(--line,rgba(201,162,75,.24));background:rgba(255,255,255,.05);
   color:var(--cream,#F1EDE0);font-size:20px;line-height:1;padding:0;
