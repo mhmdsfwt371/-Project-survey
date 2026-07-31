@@ -31,6 +31,9 @@ service cloud.firestore {
     // صور المسح والتركيب — مستند لكل لقطة (فُصلت عن السجل لتجاوز حد 1MB)
     match /photos/{id} { allow read: if ok(); allow write: if canW(); }
 
+    // إعدادات مشتركة (الموعد المستهدف للمسح) — الجميع يقرأ، الإدارة تكتب
+    match /settings/{id} { allow read: if ok(); allow write: if mgr(); }
+
     // القائمة الموحّدة للشركات: المدير يضيف ويعتمد — المشرف طلبات فقط
     match /colist/{id} {
       allow read: if ok();
