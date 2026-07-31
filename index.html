@@ -3433,7 +3433,7 @@ window.NSKCORE={
 <button id="dashFab" type="button" style="display:none">📊 لوحة المتابعة</button>
 <div id="nskDash" dir="rtl"><div class="dWrap" id="dWrap"></div></div>
 
-<!-- NSK-FB phase1=auth+users:DONE v1b | phase2=records-sync:DONE | phase3=events-feed:DONE | viewer-dashboard:DONE v2+charts 2026-07-31 | std-lists+sign-format+approvals:DONE | navy-theme+challenges-report:DONE | map-pick+mobile-polish:DONE v3 | user-admin+search-filters-activity:DONE | super-admin:DONE role-matrix:v2 remember-me:DONE boss-heal:DONE | black-theme+close-x:DONE x-contrast:fix | panel-dark-unify:v5b | leaflet-dark+early-scheme:v5c | fab-tap+gold:v5d | dash-export-xlsx-pdf:v6 | dashx-clearance:v6a 2026-07-31 -->
+<!-- NSK-FB phase1=auth+users:DONE v1b | phase2=records-sync:DONE | phase3=events-feed:DONE | viewer-dashboard:DONE v2+charts 2026-07-31 | std-lists+sign-format+approvals:DONE | navy-theme+challenges-report:DONE | map-pick+mobile-polish:DONE v3 | user-admin+search-filters-activity:DONE | super-admin:DONE role-matrix:v2 remember-me:DONE boss-heal:DONE | black-theme+close-x:DONE x-contrast:fix | panel-dark-unify:v5b | leaflet-dark+early-scheme:v5c | fab-tap+gold:v5d | dash-export-xlsx-pdf:v6 | dashx-clearance:v6a | dx-above-dash:v6b 2026-07-31 -->
 <style id="fbGateCss">
 #fbGate{position:fixed;inset:0;z-index:99999;display:flex;align-items:center;justify-content:center;background:var(--cream,#101214);font-family:var(--ar,Tahoma,sans-serif);direction:rtl}
 #fbGate .fbC{display:block;width:min(92vw,360px);background:rgba(128,128,128,.07);border:1px solid var(--line,rgba(201,162,75,.3));border-radius:16px;padding:26px 22px;box-shadow:0 12px 40px rgba(0,0,0,.35);text-align:right}
@@ -4083,7 +4083,7 @@ function dxOpen(){
       +'<button type="button" class="dBtn p" id="dxPdf">PDF — بالرسوم</button>'
       +'</div>'
       +'<p class="dxH">PDF يفتح نافذة الطباعة — اختر منها «حفظ كـ PDF».</p></div>';
-    document.body.appendChild(ov);
+    ($i('nskDash')||document.body).appendChild(ov);
     ov.addEventListener('click',function(e){ if(e.target===ov) ov.hidden=true; });
     ov.querySelector('#dxX').onclick=function(){ ov.hidden=true; };
     ov.querySelector('#dxXls').onclick=function(){ var s=dxSel(); if(s.length){ dxXlsx(s); ov.hidden=true; } };
@@ -4487,7 +4487,7 @@ html:not([data-theme="light"]){color-scheme:dark}
   box-shadow:0 4px 16px rgba(0,0,0,.45)}
 #fbSyncChip{bottom:calc(72px + env(safe-area-inset-bottom,0px))}
 /* v6: نافذة تصدير اللوحة */
-#dxOv{position:fixed;inset:0;z-index:9700;background:rgba(0,0,0,.55);
+#dxOv{position:fixed;inset:0;z-index:99990;background:rgba(0,0,0,.55);
   display:flex;align-items:center;justify-content:center;direction:rtl}
 #dxOv[hidden]{display:none}
 #dxOv .dxB{position:relative;width:min(92vw,380px);max-height:86vh;overflow:auto;
