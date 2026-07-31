@@ -949,7 +949,7 @@ window.addEventListener('error', function(e){
 <div id="app">
   <header>
     <div class="t">
-      <div class="eyebrow">قارئات نُسُك ١٤٤٨هـ <span style="color:var(--muted);letter-spacing:0;font-weight:600">· نسخة V1.5</span></div>
+      <div class="eyebrow">قارئات نُسُك ١٤٤٨هـ <span style="color:var(--muted);letter-spacing:0;font-weight:600">· نسخة V1.6</span></div>
       <h1 id="ttl">المسح الميداني</h1>
     </div>
     <button class="pill" id="modeBtn" type="button">المسح</button>
@@ -1537,8 +1537,11 @@ function drawMap(){
   });
   Object.values(props).forEach(p=>{
     const c=SC.proposed;
-    const m=L.circleMarker([p.lat,p.lon],{renderer:cv,radius:8,weight:2.4,color:c,
-      fillColor:c,fillOpacity:.35,dashArray:'4,3'});
+    const sgn=esc((((p.v||{}).sign)||'').trim());
+    const m=L.marker([p.lat,p.lon],{title:'موقع مقترح — '+p.id,
+      icon:L.divIcon({className:'prpPin',
+        html:'<span class="pp-l">مقترح'+(sgn?' · '+sgn:'')+'</span><i></i>',
+        iconSize:[0,0],iconAnchor:[0,0],popupAnchor:[0,-18]})});
     const dir='https://www.google.com/maps/dir/?api=1&destination='+p.lat+','+p.lon;
     m.bindPopup('<b style="color:#C77DFF">موقع مقترح</b><br/>'+
       '<span class="pn">'+esc(p.id)+'</span><br/>'+
@@ -2664,7 +2667,7 @@ function openNewForm(la,lo,ac,near,editId){
     field('السبب','reason','select',
       ['مخيم جديد لم يكن موجودًا','مخيم انقسم إلى أكثر من واحد',
        'تغيّر ترقيم الشاخص','الشاخص مفقود أو غير واضح','سبب آخر'],1)+
-    field('شرح مختصر','why','textarea',0,1)+
+    field('شرح مختصر','why','textarea',0,0,'اختياري — اكتبه فقط لو فيه تفصيلة تساعد المكتب')+
     '</fieldset>'+
     '<fieldset><legend>الصور</legend>'+
     '<div style="font-size:11.5px;color:var(--muted);line-height:1.7;margin-bottom:11px">'+
@@ -2743,7 +2746,7 @@ function openNewForm(la,lo,ac,near,editId){
 async function saveNew(){
   const f=document.getElementById('nf'), v={};
   f.querySelectorAll('[name]').forEach(el=>{ if(el.value) v[el.name]=el.value; });
-  const miss=['region','stype','square','sign','reason','why'].filter(k=>!v[k]);
+  const miss=['region','stype','square','sign','reason'].filter(k=>!v[k]);
   if(miss.length){ toast('أكمل الحقول الإلزامية أولًا',1); return; }
   v.sign=normSign(v.sign); v.square=normSign(v.square);
   try{
@@ -3159,6 +3162,7 @@ function updFab(){
 }
 function show(v){
   document.querySelectorAll('.view').forEach(s=>s.classList.toggle('on',s.id===v));
+  document.body.classList.toggle('nsk-vform', v==='vForm');
   document.querySelectorAll('nav button').forEach(b=>b.classList.toggle('on',b.dataset.v===v));
   if(v==='vMap') setTimeout(()=>map.invalidateSize(),60);
   if(!_nav && v!==_curV){ try{ history.pushState({v:v},''); }catch(e){} }
@@ -4645,6 +4649,18 @@ header{padding-top:calc(10px + env(safe-area-inset-top,0px))}
 body:has(#sheet:not([hidden])) #fab,
 body:has(#sheet:not([hidden])) #dashFab,
 body:has(#sheet:not([hidden])) #fbSyncChip{ display:none!important }
+/* V1.6: شارة المزامنة تختفي داخل شاشة النموذج حتى لا تغطي أزرار الحفظ/الإرسال */
+body.nsk-vform #fbSyncChip,
+body:has(#vForm.on) #fbSyncChip{ display:none!important }
+/* V1.6: دبوس الموقع المقترح — نقطة + لافتة ظاهرة قابلة للضغط تفتح لوحة المعلومات */
+.prpPin{background:none;border:0}
+.prpPin i{position:absolute;left:-8px;top:-8px;width:16px;height:16px;border-radius:50%;
+  background:rgba(199,125,255,.38);border:2.5px dashed #C77DFF;box-sizing:border-box;
+  box-shadow:0 0 0 3px rgba(10,11,13,.5)}
+.prpPin .pp-l{position:absolute;left:0;transform:translateX(-50%);bottom:12px;
+  white-space:nowrap;background:#1A0B26;border:1px solid #C77DFF;color:#E9D5FF;
+  font-weight:800;font-size:11px;line-height:1;border-radius:999px;padding:5px 11px;
+  box-shadow:0 3px 10px rgba(0,0,0,.45);cursor:pointer}
 #nskDash .evCtl{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:6px 0 12px}
 #nskDash .evCtl label{display:flex;align-items:center;gap:6px;color:var(--grey,#9AA1AB);font-size:.85rem}
 #nskDash .evCtl input,#nskDash .evCtl select{background:var(--panel,#141619);color:var(--cream,#F1EDE0);border:1px solid rgba(150,158,172,.25);border-radius:10px;padding:7px 10px;font:inherit;color-scheme:dark}
