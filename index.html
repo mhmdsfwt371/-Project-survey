@@ -949,7 +949,7 @@ window.addEventListener('error', function(e){
 <div id="app">
   <header>
     <div class="t">
-      <div class="eyebrow">قارئات نُسُك ١٤٤٨هـ <span style="color:var(--muted);letter-spacing:0;font-weight:600">· نسخة V1.7</span></div>
+      <div class="eyebrow">قارئات نُسُك ١٤٤٨هـ <span style="color:var(--muted);letter-spacing:0;font-weight:600">· نسخة V1.8</span></div>
       <h1 id="ttl">المسح الميداني</h1>
     </div>
     <button class="pill" id="modeBtn" type="button">المسح</button>
@@ -4336,6 +4336,7 @@ function zN(z){ z=String(z||''); return z.indexOf('عرف')>=0?'عرفات':z.in
 var DXS=[['pace','الوتيرة والهدف'],['over','نظرة عامة (الرسوم الدائرية)'],['inst','التركيب والجدولة'],
  ['daily','معدل التركيب اليومي'],['survey','المسح الميداني'],
  ['chal','التحديات الميدانية'],['reg','حسب المشعر'],
+ ['co','حسب شركة الخدمة'],['stuck','المتعذر والراكد'],
  ['team','إنتاجية الفريق'],['ev','آخر الأحداث']];
 function dxSaved(){ try{ return JSON.parse(localStorage.getItem('nsk.dx')||'null'); }catch(e){ return null; } }
 function dxOpen(){
@@ -4416,6 +4417,13 @@ function dxXlsx(sel){
       r4.push([ev.t?(ev.t.toLocaleDateString('ar-EG')+' '+fmtT(ev.t)):'—', ev.by||'', ev.txt||'']); });
     add('الأحداث',r4,[18,16,60]); }
   var d=new Date(), tag=d.getFullYear()+'-'+('0'+(d.getMonth()+1)).slice(-2)+'-'+('0'+d.getDate()).slice(-2);
+  if(sel.indexOf('co')>-1){ var CO2=coTable();
+    add('حسب الشركة',[['الشركة','المواقع','مُركّب','متعذّر','٪ الإنجاز']].concat(
+      CO2.map(function(m){ return [m.co,m.t,m.ok,m.bad,m.p]; })),[34,10,10,10,12]); }
+  if(sel.indexOf('stuck')>-1){ var SK2=stuckRows();
+    add('المتعذر والراكد',[['النوع','الموقع','المشعر','الحالة','منذ (يوم)','السبب المسجّل']].concat(
+      SK2.bad.map(function(x){ return ['متعذّر',x.n,zN(x.z),'متعذّر',x.d,x.why||'']; }),
+      SK2.stale.map(function(x){ return ['راكد',x.n,zN(x.z),x.st,x.d,'']; })),[10,26,10,14,10,40]); }
   X.writeFile(wb,'تقرير_لوحة_المتابعة_'+tag+'.xlsx');
   try{ if(window.NSKSYNC) NSKSYNC.log('تصدير تقرير اللوحة (Excel) — '+sel.length+' أقسام'); }catch(e){}
 }
@@ -4505,6 +4513,99 @@ function exportChal(){
   X.writeFile(wb,'تقرير_التحديات_الميدانية.xlsx');
   try{toast('تم تصدير تقرير التحديات — '+sites.length.toLocaleString('ar-EG')+' موقعًا');}catch(e){}
 }
+function arS(s){ return String(s==null?'':s).replace(/\d/g,function(d){return '\u0660\u0661\u0662\u0663\u0664\u0665\u0666\u0667\u0668\u0669'[+d];}); }
+function daysSince(ds){
+  if(!/^\d{4}-\d{2}-\d{2}/.test(String(ds||''))) return null;
+  var d=new Date(String(ds).slice(0,10)+'T00:00:00');
+  return Math.max(0,Math.floor((Date.now()-d.getTime())/86400000));
+}
+function coTable(){
+  var C=window.NSKCORE, dbx=C.db(), inss=C.all('inss'), recs=C.all('recs');
+  var M={};
+  dbx.d.forEach(function(r){
+    var id=r[0], fx=((recs[id]||{}).fix)||{};
+    var co=String(fx.company||r[24]||r[10]||'').trim();
+    if(!co) return;
+    var m=M[co]=M[co]||{co:co,t:0,ok:0,bad:0};
+    m.t++;
+    var st=(inss[id]||{}).status||'';
+    if(st==='\u0645\u064f\u0631\u0643\u0651\u0628') m.ok++;
+    else if(st==='\u0645\u062a\u0639\u0630\u0651\u0631') m.bad++;
+  });
+  return Object.keys(M).map(function(k){ var m=M[k]; m.p=pct(m.ok,m.t); return m; })
+    .sort(function(a,b){ return (a.p-b.p)||(b.t-a.t)||a.co.localeCompare(b.co,'ar'); });
+}
+function stuckRows(){
+  var C=window.NSKCORE, dbx=C.db(), inss=C.all('inss'), recs=C.all('recs');
+  var nm={}; dbx.d.forEach(function(r){ nm[r[0]]={n:r[1]||r[0], z:C.szOf(r)}; });
+  var bad=[], stale=[];
+  Object.keys(inss).forEach(function(id){
+    var x=inss[id]||{}, a=daysSince(x.date), b=nm[id]||{n:id,z:''};
+    var rv=((recs[id]||{}).v)||{};
+    var why=x.note||x.why||rv.chal_note||(((recs[id]||{}).chal)||[])[0]||'';
+    if(x.status==='\u0645\u062a\u0639\u0630\u0651\u0631'){
+      bad.push({id:id,n:b.n,z:b.z,d:(a==null?0:a),why:why});
+    } else if((x.status==='\u0645\u062c\u062f\u0648\u0644'||x.status==='\u0642\u064a\u062f \u0627\u0644\u062a\u0631\u0643\u064a\u0628') && a!=null && a>=5){
+      stale.push({id:id,n:b.n,z:b.z,d:a,st:x.status});
+    }
+  });
+  bad.sort(function(a,b){ return b.d-a.d; });
+  stale.sort(function(a,b){ return b.d-a.d; });
+  return {bad:bad, stale:stale};
+}
+function pulseCalc(){
+  var rows=teamRows(), t0=_dk(new Date());
+  var act=0, tot=0, lastT='';
+  rows.forEach(function(u){
+    if(u.by==='\u2014'||!u.last) return;
+    tot++;
+    if(String(u.last).slice(0,10)===t0) act++;
+    if(u.last>lastT) lastT=u.last;
+  });
+  return {act:act, tot:tot, last:lastT?String(lastT).slice(11,16):''};
+}
+function pendProps(){
+  var props=window.NSKCORE.all('props'), n=0, oldest=null;
+  Object.keys(props).forEach(function(k){
+    var p=props[k]||{}; if(p.status!=='proposed') return;
+    n++; var d=daysSince(p.date); if(d!=null && (oldest==null||d>oldest)) oldest=d;
+  });
+  return {n:n, old:oldest};
+}
+function daySummary(){
+  var c=counts(), gd=goalDeadline(), pc=paceCalc(c.total,c.svDone,gd,dailySv(7));
+  var SK=stuckRows(), CO=coTable(), pu=pulseCalc(), pp=pendProps();
+  var t=new Date(), t0=_dk(t), today=0, inssAll=window.NSKCORE.all('inss');
+  Object.keys(inssAll).forEach(function(k){ var r=inssAll[k];
+    if(r.status==='\u0645\u064f\u0631\u0643\u0651\u0628' && String(r.date||'').slice(0,10)===t0) today++; });
+  function dm(s){ s=String(s||''); return s.length>=10 ? arS(s.slice(8,10)+'/'+s.slice(5,7)) : ''; }
+  var L=[];
+  L.push('\ud83d\udcca \u0646\u064f\u0633\u064f\u0643 \u0661\u0664\u0664\u0668 \u2014 \u0645\u0644\u062e\u0635 '+arS(('0'+t.getDate()).slice(-2)+'/'+('0'+(t.getMonth()+1)).slice(-2)+' '+('0'+t.getHours()).slice(-2)+':'+('0'+t.getMinutes()).slice(-2)));
+  L.push('\u0627\u0644\u062a\u0631\u0643\u064a\u0628: \u066a'+arS(pct(c.ok,c.total))+' ('+arS(c.ok)+' \u0645\u0646 '+arS(c.total)+') \u00b7 \u0627\u0644\u064a\u0648\u0645 +'+arS(today));
+  L.push('\u0627\u0644\u0645\u0633\u062d: \u066a'+arS(pct(c.svDone,c.total))+' ('+arS(c.svDone)+') \u00b7 \u0645\u062a\u0628\u0642\u064d '+arS(pc.rem));
+  L.push('\u0645\u062a\u0639\u0630\u0651\u0631: '+arS(SK.bad.length)+(SK.bad.length?' (\u0623\u0642\u062f\u0645\u0647\u0627 '+arS(SK.bad[0].d)+' \u064a\u0648\u0645)':'')+' \u00b7 \u0631\u0627\u0643\u062f \u0665+ \u0623\u064a\u0627\u0645: '+arS(SK.stale.length));
+  L.push('\u0646\u0634\u0627\u0637 \u0627\u0644\u064a\u0648\u0645: '+arS(pu.act)+' \u0645\u0646 '+arS(pu.tot)+' \u0639\u0646\u0635\u0631\u064b\u0627 \u0645\u064a\u062f\u0627\u0646\u064a\u064b\u0627'+(pu.last?' \u00b7 \u0622\u062e\u0631 \u0639\u0645\u0644\u064a\u0629 '+arS(pu.last):''));
+  if(CO.length){
+    var low=CO.slice(0,2).map(function(m){ return m.co+' \u066a'+arS(m.p); }).join('\u060c ');
+    L.push('\u0623\u0642\u0644 \u0627\u0644\u0634\u0631\u0643\u0627\u062a \u0625\u0646\u062c\u0627\u0632\u064b\u0627: '+low);
+  }
+  if(pp.n) L.push('\u0645\u0642\u062a\u0631\u062d\u0627\u062a \u0628\u0627\u0646\u062a\u0638\u0627\u0631 \u0627\u0644\u0627\u0639\u062a\u0645\u0627\u062f: '+arS(pp.n));
+  var fin=pc.finish?dm(_dk(pc.finish)):'';
+  if(fin) L.push('\u0627\u0644\u0627\u0643\u062a\u0645\u0627\u0644 \u0627\u0644\u0645\u062a\u0648\u0642\u0639: '+fin+((gd&&gd.length>=10)?' \u00b7 \u0627\u0644\u0645\u0648\u0639\u062f: '+dm(gd):''));
+  return L.join('\n');
+}
+function copySummary(){
+  var txt=daySummary();
+  function ok(){ try{toast('\u0627\u062a\u0646\u0633\u062e \u0627\u0644\u0645\u0644\u062e\u0635 \u2014 \u0627\u0644\u0635\u0642\u0647 \u0641\u064a \u0627\u0644\u0645\u062d\u0627\u062f\u062b\u0629');}catch(e){}
+    try{ if(window.NSKSYNC) NSKSYNC.log('\u0646\u0633\u062e \u0645\u0644\u062e\u0635 \u0627\u0644\u064a\u0648\u0645 \u0645\u0646 \u0627\u0644\u0644\u0648\u062d\u0629'); }catch(e){} }
+  function legacy(){ try{ var ta=document.createElement('textarea'); ta.value=txt;
+      ta.style.position='fixed'; ta.style.opacity='0'; document.body.appendChild(ta);
+      ta.select(); document.execCommand('copy'); document.body.removeChild(ta); ok(); }
+    catch(e){ try{ prompt('\u0627\u0646\u0633\u062e \u0627\u0644\u0645\u0644\u062e\u0635:',txt); }catch(x){} } }
+  if(navigator.clipboard && navigator.clipboard.writeText){
+    navigator.clipboard.writeText(txt).then(ok,function(){ legacy(); });
+  } else legacy();
+}
 function render(){
   const c=counts();
   let h='';
@@ -4513,8 +4614,15 @@ function render(){
   h+='<button class="dBtn" id="dAcct" type="button">الحساب</button>';
   h+='<button class="dBtn" id="dRef" type="button">تحديث</button>';
   h+='<button class="dBtn" id="dExp" type="button">⬇ تصدير</button>';
+  h+='<button class="dBtn" id="dCopy" type="button">📋 ملخص اليوم</button>';
   h+='<button class="dBtn p" id="dMap" type="button">عرض الخريطة</button></div>';
   h+='<p class="dSub">آخر مزامنة: '+(lastSync?fmtT(lastSync):'—')+' · الأرقام لحظية من الميدان</p>';
+  (function(){ var pu=pulseCalc(), pp=pendProps();
+    h+='<p class="dSub dPulse">نشاط اليوم: <b>'+AR(pu.act)+'</b> من '+AR(pu.tot)+' عنصرًا ميدانيًا'
+      +(pu.last?' · آخر عملية '+arS(pu.last):'')
+      +' &nbsp;·&nbsp; مقترحات بانتظار الاعتماد: <b>'+AR(pp.n)+'</b>'
+      +((pp.n&&pp.old!=null)?' (أقدمها منذ '+AR(pp.old)+' يوم)':'')+'</p>';
+  })();
   h+='<section class="dSec" data-sec="pace">';
   h+='<h2>الوتيرة والهدف</h2>'+paceHtml(c);
   h+='</section><section class="dSec" data-sec="over">';
@@ -4584,6 +4692,49 @@ function render(){
     h+='<div class="dEmpty" style="border:1px dashed var(--line,#3a4a42);border-radius:12px">لا توجد تحديات مسجّلة بعد — تُجمَع تلقائيًا من نماذج المسح فور حفظها.</div>';
   }
 
+  /* V1.8 */
+  (function(){
+    var CO=coTable();
+    h+='</section><section class="dSec" data-sec="co">';
+    h+='<h2>حسب شركة الخدمة — الأقل إنجازًا أولًا</h2>';
+    if(!CO.length){ h+='<div class="dEmpty">لا توجد شركات مرتبطة بالمواقع بعد.</div>'; }
+    else{
+      h+='<table class="dT"><thead><tr><th>الشركة</th><th>المواقع</th><th>مُركّب</th><th>متعذّر</th><th>٪</th><th style="min-width:96px">التقدم</th></tr></thead><tbody>';
+      CO.slice(0,12).forEach(function(m){
+        h+='<tr><td>'+esc2(m.co)+'</td><td>'+AR(m.t)+'</td><td style="color:#3AD6A0;font-weight:700">'+AR(m.ok)+'</td><td style="color:#E05252">'+AR(m.bad)+'</td><td>٪'+AR(m.p)+'</td><td>'+miniBar(m.ok,m.ok,m.t)+'</td></tr>';
+      });
+      h+='</tbody></table>';
+      if(CO.length>12) h+='<div class="dTs">…وباقي '+AR(CO.length-12)+' شركة بنسب أعلى — القائمة كاملة في تصدير الإكسل.</div>';
+    }
+    var SK=stuckRows();
+    h+='</section><section class="dSec" data-sec="stuck">';
+    h+='<h2>المتعذّر والمواقع الراكدة — بالعمر</h2>';
+    h+='<div class="dGrid">';
+    h+=card(SK.bad.length,'متعذّر قائم','#E05252');
+    h+=card(SK.bad.length?SK.bad[0].d:0,'أقدم تعذّر (يوم)','#E05252');
+    h+=card(SK.stale.length,'راكد ٥+ أيام بلا حركة','#E8873A');
+    h+='</div>';
+    if(SK.bad.length){
+      h+='<h2 style="font-size:.95em;margin-top:14px">المتعذّر — الأقدم أولًا</h2>';
+      h+='<table class="dT"><thead><tr><th>الموقع</th><th>المشعر</th><th>منذ (يوم)</th><th>السبب المسجّل</th></tr></thead><tbody>';
+      SK.bad.slice(0,10).forEach(function(x){
+        h+='<tr><td>'+esc2(x.n)+'</td><td>'+zN(x.z)+'</td><td style="color:#E05252;font-weight:700">'+AR(x.d)+'</td><td>'+esc2(x.why||'—')+'</td></tr>';
+      });
+      h+='</tbody></table>';
+      if(SK.bad.length>10) h+='<div class="dTs">…وباقي '+AR(SK.bad.length-10)+' — كاملة في تصدير الإكسل.</div>';
+    }
+    if(SK.stale.length){
+      h+='<h2 style="font-size:.95em;margin-top:14px">راكد — مجدول أو قيد التركيب بلا أي حركة</h2>';
+      h+='<table class="dT"><thead><tr><th>الموقع</th><th>المشعر</th><th>الحالة</th><th>بلا حركة منذ (يوم)</th></tr></thead><tbody>';
+      SK.stale.slice(0,10).forEach(function(x){
+        h+='<tr><td>'+esc2(x.n)+'</td><td>'+zN(x.z)+'</td><td>'+esc2(x.st)+'</td><td style="color:#E8873A;font-weight:700">'+AR(x.d)+'</td></tr>';
+      });
+      h+='</tbody></table>';
+      if(SK.stale.length>10) h+='<div class="dTs">…وباقي '+AR(SK.stale.length-10)+'.</div>';
+    }
+    if(!SK.bad.length && !SK.stale.length) h+='<div class="dEmpty">لا يوجد متعذّر قائم ولا مواقع راكدة — الوضع سليم ✅</div>';
+  })();
+
   h+='</section><section class="dSec" data-sec="reg">';
   h+='<h2>حسب المشعر</h2><table class="dT"><thead><tr><th>المشعر</th><th>المواقع</th><th>دخل الجدولة</th><th>مُركّب</th><th>٪ الإنجاز</th><th style="min-width:96px">التقدم</th></tr></thead><tbody>';
   ['منى','عرفات','مزدلفة'].forEach(function(z){
@@ -4612,6 +4763,7 @@ function render(){
   $i('dRef').onclick=function(){ render(); };
   var xb=$i('dChalX'); if(xb) xb.onclick=exportChal;
   var eb=$i('dExp'); if(eb) eb.onclick=dxOpen;
+  var cpb=$i('dCopy'); if(cpb) cpb.onclick=copySummary;
   var eq=$i('evQ'); if(eq){ var _et; eq.oninput=function(){ clearTimeout(_et); var v=eq.value; _et=setTimeout(function(){ evF.q=v; evPaint(); },220); }; }
   var ef=$i('evFrom'); if(ef) ef.onchange=function(){ evF.from=ef.value; evPaint(); };
   var eg=$i('evTo'); if(eg) eg.onchange=function(){ evF.to=eg.value; evPaint(); };
@@ -4759,6 +4911,7 @@ header{padding-top:calc(10px + env(safe-area-inset-top,0px))}
 #nskDash .dTbl td{padding:8px 10px;border-bottom:1px solid rgba(150,158,172,.12);white-space:nowrap}
 #nskDash .dTbl tr:first-child td{color:var(--gold,#C9A24B);font-weight:700}
 #nskDash .dTs{color:var(--grey,#9AA1AB);font-size:.82em}
+#nskDash .dPulse b{color:var(--gold,#C9A24B)}
 #nskDash .evCb{position:relative}
 #nskDash .evCbBtn{background:var(--panel,#141619);color:var(--cream,#F1EDE0);border:1px solid rgba(150,158,172,.25);border-radius:10px;padding:7px 12px;font:inherit;cursor:pointer;max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 #nskDash .evCbBtn.on{border-color:var(--gold,#C9A24B);color:var(--gold,#C9A24B)}
