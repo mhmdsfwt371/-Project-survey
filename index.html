@@ -952,7 +952,7 @@ window.addEventListener('error', function(e){
 <div id="app">
   <header>
     <div class="t">
-      <div class="eyebrow">قارئات نُسُك ١٤٤٨هـ <span style="color:var(--muted);letter-spacing:0;font-weight:600">· نسخة v3 — التحديات والقوائم</span></div>
+      <div class="eyebrow">قارئات نُسُك ١٤٤٨هـ <span style="color:var(--muted);letter-spacing:0;font-weight:600">· نسخة v4 — سوبر أدمن</span></div>
       <h1 id="ttl">المسح الميداني</h1>
     </div>
     <button class="pill" id="modeBtn" type="button">المسح</button>
@@ -1957,7 +1957,7 @@ window.openForm = function(id){
   if(kn){
     const STDK=['sign','square','company'];
     const KLBL={sign:'رقم الشاخصة', square:'رقم المربع', company:'شركة الخدمة'};
-    const isEng = nskRole()==='engineer';
+    const isEng = nskEng();
     const stdBase = {name:current.r[1], square:sq, sign:sg, company:coFinal};
     function pendPaint(k){
       const row=kn.querySelector('.rv[data-k="'+k+'"]'); if(!row) return;
@@ -2304,6 +2304,7 @@ function metres(a,b,c,d){
 /* ===== NSK-STD: توحيد أسماء الشركات وفورمات الشواخص ===== */
 const cos = {}; window.__cos = cos;
 function nskRole(){ return (window.NSK_USER && NSK_USER.role) || 'supervisor'; }
+function nskEng(){ const r=nskRole(); return r==='engineer'||r==='admin'; }
 function nskBy(){ const u=window.NSK_USER||{}; return u.name||u.email||me||'غير محدد'; }
 function nskNow(){ return new Date().toISOString().slice(0,16).replace('T',' '); }
 function normDigits(s){
@@ -2373,7 +2374,7 @@ async function coRequest(name, site){
   return true;
 }
 async function coAddDirect(name){
-  if(nskRole()!=='engineer'){ toast('إضافة الشركات مباشرة للمهندس فقط',1); return false; }
+  if(!nskEng()){ toast('إضافة الشركات مباشرة للمهندس فقط',1); return false; }
   name=coNorm(name);
   if(!name){ toast('اكتب اسم الشركة أولًا',1); return false; }
   if(coExists(name)==='ok'){ toast('الشركة موجودة بالفعل'); return true; }
@@ -2384,7 +2385,7 @@ async function coAddDirect(name){
   return true;
 }
 window.__coApprove = async function(id){
-  if(nskRole()!=='engineer'){ toast('الاعتماد للمهندس فقط',1); return; }
+  if(!nskEng()){ toast('الاعتماد للمهندس فقط',1); return; }
   const c=cos[id]; if(!c) return;
   await coSave(id, Object.assign({}, c, {st:'ok', okBy:nskBy(), okAt:nskNow()}));
   if(window.NSKSYNC) NSKSYNC.log('اعتماد شركة: '+c.name);
@@ -2392,7 +2393,7 @@ window.__coApprove = async function(id){
   try{ drawPend(); }catch(e){}
 };
 window.__coReject = async function(id){
-  if(nskRole()!=='engineer'){ toast('الرفض للمهندس فقط',1); return; }
+  if(!nskEng()){ toast('الرفض للمهندس فقط',1); return; }
   const c=cos[id]; if(!c) return;
   if(!confirm('رفض وحذف طلب «'+c.name+'»؟')) return;
   delete cos[id];
@@ -2436,7 +2437,7 @@ function coPick(cur, opt, cb){
     };
     ov.querySelector('#cpNewGo').onclick=async function(){
       const inp=ov.querySelector('#cpNewName'), nm=coNorm(inp.value);
-      if(nskRole()==='engineer'){
+      if(nskEng()){
         if(await coAddDirect(nm)){
           inp.value=''; coPickList(); coPickPend();
           if(coExists(nm)==='ok'){ ov.hidden=true; if(__coCb) __coCb(nm); }
@@ -2454,7 +2455,7 @@ function coPick(cur, opt, cb){
   ov.querySelector('#cpSearch').value='';
   ov.querySelector('#cpNewName').value='';
   ov.querySelector('#cpNewGo').textContent =
-    nskRole()==='engineer' ? '＋ إضافة للقائمة' : 'إرسال طلب للمهندس';
+    nskEng() ? '＋ إضافة للقائمة' : 'إرسال طلب للمهندس';
   coPickList(); coPickPend();
   ov.hidden=false;
   setTimeout(function(){ try{ ov.querySelector('#cpSearch').focus(); }catch(e){} },60);
@@ -2472,7 +2473,7 @@ function coPickList(){
 }
 function coPickPend(){
   const ov=document.getElementById('coPickOv'); if(!ov) return;
-  const eng=nskRole()==='engineer', L=coPendList();
+  const eng=nskEng(), L=coPendList();
   ov.querySelector('#cpPend').innerHTML = !L.length ? '' :
     '<div class="cp-ph">طلبات بانتظار اعتماد المهندس</div>'+
     L.map(function(x){
@@ -2486,7 +2487,7 @@ function coPickPend(){
 }
 function drawPend(){
   const box=document.getElementById('pendBox'); if(!box) return;
-  const eng=nskRole()==='engineer';
+  const eng=nskEng();
   const L=coPendList();
   const FR=Object.entries(recs).filter(function(x){
     return x[1] && x[1].fixReq && Object.keys(x[1].fixReq).length;
@@ -3426,7 +3427,7 @@ window.NSKCORE={
 <button id="dashFab" type="button" style="display:none">📊 لوحة المتابعة</button>
 <div id="nskDash" dir="rtl"><div class="dWrap" id="dWrap"></div></div>
 
-<!-- NSK-FB phase1=auth+users:DONE v1b | phase2=records-sync:DONE | phase3=events-feed:DONE | viewer-dashboard:DONE v2+charts 2026-07-31 | std-lists+sign-format+approvals:DONE | navy-theme+challenges-report:DONE | map-pick+mobile-polish:DONE v3 | user-admin+search-filters-activity:DONE 2026-07-31 -->
+<!-- NSK-FB phase1=auth+users:DONE v1b | phase2=records-sync:DONE | phase3=events-feed:DONE | viewer-dashboard:DONE v2+charts 2026-07-31 | std-lists+sign-format+approvals:DONE | navy-theme+challenges-report:DONE | map-pick+mobile-polish:DONE v3 | user-admin+search-filters-activity:DONE | super-admin:DONE 2026-07-31 -->
 <style id="fbGateCss">
 #fbGate{position:fixed;inset:0;z-index:99999;display:flex;align-items:center;justify-content:center;background:var(--cream,#0B1730);font-family:var(--ar,Tahoma,sans-serif);direction:rtl}
 #fbGate .fbC{display:block;width:min(92vw,360px);background:rgba(128,128,128,.07);border:1px solid var(--line,rgba(201,162,75,.3));border-radius:16px;padding:26px 22px;box-shadow:0 12px 40px rgba(0,0,0,.35);text-align:right}
@@ -3539,14 +3540,18 @@ window.NSKFB = { app, auth, db, config: firebaseConfig };  /* phase-2 sync hooks
 const $g = id => document.getElementById(id);
 const say = (t,ok)=>window.NSKGATE.say(t,ok);
 
+const BOSS_EMAIL='mohammed.safwat@afaqy.com';
 async function profileFor(user){
+  const boss = String(user.email||'').toLowerCase()===BOSS_EMAIL;
   try{
     const s = await getDoc(doc(db,'users',user.uid));
     if(s.exists()){
       const d = s.data();
-      if(d.active === false) return { blocked:'الحساب موقوف — راجع المهندس' };
-      return { uid:user.uid, email:user.email||d.email||'', name:d.name||user.email, role:d.role||'supervisor' };
+      if(d.active === false && !boss) return { blocked:'الحساب موقوف — راجع المهندس' };
+      let role = d.role||'supervisor'; if(boss) role='admin';
+      return { uid:user.uid, email:user.email||d.email||'', name:d.name||user.email, role:role };
     }
+    if(boss) return { uid:user.uid, email:user.email||'', name:'Mohamed Safwat', role:'admin' };
     return { missing:true };
   }catch(e){
     try{ const c=JSON.parse(localStorage.getItem('nsk.user')||'null'); if(c && c.uid===user.uid) return c; }catch(_e){}
@@ -3598,8 +3603,19 @@ $g('fbPass').addEventListener('keydown', e=>{ if(e.key==='Enter') $g('fbGo').cli
 function bindAccountPanel(p){
   const acct=$g('fbAcct');
   $g('fbAName').textContent = p.name;
-  $g('fbARole').textContent = (p.role==='engineer'?'مهندس':p.role==='viewer'?'وزارة — متابعة وعرض فقط':'مشرف') + ' · ' + p.email;
-  $g('fbAdmin').style.display = p.role==='engineer' ? 'block' : 'none';
+  $g('fbARole').textContent = (p.role==='admin'?'سوبر أدمن':p.role==='engineer'?'مهندس':p.role==='viewer'?'وزارة — متابعة وعرض فقط':'مشرف') + ' · ' + p.email;
+  $g('fbAdmin').style.display = (p.role==='engineer'||p.role==='admin') ? 'block' : 'none';
+  const nuR=$g('nuRole');
+  if(nuR && !nuR.dataset.tuned){
+    nuR.dataset.tuned='1';
+    if(p.role==='admin'){
+      const o=document.createElement('option');
+      o.value='admin'; o.textContent='سوبر أدمن — إدارة كاملة';
+      nuR.appendChild(o);
+    } else {
+      const oe=nuR.querySelector('option[value="engineer"]'); if(oe) oe.remove();
+    }
+  }
   const meBtn=document.getElementById('meBtn');
   if(meBtn){ meBtn.onclick = ()=>{ acct.style.display='flex'; }; }
   $g('fbCls').onclick = ()=>{ acct.style.display='none'; };
@@ -3615,7 +3631,7 @@ function bindAccountPanel(p){
       await setDoc(doc(db,'users',cred.user.uid),
         { email:em, name:nm, role:role, active:true, createdAt:serverTimestamp(), createdBy:p.uid });
       m.textContent='✓ تم إنشاء حساب ' + nm;
-      try{ if(window.NSKSYNC) NSKSYNC.log('إنشاء حساب: '+nm+' — '+(role==='engineer'?'مهندس':role==='viewer'?'وزارة':'مشرف')); }catch(_e){}
+      try{ if(window.NSKSYNC) NSKSYNC.log('إنشاء حساب: '+nm+' — '+(role==='admin'?'سوبر أدمن':role==='engineer'?'مهندس':role==='viewer'?'وزارة':'مشرف')); }catch(_e){}
       try{ loadUsers(); }catch(_e){}
       $g('nuName').value=''; $g('nuEmail').value=''; $g('nuPass').value=''; if($g('nuRole')) $g('nuRole').value='supervisor';
     }catch(e){
@@ -3628,12 +3644,12 @@ function bindAccountPanel(p){
   };
 
   /* ---- إدارة المستخدمين (مهندس فقط) ---- */
-  const ROLE_AR={supervisor:'مشرف',engineer:'مهندس',viewer:'وزارة'};
+  const ROLE_AR={supervisor:'مشرف',engineer:'مهندس',viewer:'وزارة',admin:'سوبر أدمن'};
   const eh=s=>String(s==null?'':s).replace(/[<>&"]/g,c=>({'<':'&lt;','>':'&gt;','&':'&amp;','"':'&quot;'}[c]));
   let USERS=[]; let uQ=''; let uF='all';
   const uMsg=(t,ok)=>{ const el=$g('uMsg'); if(el){ el.textContent=t||'';
     el.style.color= ok?'var(--green,#3AD6A0)':'var(--grey,#95A39C)'; } };
-  const actEng=()=>USERS.filter(u=>u.role==='engineer'&&u.active!==false).length;
+  const actEng=()=>USERS.filter(u=>(u.role==='engineer'||u.role==='admin')&&u.active!==false).length;
   function uStats(){
     const m={};
     try{
@@ -3651,6 +3667,7 @@ function bindAccountPanel(p){
     const box=$g('uList'); if(!box) return;
     const c=$g('uCnt'); if(c) c.textContent='('+USERS.length+')';
     const F=[['all','الكل',function(u){return true;}],
+             ['admin','أدمن',function(u){return u.role==='admin';}],
              ['supervisor','مشرف',function(u){return u.role==='supervisor';}],
              ['engineer','مهندس',function(u){return u.role==='engineer';}],
              ['viewer','وزارة',function(u){return u.role==='viewer';}],
@@ -3680,19 +3697,23 @@ function bindAccountPanel(p){
         : '<div class="uS">'+(s
             ? s.n+' عملية ميدانية · آخر نشاط '+(s.last? s.last.slice(8,10)+'/'+s.last.slice(5,7) : '—')
             : 'لا نشاط ميداني بعد')+'</div>';
+      const lock = p.role!=='admin' && (u.role==='engineer'||u.role==='admin') && !me;
+      const OPTS = p.role==='admin' ? ['supervisor','engineer','viewer','admin'] : ['supervisor','viewer'];
+      const acts = lock
+        ? '<div class="uA uLock">إدارة حسابات المهندسين والأدمن — للسوبر أدمن فقط</div>'
+        : '<div class="uA">'+
+          '<select class="uRole"'+(me?' disabled':'')+'>'+
+            OPTS.map(function(r){
+              return '<option value="'+r+'"'+(u.role===r?' selected':'')+'>'+ROLE_AR[r]+'</option>'; }).join('')+
+          '</select>'+
+          '<button type="button" class="uTg"'+(me?' disabled':'')+'>'+(off?'تفعيل':'إيقاف')+'</button>'+
+          '<button type="button" class="uPw" title="إرسال رابط تعيين كلمة مرور جديدة">كلمة المرور</button>'+
+          '</div>';
       return '<div class="uRow'+(off?' uOff':'')+'" data-uid="'+u.uid+'">'+
         '<div class="uT"><b>'+eh(u.name||'—')+
         (me?' <span class="uMe">أنت</span>':'')+
         (off?' <span class="uSt">موقوف</span>':'')+
-        '</b><i>'+eh(u.email||'')+'</i></div>'+ stat +
-        '<div class="uA">'+
-        '<select class="uRole"'+(me?' disabled':'')+'>'+
-          ['supervisor','engineer','viewer'].map(function(r){
-            return '<option value="'+r+'"'+(u.role===r?' selected':'')+'>'+ROLE_AR[r]+'</option>'; }).join('')+
-        '</select>'+
-        '<button type="button" class="uTg"'+(me?' disabled':'')+'>'+(off?'تفعيل':'إيقاف')+'</button>'+
-        '<button type="button" class="uPw" title="إرسال رابط تعيين كلمة مرور جديدة">كلمة المرور</button>'+
-        '</div></div>';
+        '</b><i>'+eh(u.email||'')+'</i></div>'+ stat + acts + '</div>';
     }).join('');
   }
   async function loadUsers(){
@@ -3715,10 +3736,12 @@ function bindAccountPanel(p){
     uListEl.onclick=async e=>{
       const row=e.target.closest('.uRow'); if(!row) return;
       const u=USERS.find(x=>x.uid===row.dataset.uid); if(!u) return;
+      const lock = p.role!=='admin' && (u.role==='engineer'||u.role==='admin') && u.uid!==p.uid;
       if(e.target.classList.contains('uTg')){
+        if(lock){ uMsg('إدارة حسابات المهندسين والأدمن للسوبر أدمن فقط'); return; }
         if(u.uid===p.uid){ uMsg('لا يمكنك إيقاف حسابك بنفسك'); return; }
         const toOff=u.active!==false;
-        if(toOff && u.role==='engineer' && actEng()<=1){ uMsg('لا يمكن إيقاف آخر مهندس نشط'); return; }
+        if(toOff && (u.role==='engineer'||u.role==='admin') && actEng()<=1){ uMsg('لا يمكن إيقاف آخر مهندس أو أدمن نشط'); return; }
         const nm=u.name||u.email;
         if(!confirm((toOff?'إيقاف حساب ':'تفعيل حساب ')+nm+'؟'+
           (toOff?String.fromCharCode(10)+'لن يستطيع الدخول أو المزامنة نهائيًا حتى يُعاد تفعيله.':''))) return;
@@ -3731,6 +3754,7 @@ function bindAccountPanel(p){
         }catch(err){ uMsg('فشل: '+((err&&err.code)||err)); }
       }
       else if(e.target.classList.contains('uPw')){
+        if(lock){ uMsg('إدارة حسابات المهندسين والأدمن للسوبر أدمن فقط'); return; }
         if(!u.email){ uMsg('لا يوجد إيميل مسجّل لهذا الحساب'); return; }
         if(!confirm('إرسال رابط تعيين كلمة مرور جديدة إلى:'+String.fromCharCode(10)+u.email+'؟')) return;
         try{
@@ -3745,9 +3769,12 @@ function bindAccountPanel(p){
       const row=e.target.closest('.uRow'); if(!row) return;
       const u=USERS.find(x=>x.uid===row.dataset.uid); if(!u) return;
       const nr=sel.value;
-      if(u.uid===p.uid){ sel.value=u.role; uMsg('غيّر دورك من حساب مهندس آخر'); return; }
-      if(u.role==='engineer' && nr!=='engineer' && u.active!==false && actEng()<=1){
-        sel.value=u.role; uMsg('لا يمكن تغيير دور آخر مهندس نشط'); return; }
+      const lockR = p.role!=='admin' && (u.role==='engineer'||u.role==='admin');
+      if(lockR){ sel.value=u.role; uMsg('إدارة حسابات المهندسين والأدمن للسوبر أدمن فقط'); return; }
+      if(u.uid===p.uid){ sel.value=u.role; uMsg('غيّر دورك من حساب آخر بصلاحية إدارة'); return; }
+      if((u.role==='engineer'||u.role==='admin') && nr!=='engineer' && nr!=='admin'
+         && u.active!==false && actEng()<=1){
+        sel.value=u.role; uMsg('لا يمكن تغيير دور آخر مهندس أو أدمن نشط'); return; }
       if(!confirm('تغيير دور '+(u.name||u.email)+' إلى «'+ROLE_AR[nr]+'»؟'+
         String.fromCharCode(10)+'يسري فورًا على الصلاحيات — ويكتمل عنده بعد إعادة الدخول.')){
         sel.value=u.role; return; }
@@ -3759,7 +3786,7 @@ function bindAccountPanel(p){
       }catch(err){ sel.value=u.role; uMsg('فشل: '+((err&&err.code)||err)); }
     };
   }
-  if(p.role==='engineer'){ loadUsers(); }
+  if(p.role==='engineer'||p.role==='admin'){ loadUsers(); }
 }
 </script>
 <script type="module">
@@ -3869,7 +3896,7 @@ function start(){
     },
     function(e){ console.warn('events',e); });
   if(user.role==='viewer'){ dashAllowed=true; window.NSKDASH.open(); }
-  else if(user.role==='engineer'){ dashAllowed=true; }
+  else if(user.role==='engineer'||user.role==='admin'){ dashAllowed=true; }
   updDashFab();
 }
 function maybe(){ if(user && appReady) start(); }
@@ -4256,6 +4283,8 @@ header{padding-top:calc(10px + env(safe-area-inset-top,0px))}
   border-radius:999px;padding:5px 11px;font:inherit;font-size:11px;font-weight:700;cursor:pointer}
 #fbAcct #uChips button.on{border-color:var(--gold,#C9A24B);color:var(--gold,#C9A24B);background:rgba(201,162,75,.10)}
 #fbAcct .uS{color:var(--grey,#6F7D92);font-size:10.5px;margin:-2px 0 7px}
+#fbAcct .uA.uLock{color:var(--grey,#6F7D92);font-size:10.5px;border:1px dashed var(--line,#555);
+  border-radius:8px;padding:7px 9px}
 </style>
 </body>
 </html>
