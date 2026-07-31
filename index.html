@@ -949,7 +949,7 @@ window.addEventListener('error', function(e){
 <div id="app">
   <header>
     <div class="t">
-      <div class="eyebrow">قارئات نُسُك ١٤٤٨هـ <span style="color:var(--muted);letter-spacing:0;font-weight:600">· نسخة V1.4</span></div>
+      <div class="eyebrow">قارئات نُسُك ١٤٤٨هـ <span style="color:var(--muted);letter-spacing:0;font-weight:600">· نسخة V1.5</span></div>
       <h1 id="ttl">المسح الميداني</h1>
     </div>
     <button class="pill" id="modeBtn" type="button">المسح</button>
@@ -3464,7 +3464,7 @@ window.NSKCORE={
 <button id="dashFab" type="button" style="display:none">📊 لوحة المتابعة</button>
 <div id="nskDash" dir="rtl"><div class="dWrap" id="dWrap"></div></div>
 
-<!-- NSK-FB phase1=auth+users:DONE v1b | phase2=records-sync:DONE | phase3=events-feed:DONE | viewer-dashboard:DONE v2+charts 2026-07-31 | std-lists+sign-format+approvals:DONE | navy-theme+challenges-report:DONE | map-pick+mobile-polish:DONE v3 | user-admin+search-filters-activity:DONE | super-admin:DONE role-matrix:v2 remember-me:DONE boss-heal:DONE | black-theme+close-x:DONE x-contrast:fix | panel-dark-unify:v5b | leaflet-dark+early-scheme:v5c | fab-tap+gold:v5d | dash-export-xlsx-pdf:v6 | dashx-clearance:v6a | dx-above-dash:v6b | terms-shakhes-ap:v6c | names-shakhes:v6d | hide-attrib:v6e | ver:V1-final | evlog:V1.1 | sheet-floaters:V1.2 | evfilters3:V1.3 | catx:V1.4 2026-07-31 -->
+<!-- NSK-FB phase1=auth+users:DONE v1b | phase2=records-sync:DONE | phase3=events-feed:DONE | viewer-dashboard:DONE v2+charts 2026-07-31 | std-lists+sign-format+approvals:DONE | navy-theme+challenges-report:DONE | map-pick+mobile-polish:DONE v3 | user-admin+search-filters-activity:DONE | super-admin:DONE role-matrix:v2 remember-me:DONE boss-heal:DONE | black-theme+close-x:DONE x-contrast:fix | panel-dark-unify:v5b | leaflet-dark+early-scheme:v5c | fab-tap+gold:v5d | dash-export-xlsx-pdf:v6 | dashx-clearance:v6a | dx-above-dash:v6b | terms-shakhes-ap:v6c | names-shakhes:v6d | hide-attrib:v6e | ver:V1-final | evlog:V1.1 | sheet-floaters:V1.2 | evfilters3:V1.3 | catx:V1.4 | photos-split:V1.5 2026-07-31 -->
 <style id="fbGateCss">
 #fbGate{position:fixed;inset:0;z-index:99999;display:flex;align-items:center;justify-content:center;background:var(--cream,#101214);font-family:var(--ar,Tahoma,sans-serif);direction:rtl}
 #fbGate .fbC{display:block;width:min(92vw,360px);background:rgba(128,128,128,.07);border:1px solid var(--line,rgba(201,162,75,.3));border-radius:16px;padding:26px 22px;box-shadow:0 12px 40px rgba(0,0,0,.35);text-align:right}
@@ -3904,9 +3904,18 @@ window.NSKSYNC = {
   push:function(kind,id,rec){
     if(!db || !user || user.role==='viewer') return;
     pendUp++; chipIdle();
-    setDoc(doc(db,kind,String(id)), Object.assign({},rec,{_up:serverTimestamp(),_by:(user.name||user.email||'')}))
+    const body=Object.assign({},rec,{_up:serverTimestamp(),_by:(user.name||user.email||'')});
+    const ph=body.photos; if(ph){ delete body.photos; body.phN=Object.keys(ph).length; }
+    setDoc(doc(db,kind,String(id)), body)
       .then(function(){ pendUp=Math.max(0,pendUp-1); lastSync=new Date(); chipIdle(); })
       .catch(function(e){ pendUp=Math.max(0,pendUp-1); chip('تعذّر الرفع — سيُعاد تلقائيًا',1); setTimeout(chipIdle,4000); console.warn('push',e); });
+    if(ph){ Object.keys(ph).forEach(function(k){
+      const d=String(ph[k]||''); if(!d) return;
+      if(d.length>980000){ console.warn('photo too large for cloud, kept on device:',k); return; }
+      setDoc(doc(db,'photos', kind+'__'+String(id)+'__'+encodeURIComponent(k)),
+        { kind:kind, site:String(id), k:k, d:d, _up:serverTimestamp(), _by:(user.name||user.email||'') })
+        .catch(function(e){ console.warn('photo push',e); });
+    }); }
     window.NSKSYNC.log(evTxt(kind,id,rec));
   },
   del:function(kind,id){
@@ -3935,6 +3944,9 @@ async function applySnap(kind, snap){
     }
     if(ch.doc.metadata.hasPendingWrites) continue;
     const inc = strip(ch.doc.data());
+    if(inc && !inc.photos){ const _loc=C.get(kind,id); if(_loc && _loc.photos) inc.photos=_loc.photos; }
+    const _pb=PHBUF[kind+'|'+id];
+    if(_pb){ inc.photos=Object.assign({}, inc.photos||{}, _pb); delete PHBUF[kind+'|'+id]; }
     if(eq(inc, C.get(kind,id))) continue;
     C.set(kind,id,inc);
     try{ await window.storage.set(KP[kind]+id, JSON.stringify(inc), false); }catch(e){}
@@ -3953,6 +3965,36 @@ async function applySnap(kind, snap){
   } else if(snap.metadata && !snap.metadata.fromCache){ lastSync=new Date(); chipIdle(); }
 }
 
+const PHBUF={};
+async function applyPhotoSnap(snap){
+  const C=window.NSKCORE; if(!C) return;
+  let changed=0;
+  for(const ch of snap.docChanges()){
+    if(ch.type==='removed') continue;
+    if(ch.doc.metadata.hasPendingWrites) continue;
+    const p=ch.doc.data()||{};
+    if(!p.kind || !p.site || !p.k || !p.d) continue;
+    const host=C.get(p.kind, String(p.site));
+    if(!host){
+      const bk=p.kind+'|'+p.site;
+      PHBUF[bk]=PHBUF[bk]||{}; PHBUF[bk][p.k]=p.d;
+      continue;
+    }
+    if((host.photos||{})[p.k]===p.d) continue;
+    host.photos=host.photos||{}; host.photos[p.k]=p.d;
+    C.set(p.kind,String(p.site),host);
+    try{ await window.storage.set(KP[p.kind]+p.site, JSON.stringify(host), false); }catch(e){}
+    changed++;
+  }
+  if(changed){
+    lastSync=new Date(); chipIdle();
+    clearTimeout(applyTimer);
+    applyTimer=setTimeout(function(){
+      C.redraw();
+      if(window.NSKDASH) window.NSKDASH.refresh();
+    },450);
+  }
+}
 const events=[]; window.NSKEVENTS=events;
 /* --- سجل الأحداث: فلاتر (فترة/شاخص/شركة) + تصدير إكسل --- */
 const evF={from:'',to:'',q:'',co:'',reg:'',user:''};
@@ -4069,6 +4111,7 @@ function start(){
       function(s){ applySnap(k,s); },
       function(e){ chip('انقطعت المزامنة — إعادة المحاولة…',1); console.warn('snap '+k,e); });
   });
+  onSnapshot(collection(db,'photos'), function(s){ applyPhotoSnap(s); }, function(e){ console.warn('snap photos',e); });
   onSnapshot(query(collection(db,'events'), orderBy('t','desc'), limit(500)),
     function(s){
       events.length=0;

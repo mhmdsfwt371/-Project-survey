@@ -28,6 +28,9 @@ service cloud.firestore {
     match /inss/{id}  { allow read: if ok(); allow write: if canW(); }
     match /props/{id} { allow read: if ok(); allow write: if canW(); }
 
+    // صور المسح والتركيب — مستند لكل لقطة (فُصلت عن السجل لتجاوز حد 1MB)
+    match /photos/{id} { allow read: if ok(); allow write: if canW(); }
+
     // القائمة الموحّدة للشركات: المدير يضيف ويعتمد — المشرف طلبات فقط
     match /colist/{id} {
       allow read: if ok();
