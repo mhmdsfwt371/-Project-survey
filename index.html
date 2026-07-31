@@ -953,7 +953,7 @@ window.addEventListener('error', function(e){
 <div id="app">
   <header>
     <div class="t">
-      <div class="eyebrow">قارئات نُسُك ١٤٤٨هـ <span style="color:var(--muted);letter-spacing:0;font-weight:600">· نسخة v5 — الثيم الأسود</span></div>
+      <div class="eyebrow">قارئات نُسُك ١٤٤٨هـ <span style="color:var(--muted);letter-spacing:0;font-weight:600">· نسخة v6 — تقارير اللوحة</span></div>
       <h1 id="ttl">المسح الميداني</h1>
     </div>
     <button class="pill" id="modeBtn" type="button">المسح</button>
@@ -3433,7 +3433,7 @@ window.NSKCORE={
 <button id="dashFab" type="button" style="display:none">📊 لوحة المتابعة</button>
 <div id="nskDash" dir="rtl"><div class="dWrap" id="dWrap"></div></div>
 
-<!-- NSK-FB phase1=auth+users:DONE v1b | phase2=records-sync:DONE | phase3=events-feed:DONE | viewer-dashboard:DONE v2+charts 2026-07-31 | std-lists+sign-format+approvals:DONE | navy-theme+challenges-report:DONE | map-pick+mobile-polish:DONE v3 | user-admin+search-filters-activity:DONE | super-admin:DONE role-matrix:v2 remember-me:DONE boss-heal:DONE | black-theme+close-x:DONE x-contrast:fix | panel-dark-unify:v5b | leaflet-dark+early-scheme:v5c | fab-tap+gold:v5d 2026-07-31 -->
+<!-- NSK-FB phase1=auth+users:DONE v1b | phase2=records-sync:DONE | phase3=events-feed:DONE | viewer-dashboard:DONE v2+charts 2026-07-31 | std-lists+sign-format+approvals:DONE | navy-theme+challenges-report:DONE | map-pick+mobile-polish:DONE v3 | user-admin+search-filters-activity:DONE | super-admin:DONE role-matrix:v2 remember-me:DONE boss-heal:DONE | black-theme+close-x:DONE x-contrast:fix | panel-dark-unify:v5b | leaflet-dark+early-scheme:v5c | fab-tap+gold:v5d | dash-export-xlsx-pdf:v6 2026-07-31 -->
 <style id="fbGateCss">
 #fbGate{position:fixed;inset:0;z-index:99999;display:flex;align-items:center;justify-content:center;background:var(--cream,#101214);font-family:var(--ar,Tahoma,sans-serif);direction:rtl}
 #fbGate .fbC{display:block;width:min(92vw,360px);background:rgba(128,128,128,.07);border:1px solid var(--line,rgba(201,162,75,.3));border-radius:16px;padding:26px 22px;box-shadow:0 12px 40px rgba(0,0,0,.35);text-align:right}
@@ -4060,6 +4060,95 @@ function miniBar(sch,ok,total){
   return '<div class="dRB"><i style="width:'+ps+'%;background:rgba(75,201,245,.4)"></i><i style="width:'+po+'%;background:#3AD6A0"></i></div>';
 }
 function zN(z){ z=String(z||''); return z.indexOf('عرف')>=0?'عرفات':z.indexOf('مزد')>=0?'مزدلفة':z.indexOf('من')>=0?'منى':(z||'—'); }
+/* ==== تصدير اللوحة: أقسام مختارة → Excel / PDF ==== */
+var DXS=[['over','نظرة عامة (الرسوم الدائرية)'],['inst','التركيب والجدولة'],
+ ['daily','معدل التركيب اليومي'],['survey','المسح الميداني'],
+ ['chal','التحديات الميدانية'],['reg','حسب المشعر'],['ev','آخر الأحداث']];
+function dxSaved(){ try{ return JSON.parse(localStorage.getItem('nsk.dx')||'null'); }catch(e){ return null; } }
+function dxOpen(){
+  var ov=$i('dxOv');
+  if(!ov){
+    ov=document.createElement('div'); ov.id='dxOv';
+    var saved=dxSaved();
+    var rows=DXS.map(function(s){
+      var on=!saved||saved.indexOf(s[0])>-1;
+      return '<label class="dxR"><input type="checkbox" value="'+s[0]+'"'+(on?' checked':'')+'> '+s[1]+'</label>';
+    }).join('');
+    ov.innerHTML='<div class="dxB">'
+      +'<button type="button" class="nskX" id="dxX" aria-label="إغلاق">×</button>'
+      +'<h3>تصدير تقرير اللوحة</h3>'
+      +'<p class="dxH">اختر الأقسام التي تريدها في التقرير:</p>'+rows
+      +'<div class="dxA">'
+      +'<button type="button" class="dBtn p" id="dxXls">Excel — القيم</button>'
+      +'<button type="button" class="dBtn p" id="dxPdf">PDF — بالرسوم</button>'
+      +'</div>'
+      +'<p class="dxH">PDF يفتح نافذة الطباعة — اختر منها «حفظ كـ PDF».</p></div>';
+    document.body.appendChild(ov);
+    ov.addEventListener('click',function(e){ if(e.target===ov) ov.hidden=true; });
+    ov.querySelector('#dxX').onclick=function(){ ov.hidden=true; };
+    ov.querySelector('#dxXls').onclick=function(){ var s=dxSel(); if(s.length){ dxXlsx(s); ov.hidden=true; } };
+    ov.querySelector('#dxPdf').onclick=function(){ var s=dxSel(); if(s.length){ ov.hidden=true; dxPdf(s); } };
+  }
+  ov.hidden=false;
+}
+function dxSel(){
+  var out=[], ov=$i('dxOv'); if(!ov) return out;
+  ov.querySelectorAll('input[type=checkbox]').forEach(function(c){ if(c.checked) out.push(c.value); });
+  try{ localStorage.setItem('nsk.dx', JSON.stringify(out)); }catch(e){}
+  if(!out.length){ try{ toast('اختر قسمًا واحدًا على الأقل',1); }catch(e){} }
+  return out;
+}
+function dxXlsx(sel){
+  var X=window.XLSX; if(!X||!X.utils){ try{toast('مكتبة الإكسل غير جاهزة',1);}catch(e){} return; }
+  var c=counts(), wb=X.utils.book_new(); wb.Workbook={Views:[{RTL:true}]};
+  function add(name,rows,w){ var ws=X.utils.aoa_to_sheet(rows);
+    if(w) ws['!cols']=w.map(function(x){return {wch:x};});
+    X.utils.book_append_sheet(wb,ws,name); }
+  if(sel.indexOf('over')>-1) add('نظرة عامة',[['الحالة','العدد'],
+    ['مُركّب',c.ok],['قيد التركيب',c.run],['مجدول',c.sch],['متعذّر',c.bad],['لم يُجدول',c.none],
+    ['نسبة التركيب من المشروع','٪'+pct(c.ok,c.total)],
+    ['تم المسح',c.svDone],['متبقٍ للمسح',Math.max(0,c.total-c.svDone)],
+    ['نسبة المسح','٪'+pct(c.svDone,c.total)]],[28,14]);
+  if(sel.indexOf('inst')>-1) add('التركيب والجدولة',[['البند','العدد'],
+    ['إجمالي المواقع',c.total],['دخل الجدولة',c.plan],['مجدول',c.sch],['قيد التركيب',c.run],
+    ['مُركّب',c.ok],['متعذّر',c.bad],['لم يُجدول بعد',c.none],
+    ['٪ مُركّب من المجدول','٪'+pct(c.ok,c.plan)],['٪ مُركّب من الإجمالي','٪'+pct(c.ok,c.total)]],[26,14]);
+  if(sel.indexOf('daily')>-1){ var r1=[['اليوم','عمليات التركيب']];
+    dailyOk(14).forEach(function(d){ r1.push([d.lb,d.v]); }); add('التركيب اليومي',r1,[20,14]); }
+  if(sel.indexOf('survey')>-1) add('المسح الميداني',[['البند','العدد'],
+    ['تم المسح',c.svDone],['صالح للتركيب',c.svFit],['غير مناسب',c.svBad],['مناسب بتعديل',c.svHalf],
+    ['مواقع مقترحة مضافة',c.props],['٪ تقدم المسح','٪'+pct(c.svDone,c.total)]],[24,14]);
+  if(sel.indexOf('chal')>-1){ var r2=[['التحدي','المواقع','منى','عرفات','مزدلفة']];
+    Object.keys(c.chMap).sort(function(a,b){return c.chMap[b].t-c.chMap[a].t;}).forEach(function(n){
+      var m=c.chMap[n]; r2.push([n,m.t,m['منى'],m['عرفات'],m['مزدلفة']]); });
+    r2.push([]); r2.push(['مواقع لديها تحديات',c.chSites]); r2.push(['إجمالي البلاغات',c.chReps]);
+    add('التحديات',r2,[34,10,8,8,8]); }
+  if(sel.indexOf('reg')>-1){ var r3=[['المشعر','المواقع','دخل الجدولة','مُركّب','٪ الإنجاز']];
+    ['منى','عرفات','مزدلفة'].forEach(function(z){ var g=c.reg[z]||{t:0,s:0,o:0};
+      r3.push([z,g.t,g.s,g.o,'٪'+pct(g.o,g.t)]); });
+    add('حسب المشعر',r3,[12,10,12,10,10]); }
+  if(sel.indexOf('ev')>-1){ var r4=[['التاريخ','بواسطة','الحدث']];
+    events.forEach(function(ev){
+      r4.push([ev.t?(ev.t.toLocaleDateString('ar-EG')+' '+fmtT(ev.t)):'—', ev.by||'', ev.txt||'']); });
+    add('الأحداث',r4,[18,16,60]); }
+  var d=new Date(), tag=d.getFullYear()+'-'+('0'+(d.getMonth()+1)).slice(-2)+'-'+('0'+d.getDate()).slice(-2);
+  X.writeFile(wb,'تقرير_لوحة_المتابعة_'+tag+'.xlsx');
+  try{ if(window.NSKSYNC) NSKSYNC.log('تصدير تقرير اللوحة (Excel) — '+sel.length+' أقسام'); }catch(e){}
+}
+function dxPdf(sel){
+  render();
+  document.querySelectorAll('#nskDash .dSec').forEach(function(s){
+    s.classList.toggle('dxHide', sel.indexOf(s.getAttribute('data-sec'))<0);
+  });
+  document.body.classList.add('dxPrint');
+  var done=function(){ document.body.classList.remove('dxPrint');
+    document.querySelectorAll('#nskDash .dSec.dxHide').forEach(function(s){ s.classList.remove('dxHide'); });
+    window.removeEventListener('afterprint',done); };
+  window.addEventListener('afterprint',done);
+  setTimeout(function(){ window.print(); },60);
+  setTimeout(done,120000);
+  try{ if(window.NSKSYNC) NSKSYNC.log('تصدير تقرير اللوحة (PDF) — '+sel.length+' أقسام'); }catch(e){}
+}
 function exportChal(){
   var X=window.XLSX;
   if(!X||!X.utils){ try{toast('مكتبة الإكسل غير جاهزة',1);}catch(e){} return; }
@@ -4139,8 +4228,10 @@ function render(){
   h+='<button class="dBtn" id="dTheme" type="button" title="فاتح / داكن">🌓</button>';
   h+='<button class="dBtn" id="dAcct" type="button">الحساب</button>';
   h+='<button class="dBtn" id="dRef" type="button">تحديث</button>';
+  h+='<button class="dBtn" id="dExp" type="button">⬇ تصدير</button>';
   h+='<button class="dBtn p" id="dMap" type="button">عرض الخريطة</button></div>';
   h+='<p class="dSub">آخر مزامنة: '+(lastSync?fmtT(lastSync):'—')+' · الأرقام لحظية من الميدان</p>';
+  h+='<section class="dSec" data-sec="over">';
 
   h+='<h2>نظرة عامة</h2><div class="dChRow">';
   h+='<div class="dChBox">'+svgDonut([
@@ -4158,6 +4249,7 @@ function render(){
     ])+'</div>';
   h+='</div>';
 
+  h+='</section><section class="dSec" data-sec="inst">';
   h+='<h2>التركيب والجدولة</h2><div class="dGrid">';
   h+=card(c.total,'إجمالي المواقع','var(--gold,#C9A24B)');
   h+=card(c.plan,'دخل الجدولة','#8FD3E8');
@@ -4171,9 +4263,11 @@ function render(){
   h+=barRow('نسبة التركيب من إجمالي المشروع', c.ok, c.total, '#4BC9F5');
 
   var dly=dailyOk(14), hasD=dly.some(function(x){return x.v>0;});
+  h+='</section><section class="dSec" data-sec="daily">';
   h+='<h2>معدل التركيب اليومي — آخر ١٤ يوم</h2>';
   h+='<div class="dCols">'+(hasD? svgCols(dly) : '<div class="dEmpty">لا توجد عمليات تركيب مسجّلة خلال آخر ١٤ يوم — سيظهر الرسم مع أول تركيب.</div>')+'</div>';
 
+  h+='</section><section class="dSec" data-sec="survey">';
   h+='<h2>المسح الميداني</h2><div class="dGrid">';
   h+=card(c.svDone,'تم المسح','#4BC9F5');
   h+=card(c.svFit,'صالح للتركيب','#3AD6A0');
@@ -4182,6 +4276,7 @@ function render(){
   h+='</div>';
   h+=barRow('تقدم المسح من إجمالي المواقع', c.svDone, c.total, '#E8C34B');
 
+  h+='</section><section class="dSec" data-sec="chal">';
   h+='<h2>التحديات الميدانية — إفادة المشرفين</h2><div class="dGrid">';
   h+=card(c.chSites,'مواقع لديها تحديات','#E8873A');
   h+=card(c.svBad,'غير مناسب للتركيب','#E05252');
@@ -4203,6 +4298,7 @@ function render(){
     h+='<div class="dEmpty" style="border:1px dashed var(--line,#3a4a42);border-radius:12px">لا توجد تحديات مسجّلة بعد — تُجمَع تلقائيًا من نماذج المسح فور حفظها.</div>';
   }
 
+  h+='</section><section class="dSec" data-sec="reg">';
   h+='<h2>حسب المشعر</h2><table class="dT"><thead><tr><th>المشعر</th><th>المواقع</th><th>دخل الجدولة</th><th>مُركّب</th><th>٪ الإنجاز</th><th style="min-width:96px">التقدم</th></tr></thead><tbody>';
   ['منى','عرفات','مزدلفة'].forEach(function(z){
     const g=c.reg[z]||{t:0,s:0,o:0};
@@ -4210,6 +4306,7 @@ function render(){
   });
   h+='</tbody></table>';
 
+  h+='</section><section class="dSec" data-sec="ev">';
   h+='<h2>آخر الأحداث ('+AR(events.length)+')</h2>';
   if(!events.length){ h+='<div class="dEv"><div class="dEmpty">لا توجد أحداث بعد — أول تحديث من الميدان سيظهر هنا فورًا.</div></div>'; }
   else{
@@ -4220,10 +4317,12 @@ function render(){
     });
     h+='</div>';
   }
+  h+='</section>';
   $i('dWrap').innerHTML=h;
   $i('dMap').onclick=function(){ window.NSKDASH.close(); };
   $i('dRef').onclick=function(){ render(); };
   var xb=$i('dChalX'); if(xb) xb.onclick=exportChal;
+  var eb=$i('dExp'); if(eb) eb.onclick=dxOpen;
   $i('dAcct').onclick=function(){ const a=$i('fbAcct'); if(a) a.style.display='flex'; };
   $i('dTheme').onclick=function(){ const t=document.getElementById('thBtn'); if(t) t.click(); };
 }
@@ -4384,6 +4483,37 @@ html:not([data-theme="light"]){color-scheme:dark}
   bottom:calc(72px + env(safe-area-inset-bottom,0px));
   box-shadow:0 4px 16px rgba(0,0,0,.45)}
 #fbSyncChip{bottom:calc(72px + env(safe-area-inset-bottom,0px))}
+/* v6: نافذة تصدير اللوحة */
+#dxOv{position:fixed;inset:0;z-index:9700;background:rgba(0,0,0,.55);
+  display:flex;align-items:center;justify-content:center;direction:rtl}
+#dxOv[hidden]{display:none}
+#dxOv .dxB{position:relative;width:min(92vw,380px);max-height:86vh;overflow:auto;
+  background:var(--panel,#141619);border:1px solid var(--line,rgba(201,162,75,.24));
+  border-radius:16px;padding:18px 18px 12px}
+#dxOv h3{margin:0 0 4px;color:var(--gold,#C9A24B);font-size:16px}
+#dxOv .dxH{color:var(--grey,#7A828C);font-size:11.5px;margin:4px 0 10px}
+#dxOv .dxR{display:flex;align-items:center;gap:10px;color:var(--cream,#F1EDE0);
+  font-size:13.5px;padding:7px 2px;cursor:pointer;user-select:none}
+#dxOv .dxR input{width:17px;height:17px;accent-color:var(--gold,#C9A24B)}
+#dxOv .dxA{display:flex;gap:10px;margin-top:12px}
+#dxOv .dxA .dBtn{flex:1;text-align:center}
+/* v6: وضع الطباعة — تقرير أبيض نظيف بالرسوم */
+@media print{
+  body.dxPrint > *:not(#nskDash){display:none!important}
+  body.dxPrint #nskDash{position:static!important;inset:auto!important;display:block!important;
+    height:auto!important;overflow:visible!important;background:#fff!important}
+  body.dxPrint #nskDash .dSec.dxHide{display:none!important}
+  body.dxPrint #nskDash .dHead button,body.dxPrint #dChalX,body.dxPrint #dashX,
+  body.dxPrint #dxOv{display:none!important}
+  body.dxPrint #nskDash h1{background:none!important;-webkit-text-fill-color:#111!important;color:#111!important}
+  body.dxPrint #nskDash h2{color:#111!important}
+  body.dxPrint #nskDash .dSub,body.dxPrint #nskDash .dT td,body.dxPrint #nskDash .dT th,
+  body.dxPrint #nskDash .e span,body.dxPrint #nskDash .e time,body.dxPrint #nskDash .e b{color:#222!important}
+  body.dxPrint #nskDash .dCard,body.dxPrint #nskDash .dEv,body.dxPrint #nskDash .dChBox{
+    background:#fff!important;border:1px solid #ddd!important;box-shadow:none!important}
+  body.dxPrint #nskDash .dSec{break-inside:avoid-page}
+  body.dxPrint #nskDash *{print-color-adjust:exact;-webkit-print-color-adjust:exact}
+}
 </style>
 </body>
 </html>
