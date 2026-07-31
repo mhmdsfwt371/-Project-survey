@@ -1,0 +1,45 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{db}/documents {
+
+    function isBoss(){ return request.auth != null
+        && request.auth.token.email == 'mohammed.safwat@afaqy.com'; }
+    function uDoc()  { return get(/databases/$(db)/documents/users/$(request.auth.uid)).data; }
+    function ok()    { return isBoss() || (request.auth != null && uDoc().active == true); }
+    function role()  { return isBoss() ? 'admin' : uDoc().role; }
+    function mgr()   { return ok() && (role() == 'engineer' || role() == 'admin'); }
+    function canW()  { return ok() && (role() == 'engineer' || role() == 'admin' || role() == 'supervisor'); }
+
+    // المستخدمون: كل واحد يقرأ حسابه — المدير يقرأ الكل
+    // الأدمن يكتب أي حساب — المهندس يكتب وثائق المشرفين فقط (بدون تغيير الدور)
+    match /users/{uid} {
+      allow read: if request.auth != null && (request.auth.uid == uid || mgr());
+      allow create, update: if ok() && (
+        role() == 'admin'
+        || (role() == 'engineer'
+            && (resource == null || resource.data.role == 'supervisor')
+            && request.resource.data.role == 'supervisor'));
+      allow delete: if false;
+    }
+
+    // سجلات المسح والتركيب والمواقع المقترحة
+    match /recs/{id}  { allow read: if ok(); allow write: if canW(); }
+    match /inss/{id}  { allow read: if ok(); allow write: if canW(); }
+    match /props/{id} { allow read: if ok(); allow write: if canW(); }
+
+    // القائمة الموحّدة للشركات: المدير يضيف ويعتمد — المشرف طلبات فقط
+    match /colist/{id} {
+      allow read: if ok();
+      allow write: if mgr();
+      allow create: if ok() && role() == 'supervisor'
+                    && request.resource.data.st == 'req';
+    }
+
+    // سجل الأحداث: قراءة للجميع — إضافة فقط — لا تعديل ولا حذف
+    match /events/{id} {
+      allow read: if ok();
+      allow create: if canW();
+      allow update, delete: if false;
+    }
+  }
+}
