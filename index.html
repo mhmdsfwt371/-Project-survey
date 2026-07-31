@@ -3432,7 +3432,7 @@ window.NSKCORE={
 <button id="dashFab" type="button" style="display:none">📊 لوحة المتابعة</button>
 <div id="nskDash" dir="rtl"><div class="dWrap" id="dWrap"></div></div>
 
-<!-- NSK-FB phase1=auth+users:DONE v1b | phase2=records-sync:DONE | phase3=events-feed:DONE | viewer-dashboard:DONE v2+charts 2026-07-31 | std-lists+sign-format+approvals:DONE | navy-theme+challenges-report:DONE | map-pick+mobile-polish:DONE v3 | user-admin+search-filters-activity:DONE | super-admin:DONE role-matrix:v2 remember-me:DONE boss-heal:DONE | black-theme+close-x:DONE x-contrast:fix 2026-07-31 -->
+<!-- NSK-FB phase1=auth+users:DONE v1b | phase2=records-sync:DONE | phase3=events-feed:DONE | viewer-dashboard:DONE v2+charts 2026-07-31 | std-lists+sign-format+approvals:DONE | navy-theme+challenges-report:DONE | map-pick+mobile-polish:DONE v3 | user-admin+search-filters-activity:DONE | super-admin:DONE role-matrix:v2 remember-me:DONE boss-heal:DONE | black-theme+close-x:DONE x-contrast:fix | panel-dark-unify:v5b 2026-07-31 -->
 <style id="fbGateCss">
 #fbGate{position:fixed;inset:0;z-index:99999;display:flex;align-items:center;justify-content:center;background:var(--cream,#101214);font-family:var(--ar,Tahoma,sans-serif);direction:rtl}
 #fbGate .fbC{display:block;width:min(92vw,360px);background:rgba(128,128,128,.07);border:1px solid var(--line,rgba(201,162,75,.3));border-radius:16px;padding:26px 22px;box-shadow:0 12px 40px rgba(0,0,0,.35);text-align:right}
@@ -3473,7 +3473,7 @@ window.NSKCORE={
     <input id="nuName" placeholder="الاسم (يظهر مع كل مسح)">
     <input id="nuEmail" type="email" placeholder="الإيميل" dir="ltr">
     <input id="nuPass" type="password" placeholder="كلمة مرور (٦+ أحرف)" dir="ltr">
-    <select id="nuRole" style="display:block;width:100%;box-sizing:border-box;margin:2px 0 8px;padding:10px;border-radius:9px;border:1px solid var(--line,#555);background:var(--cream,#101214);color:var(--ink,#F2EFE6);font:inherit">
+    <select id="nuRole" style="display:block;width:100%;box-sizing:border-box;margin:2px 0 8px;padding:10px;border-radius:9px;border:1px solid var(--line,#555);background:rgba(255,255,255,.05);color:var(--cream,#F1EDE0);font:inherit">
       <option value="supervisor">مشرف ميداني — مسح وتركيب</option>
       <option value="engineer">مهندس — صلاحية كاملة</option>
       <option value="viewer">وزارة — متابعة وعرض فقط</option>
@@ -4346,9 +4346,23 @@ header{padding-top:calc(10px + env(safe-area-inset-top,0px))}
 #sheet .sh-box{position:relative}
 #nskDash .nskX{position:fixed;top:calc(env(safe-area-inset-top,0px) + 12px);
   inset-inline-end:14px;background:rgba(255,255,255,.08)}
-/* لوحة الحساب خلفيتها فاتحة — الـ × لازم غامقة عشان تبان */
-#fbAcct .nskX{color:var(--ink,#0A0B0D);border-color:rgba(10,11,13,.30);
-  background:rgba(10,11,13,.06);font-weight:700}
+/* v5b: توحيد الثيم — لوحة الحساب وشاشة الدخول فحمي زي باقي النوافذ */
+html:not([data-theme="light"]){color-scheme:dark}
+#fbAcct .fbC{background:var(--panel,#141619);border-color:var(--line,rgba(201,162,75,.24))}
+#fbAcct h3{color:var(--cream,#F1EDE0)}
+#fbAcct input, #fbAcct select{color:var(--cream,#F1EDE0);background:rgba(255,255,255,.04)}
+#fbAcct input::placeholder{color:var(--grey,#7A828C)}
+#fbAcct .uRow{background:rgba(255,255,255,.03)}
+#fbAcct .uRow .uT b{color:var(--cream,#F1EDE0)}
+#fbAcct .uRow select.uRole, #fbAcct .uRow button{color:var(--cream,#F1EDE0);
+  background:rgba(255,255,255,.03)}
+#fbAcct .uRow button.uTg:not([disabled]){color:#E05252}
+#fbAcct .uRow.uOff button.uTg{color:var(--green,#3AD6A0)}
+#fbAcct .nskX{color:var(--cream,#F1EDE0);border-color:var(--line,rgba(201,162,75,.24));
+  background:rgba(255,255,255,.06)}
+#fbGate{background:var(--ink,#0A0B0D)}
+#fbGate input{color:var(--cream,#F1EDE0)}
+#fbGate input::placeholder{color:var(--grey,#7A828C)}
 </style>
 </body>
 </html>
