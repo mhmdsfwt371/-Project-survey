@@ -1,3 +1,4 @@
+// قواعد Nusuk المسح الميداني — تُنشر تلقائيًا عبر GitHub Actions
 rules_version = '2';
 service cloud.firestore {
   match /databases/{db}/documents {
