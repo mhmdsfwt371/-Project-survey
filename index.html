@@ -1257,15 +1257,24 @@ async function loadAll(){
   }catch(e){ console.log('no proposed sites yet'); }
 }
 async function saveIns(id, rec){
-  try{ await window.storage.set('ins:'+id, JSON.stringify(rec), false); return true; }
+  if(window.NSK_USER && NSK_USER.role==='viewer'){ toast('حساب متابعة — العرض فقط',1); return false; }
+  try{ await window.storage.set('ins:'+id, JSON.stringify(rec), false);
+       if(window.NSKSYNC) NSKSYNC.push('inss', id, rec);
+       return true; }
   catch(e){ toast('تعذّر الحفظ',1); return false; }
 }
 async function saveProp(id, rec){
-  try{ await window.storage.set('new:'+id, JSON.stringify(rec), false); return true; }
+  if(window.NSK_USER && NSK_USER.role==='viewer'){ toast('حساب متابعة — العرض فقط',1); return false; }
+  try{ await window.storage.set('new:'+id, JSON.stringify(rec), false);
+       if(window.NSKSYNC) NSKSYNC.push('props', id, rec);
+       return true; }
   catch(e){ toast('تعذّر الحفظ — المساحة ممتلئة',1); return false; }
 }
 async function saveRec(id, rec){
-  try{ await window.storage.set('rec:'+id, JSON.stringify(rec), false); return true; }
+  if(window.NSK_USER && NSK_USER.role==='viewer'){ toast('حساب متابعة — العرض فقط',1); return false; }
+  try{ await window.storage.set('rec:'+id, JSON.stringify(rec), false);
+       if(window.NSKSYNC) NSKSYNC.push('recs', id, rec);
+       return true; }
   catch(e){ toast('تعذّر الحفظ — المساحة ممتلئة',1); return false; }
 }
 
@@ -1314,6 +1323,7 @@ window.setFstat = async function(id,k){
                 !Object.keys(rec.fix||{}).length;
   if(empty){
     try{ await window.storage.delete('rec:'+id,false); }catch(e){}
+    if(window.NSKSYNC) NSKSYNC.del('recs', id);
     delete recs[id];
   } else {
     if(!await saveRec(id, rec)) return;
@@ -2303,6 +2313,7 @@ function openNewForm(la,lo,ac,near,editId){
   if(del) del.onclick=async()=>{
     if(!confirm('حذف هذا الموقع المقترح نهائيًا؟')) return;
     try{ await window.storage.delete('new:'+editId,false); }catch(e){}
+    if(window.NSKSYNC) NSKSYNC.del('props', editId);
     delete props[editId];
     drawMap(); drawList(); drawOut(); drawMgr();
     toast('تم الحذف'); show('vList');
@@ -2680,14 +2691,15 @@ $('#expPh').onclick=()=>{
   toast('جارٍ تنزيل '+n+' صورة');
 };
 $('#clr').onclick=async()=>{
-  if(!confirm('سيتم مسح كل بيانات التجربة. متأكد؟')) return;
+  if(window.NSK_USER && NSK_USER.role==='viewer'){ toast('حساب متابعة — العرض فقط',1); return; }
+  if(!confirm('مسح محلي لهذا الجهاز فقط — بيانات السيرفر لن تُمَس وسترجع مع أول مزامنة. متأكد؟')) return;
   for(const id of Object.keys(recs)){
     try{ await window.storage.delete('rec:'+id,false); }catch(e){}
   }
   for(const id of Object.keys(props)){
     try{ await window.storage.delete('new:'+id,false); }catch(e){}
   }
-  recs={}; props={}; drawMap(); drawList(); drawOut(); drawMgr(); toast('تم المسح');
+  recs={}; props={}; drawMap(); drawList(); drawOut(); drawMgr(); toast('تم المسح محليًا');
 };
 
 /* ---------------- nav / zones ---------------- */
@@ -2892,10 +2904,68 @@ $('#thBtn').onclick=()=>setTheme(curTheme==='light'?'dark':'light');
   drawMap(); drawList(); drawOut(); drawMgr();
   map.fitBounds(L.latLngBounds(DB.d.map(r=>[r[5],r[6]])).pad(.06));
   locate();
+  window.__NSK_APP_READY = true;
+  document.dispatchEvent(new CustomEvent('nsk-app-ready'));
 })();
 </script>
+<script>
+/* NSK bridge: يكشف داخليات التطبيق لموديول المزامنة واللوحة */
+window.NSKCORE={
+  get:function(kind,id){ return (kind==='recs'?recs:kind==='inss'?inss:props)[id]; },
+  all:function(kind){ return kind==='recs'?recs:kind==='inss'?inss:props; },
+  set:function(kind,id,v){ (kind==='recs'?recs:kind==='inss'?inss:props)[id]=v; },
+  rm:function(kind,id){ delete (kind==='recs'?recs:kind==='inss'?inss:props)[id]; },
+  db:function(){ return DB; },
+  szOf:szOf,
+  total:function(){ return DB.d.length; },
+  redraw:function(){ try{ drawMap(); drawList(); drawOut(); drawMgr(); }catch(e){} try{ drawQ(); }catch(e){} }
+};
+</script>
+<style id="nskViewCss">
+.nsk-viewer #fab,.nsk-viewer #save,.nsk-viewer #isave,.nsk-viewer #nsave,
+.nsk-viewer #ndel,.nsk-viewer #clr,.nsk-viewer #fbAdmin{display:none!important}
+#fbSyncChip{position:fixed;bottom:12px;left:12px;z-index:9500;background:rgba(20,32,27,.92);
+  border:1px solid var(--line,#3a4a42);color:var(--grey,#95A39C);font:12px/1 var(--ar,Tahoma,sans-serif);
+  padding:7px 11px;border-radius:999px;direction:rtl;pointer-events:none}
+#fbSyncChip:empty{display:none}
+#fbSyncChip.bad{color:#E05252;border-color:#E05252}
+#dashFab{position:fixed;bottom:12px;right:12px;z-index:9400;border:1px solid var(--gold,#C9A24B);
+  background:var(--cream,#17251F);color:var(--gold,#C9A24B);font:700 13px var(--ar,Tahoma,sans-serif);
+  padding:10px 14px;border-radius:999px;cursor:pointer;box-shadow:0 6px 20px rgba(0,0,0,.35)}
+#nskDash{position:fixed;inset:0;z-index:9990;display:none;overflow:auto;background:var(--cream,#17251F);
+  color:var(--ink,#F2EFE6);font-family:var(--ar,Tahoma,sans-serif)}
+#nskDash .dWrap{max-width:980px;margin:0 auto;padding:18px 16px 60px}
+#nskDash .dHead{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:6px}
+#nskDash h1{margin:0;font-size:20px;color:var(--gold,#C9A24B);flex:1;min-width:220px}
+#nskDash .dBtn{border:1px solid var(--line,#3a4a42);background:transparent;color:var(--ink,#F2EFE6);
+  font:700 12.5px var(--ar,Tahoma,sans-serif);padding:8px 13px;border-radius:9px;cursor:pointer}
+#nskDash .dBtn.p{border-color:var(--gold,#C9A24B);color:var(--gold,#C9A24B)}
+#nskDash .dSub{color:var(--grey,#95A39C);font-size:12px;margin:0 0 14px}
+#nskDash h2{font-size:14.5px;color:var(--gold,#C9A24B);margin:22px 0 10px;border-top:1px solid var(--line,#2c3a34);padding-top:16px}
+#nskDash .dGrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(128px,1fr));gap:9px}
+#nskDash .dCard{background:rgba(128,128,128,.07);border:1px solid var(--line,#2c3a34);border-radius:12px;
+  padding:12px 10px;text-align:center}
+#nskDash .dCard b{display:block;font-size:23px;margin-bottom:4px}
+#nskDash .dCard span{color:var(--grey,#95A39C);font-size:11.5px}
+#nskDash .dBarRow{margin:12px 2px 2px}
+#nskDash .dBarLbl{display:flex;justify-content:space-between;color:var(--grey,#95A39C);font-size:12px;margin-bottom:5px}
+#nskDash .dBarLbl b{color:var(--ink,#F2EFE6)}
+#nskDash .dBarW{height:9px;border-radius:999px;background:rgba(128,128,128,.15);overflow:hidden}
+#nskDash .dBar{height:100%;border-radius:999px;transition:width .4s}
+#nskDash table.dT{width:100%;border-collapse:collapse;font-size:13px}
+#nskDash table.dT th{color:var(--grey,#95A39C);font-weight:400;text-align:right;padding:6px 8px;border-bottom:1px solid var(--line,#2c3a34)}
+#nskDash table.dT td{padding:8px;border-bottom:1px solid rgba(128,128,128,.1)}
+#nskDash .dEv{max-height:300px;overflow:auto;border:1px solid var(--line,#2c3a34);border-radius:12px}
+#nskDash .dEv .e{display:flex;gap:10px;padding:9px 12px;border-bottom:1px solid rgba(128,128,128,.08);font-size:12.5px}
+#nskDash .dEv .e time{color:var(--grey,#95A39C);white-space:nowrap;direction:ltr}
+#nskDash .dEv .e b{color:var(--gold,#C9A24B);font-weight:700;white-space:nowrap}
+#nskDash .dEmpty{color:var(--grey,#95A39C);font-size:12.5px;padding:14px;text-align:center}
+</style>
+<div id="fbSyncChip"></div>
+<button id="dashFab" type="button" style="display:none">📊 لوحة المتابعة</button>
+<div id="nskDash" dir="rtl"><div class="dWrap" id="dWrap"></div></div>
 
-<!-- NSK-FB phase1=auth+users:DONE v1b 2026-07-31 | phase2=records-sync:PENDING | phase3=events-feed:PENDING -->
+<!-- NSK-FB phase1=auth+users:DONE v1b | phase2=records-sync:DONE | phase3=events-feed:DONE | viewer-dashboard:DONE v2 2026-07-31 -->
 <style id="fbGateCss">
 #fbGate{position:fixed;inset:0;z-index:99999;display:flex;align-items:center;justify-content:center;background:var(--cream,#17251F);font-family:var(--ar,Tahoma,sans-serif);direction:rtl}
 #fbGate .fbC{display:block;width:min(92vw,360px);background:rgba(128,128,128,.07);border:1px solid var(--line,rgba(201,162,75,.3));border-radius:16px;padding:26px 22px;box-shadow:0 12px 40px rgba(0,0,0,.35);text-align:right}
@@ -2934,7 +3004,11 @@ $('#thBtn').onclick=()=>setTheme(curTheme==='light'?'dark':'light');
     <input id="nuName" placeholder="الاسم (يظهر مع كل مسح)">
     <input id="nuEmail" type="email" placeholder="الإيميل" dir="ltr">
     <input id="nuPass" type="password" placeholder="كلمة مرور (٦+ أحرف)" dir="ltr">
-    <label style="display:flex;gap:8px;align-items:center;color:var(--grey,#95A39C);font-size:12.5px;margin:2px 0 6px"><input type="checkbox" id="nuEng" style="width:auto;margin:0">صلاحية مهندس (كاملة)</label>
+    <select id="nuRole" style="display:block;width:100%;box-sizing:border-box;margin:2px 0 8px;padding:10px;border-radius:9px;border:1px solid var(--line,#555);background:var(--cream,#17251F);color:var(--ink,#F2EFE6);font:inherit">
+      <option value="supervisor">مشرف ميداني — مسح وتركيب</option>
+      <option value="engineer">مهندس — صلاحية كاملة</option>
+      <option value="viewer">وزارة — متابعة وعرض فقط</option>
+    </select>
     <button class="fbB fbMk" id="nuGo" type="button">إنشاء الحساب</button>
     <div class="fbM2" id="nuMsg"></div>
   </div>
@@ -2948,6 +3022,7 @@ $('#thBtn').onclick=()=>setTheme(curTheme==='light'?'dark':'light');
   window.NSKGATE={
     unlock:function(p){
       window.NSK_USER=p;
+      try{ if(p.role==='viewer') document.body.classList.add('nsk-viewer'); }catch(e){}
       var g=document.getElementById('fbGate'); if(g) g.style.display='none';
       try{
         if(window.__setMe){ window.__setMe(p.name); }
@@ -3054,7 +3129,7 @@ $g('fbPass').addEventListener('keydown', e=>{ if(e.key==='Enter') $g('fbGo').cli
 function bindAccountPanel(p){
   const acct=$g('fbAcct');
   $g('fbAName').textContent = p.name;
-  $g('fbARole').textContent = (p.role==='engineer'?'مهندس':'مشرف') + ' · ' + p.email;
+  $g('fbARole').textContent = (p.role==='engineer'?'مهندس':p.role==='viewer'?'وزارة — متابعة وعرض فقط':'مشرف') + ' · ' + p.email;
   $g('fbAdmin').style.display = p.role==='engineer' ? 'block' : 'none';
   const meBtn=document.getElementById('meBtn');
   if(meBtn){ meBtn.onclick = ()=>{ acct.style.display='flex'; }; }
@@ -3062,7 +3137,7 @@ function bindAccountPanel(p){
   $g('fbOut').onclick = async ()=>{ acct.style.display='none'; try{ await signOut(auth); }catch(e){} location.reload(); };
   $g('nuGo').onclick = async ()=>{
     const nm=$g('nuName').value.trim(), em=$g('nuEmail').value.trim(), pw=$g('nuPass').value,
-          role=$g('nuEng').checked?'engineer':'supervisor', m=$g('nuMsg');
+          role=($g('nuRole')&&$g('nuRole').value)||'supervisor', m=$g('nuMsg');
     if(!nm || !em || pw.length<6){ m.textContent='اكمل البيانات — كلمة المرور ٦ أحرف على الأقل'; return; }
     m.textContent='جارٍ الإنشاء…';
     const app2 = initializeApp(firebaseConfig, 'nu-'+Date.now());
@@ -3071,7 +3146,7 @@ function bindAccountPanel(p){
       await setDoc(doc(db,'users',cred.user.uid),
         { email:em, name:nm, role:role, active:true, createdAt:serverTimestamp(), createdBy:p.uid });
       m.textContent='✓ تم إنشاء حساب ' + nm;
-      $g('nuName').value=''; $g('nuEmail').value=''; $g('nuPass').value=''; $g('nuEng').checked=false;
+      $g('nuName').value=''; $g('nuEmail').value=''; $g('nuPass').value=''; if($g('nuRole')) $g('nuRole').value='supervisor';
     }catch(e){
       const c=(e && e.code)||'';
       m.textContent = /email-already-in-use/.test(c) ? 'الإيميل مستخدم قبل كده'
@@ -3081,6 +3156,213 @@ function bindAccountPanel(p){
     }finally{ try{ await deleteApp(app2); }catch(e){} }
   };
 }
+</script>
+<script type="module">
+/* NSK-P23: مزامنة لحظية + سجل أحداث ٥٠٠ + لوحة متابعة الوزارة */
+import { collection, doc, setDoc, deleteDoc, addDoc, onSnapshot, query, orderBy, limit, serverTimestamp }
+  from "https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js";
+
+const db = window.NSKFB && window.NSKFB.db;
+const $i = id => document.getElementById(id);
+const KP = { recs:'rec:', inss:'ins:', props:'new:' };
+let user = window.NSK_USER || null;
+let appReady = !!window.__NSK_APP_READY;
+let started=false, pendUp=0, lastSync=null, applyTimer=null, dirtyToast=false;
+const firstLoad = { recs:true, inss:true, props:true };
+
+function fmtT(d){ d=d||new Date(); return ('0'+d.getHours()).slice(-2)+':'+('0'+d.getMinutes()).slice(-2); }
+function chip(t,bad){ const c=$i('fbSyncChip'); if(!c) return; c.textContent=t||''; c.className=bad?'bad':''; }
+function chipIdle(){ chip(pendUp>0 ? ('جارٍ الرفع… ('+pendUp+')') : (lastSync ? ('مزامنة ✓ '+fmtT(lastSync)) : 'مزامنة جاهزة')); }
+function strip(d){ const c=Object.assign({},d); delete c._up; delete c._by; return c; }
+function eq(a,b){ try{ return JSON.stringify(a)===JSON.stringify(b); }catch(e){ return false; } }
+function evTxt(kind,id,rec){
+  if(kind==='inss'){ let t='تركيب ['+(rec.status||'تحديث')+'] — '+id; if(rec.sched) t+=' · جدولة: '+rec.sched; return t; }
+  if(kind==='props') return 'موقع مقترح — '+id;
+  return 'مسح ['+(rec.fstat||rec.status||'تحديث')+'] — '+id;
+}
+
+window.NSKSYNC = {
+  push:function(kind,id,rec){
+    if(!db || !user || user.role==='viewer') return;
+    pendUp++; chipIdle();
+    setDoc(doc(db,kind,String(id)), Object.assign({},rec,{_up:serverTimestamp(),_by:(user.name||user.email||'')}))
+      .then(function(){ pendUp=Math.max(0,pendUp-1); lastSync=new Date(); chipIdle(); })
+      .catch(function(e){ pendUp=Math.max(0,pendUp-1); chip('تعذّر الرفع — سيُعاد تلقائيًا',1); setTimeout(chipIdle,4000); console.warn('push',e); });
+    window.NSKSYNC.log(evTxt(kind,id,rec));
+  },
+  del:function(kind,id){
+    if(!db || !user || user.role==='viewer') return;
+    deleteDoc(doc(db,kind,String(id))).catch(function(e){ console.warn('del',e); });
+    window.NSKSYNC.log('حذف — '+id);
+  },
+  log:function(txt){
+    if(!db || !user || user.role==='viewer') return;
+    addDoc(collection(db,'events'), { t:serverTimestamp(), by:(user.name||user.email||''), role:(user.role||''), txt:String(txt||'').slice(0,240) }).catch(function(){});
+  }
+};
+
+async function applySnap(kind, snap){
+  const C = window.NSKCORE; if(!C) return;
+  let changed=0;
+  for(const ch of snap.docChanges()){
+    const id = ch.doc.id;
+    if(ch.type==='removed'){
+      if(C.get(kind,id)!==undefined){
+        C.rm(kind,id);
+        try{ await window.storage.delete(KP[kind]+id,false); }catch(e){}
+        changed++;
+      }
+      continue;
+    }
+    if(ch.doc.metadata.hasPendingWrites) continue;
+    const inc = strip(ch.doc.data());
+    if(eq(inc, C.get(kind,id))) continue;
+    C.set(kind,id,inc);
+    try{ await window.storage.set(KP[kind]+id, JSON.stringify(inc), false); }catch(e){}
+    changed++;
+  }
+  const silent = firstLoad[kind]; firstLoad[kind]=false;
+  if(changed){
+    lastSync=new Date(); chipIdle();
+    if(!silent) dirtyToast=true;
+    clearTimeout(applyTimer);
+    applyTimer=setTimeout(function(){
+      C.redraw();
+      if(window.NSKDASH) window.NSKDASH.refresh();
+      if(dirtyToast){ dirtyToast=false; try{ toast('مزامنة: وصلت تحديثات جديدة'); }catch(e){} }
+    },450);
+  } else if(snap.metadata && !snap.metadata.fromCache){ lastSync=new Date(); chipIdle(); }
+}
+
+const events=[]; window.NSKEVENTS=events;
+function start(){
+  if(started || !db || !user) return; started=true; chipIdle();
+  ['recs','inss','props'].forEach(function(k){
+    onSnapshot(collection(db,k),
+      function(s){ applySnap(k,s); },
+      function(e){ chip('انقطعت المزامنة — إعادة المحاولة…',1); console.warn('snap '+k,e); });
+  });
+  onSnapshot(query(collection(db,'events'), orderBy('t','desc'), limit(500)),
+    function(s){
+      events.length=0;
+      s.forEach(function(d){ const x=d.data();
+        events.push({ t:(x.t&&x.t.toDate)?x.t.toDate():null, by:x.by||'', role:x.role||'', txt:x.txt||'' }); });
+      if(window.NSKDASH) window.NSKDASH.refresh();
+    },
+    function(e){ console.warn('events',e); });
+  if(user.role==='viewer'){ $i('dashFab').style.display='block'; window.NSKDASH.open(); }
+  else if(user.role==='engineer'){ $i('dashFab').style.display='block'; }
+}
+function maybe(){ if(user && appReady) start(); }
+document.addEventListener('nsk-auth-ready', function(e){ user=e.detail; maybe(); });
+document.addEventListener('nsk-app-ready', function(){ appReady=true; maybe(); });
+const bootPoll=setInterval(function(){
+  if(!user && window.NSK_USER) user=window.NSK_USER;
+  if(!appReady && window.__NSK_APP_READY) appReady=true;
+  maybe(); if(started) clearInterval(bootPoll);
+},700);
+setTimeout(function(){ clearInterval(bootPoll); },20000);
+
+/* ---------------- لوحة المتابعة ---------------- */
+const AR=function(n){ try{ return (+n||0).toLocaleString('ar-EG'); }catch(e){ return String(n); } };
+const pct=function(a,b){ return b>0 ? Math.round(a*100/b) : 0; };
+function counts(){
+  const C=window.NSKCORE;
+  const inss=C.all('inss'), recs=C.all('recs'), props=C.all('props');
+  const N=C.total();
+  const c={ total:N, props:Object.keys(props).length, sch:0, run:0, ok:0, bad:0 };
+  Object.keys(inss).forEach(function(k){
+    const s=inss[k].status;
+    if(s==='مجدول') c.sch++;
+    else if(s==='قيد التركيب') c.run++;
+    else if(s==='مُركّب') c.ok++;
+    else if(s==='متعذّر') c.bad++;
+  });
+  c.plan=c.sch+c.run+c.ok+c.bad;
+  c.none=Math.max(0,N-c.plan);
+  c.svDone=0; c.svFit=0; c.svBad=0;
+  Object.keys(recs).forEach(function(k){
+    const r=recs[k];
+    if(r.fstat==='done'||r.status==='done'||r.fstat==='blocked') c.svDone++;
+    if(r.fit==='مناسب') c.svFit++;
+    if(r.fit==='غير مناسب') c.svBad++;
+  });
+  const dbx=C.db(), reg={};
+  ['منى','عرفات','مزدلفة'].forEach(function(z){ reg[z]={t:0,s:0,o:0}; });
+  dbx.d.forEach(function(r){
+    const z=C.szOf(r); if(!reg[z]) reg[z]={t:0,s:0,o:0};
+    reg[z].t++;
+    const st=(inss[r[0]]||{}).status||'';
+    if(st && st!=='لم يبدأ') reg[z].s++;
+    if(st==='مُركّب') reg[z].o++;
+  });
+  c.reg=reg;
+  return c;
+}
+function card(n,l,color){ return '<div class="dCard"><b style="color:'+color+'">'+AR(n)+'</b><span>'+l+'</span></div>'; }
+function barRow(lbl,a,b,color){
+  const p=pct(a,b);
+  return '<div class="dBarRow"><div class="dBarLbl"><span>'+lbl+'</span><b>'+AR(a)+' / '+AR(b)+' — ٪'+AR(p)+'</b></div>'+
+         '<div class="dBarW"><div class="dBar" style="width:'+Math.min(100,p)+'%;background:'+color+'"></div></div></div>';
+}
+function esc2(s){ return String(s==null?'':s).replace(/[<>&"]/g,function(ch){return {'<':'&lt;','>':'&gt;','&':'&amp;','"':'&quot;'}[ch];}); }
+function render(){
+  const c=counts();
+  let h='';
+  h+='<div class="dHead"><h1>لوحة متابعة مشروع نُسُك ١٤٤٨</h1>';
+  h+='<button class="dBtn" id="dAcct" type="button">الحساب</button>';
+  h+='<button class="dBtn" id="dRef" type="button">تحديث</button>';
+  h+='<button class="dBtn p" id="dMap" type="button">عرض الخريطة</button></div>';
+  h+='<p class="dSub">آخر مزامنة: '+(lastSync?fmtT(lastSync):'—')+' · الأرقام لحظية من الميدان</p>';
+
+  h+='<h2>التركيب والجدولة</h2><div class="dGrid">';
+  h+=card(c.total,'إجمالي المواقع','var(--gold,#C9A24B)');
+  h+=card(c.plan,'دخل الجدولة','#8FD3E8');
+  h+=card(c.sch,'مجدول','#4BC9F5');
+  h+=card(c.run,'قيد التركيب','#E8C34B');
+  h+=card(c.ok,'مُركّب','#3AD6A0');
+  h+=card(c.bad,'متعذّر','#E05252');
+  h+=card(c.none,'لم يُجدول بعد','var(--grey,#95A39C)');
+  h+='</div>';
+  h+=barRow('إنجاز ما تم جدولته — مُركّب من إجمالي المجدول', c.ok, c.plan, '#3AD6A0');
+  h+=barRow('نسبة التركيب من إجمالي المشروع', c.ok, c.total, '#4BC9F5');
+
+  h+='<h2>المسح الميداني</h2><div class="dGrid">';
+  h+=card(c.svDone,'تم المسح','#4BC9F5');
+  h+=card(c.svFit,'صالح للتركيب','#3AD6A0');
+  h+=card(c.svBad,'غير مناسب','#E05252');
+  h+=card(c.props,'مواقع مقترحة مضافة','#E8C34B');
+  h+='</div>';
+  h+=barRow('تقدم المسح من إجمالي المواقع', c.svDone, c.total, '#E8C34B');
+
+  h+='<h2>حسب المشعر</h2><table class="dT"><thead><tr><th>المشعر</th><th>المواقع</th><th>دخل الجدولة</th><th>مُركّب</th><th>٪ الإنجاز</th></tr></thead><tbody>';
+  ['منى','عرفات','مزدلفة'].forEach(function(z){
+    const g=c.reg[z]||{t:0,s:0,o:0};
+    h+='<tr><td>'+z+'</td><td>'+AR(g.t)+'</td><td>'+AR(g.s)+'</td><td style="color:#3AD6A0;font-weight:700">'+AR(g.o)+'</td><td>٪'+AR(pct(g.o,g.t))+'</td></tr>';
+  });
+  h+='</tbody></table>';
+
+  h+='<h2>آخر الأحداث ('+AR(events.length)+')</h2>';
+  if(!events.length){ h+='<div class="dEv"><div class="dEmpty">لا توجد أحداث بعد — أول تحديث من الميدان سيظهر هنا فورًا.</div></div>'; }
+  else{
+    h+='<div class="dEv">';
+    events.forEach(function(ev){
+      const t=ev.t?(ev.t.toLocaleDateString('ar-EG',{day:'numeric',month:'numeric'})+' '+fmtT(ev.t)):'—';
+      h+='<div class="e"><time>'+esc2(t)+'</time><b>'+esc2(ev.by)+'</b><span>'+esc2(ev.txt)+'</span></div>';
+    });
+    h+='</div>';
+  }
+  $i('dWrap').innerHTML=h;
+  $i('dMap').onclick=function(){ window.NSKDASH.close(); };
+  $i('dRef').onclick=function(){ render(); };
+  $i('dAcct').onclick=function(){ const a=$i('fbAcct'); if(a) a.style.display='flex'; };
+}
+window.NSKDASH={
+  open:function(){ render(); $i('nskDash').style.display='block'; },
+  close:function(){ $i('nskDash').style.display='none'; },
+  refresh:function(){ const d=$i('nskDash'); if(d && d.style.display==='block') render(); }
+};
+$i('dashFab').onclick=function(){ window.NSKDASH.open(); };
 </script>
 </body>
 </html>
