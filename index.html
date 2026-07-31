@@ -3433,7 +3433,7 @@ window.NSKCORE={
 <button id="dashFab" type="button" style="display:none">📊 لوحة المتابعة</button>
 <div id="nskDash" dir="rtl"><div class="dWrap" id="dWrap"></div></div>
 
-<!-- NSK-FB phase1=auth+users:DONE v1b | phase2=records-sync:DONE | phase3=events-feed:DONE | viewer-dashboard:DONE v2+charts 2026-07-31 | std-lists+sign-format+approvals:DONE | navy-theme+challenges-report:DONE | map-pick+mobile-polish:DONE v3 | user-admin+search-filters-activity:DONE | super-admin:DONE role-matrix:v2 remember-me:DONE boss-heal:DONE | black-theme+close-x:DONE x-contrast:fix | panel-dark-unify:v5b | leaflet-dark+early-scheme:v5c | fab-tap+gold:v5d | dash-export-xlsx-pdf:v6 2026-07-31 -->
+<!-- NSK-FB phase1=auth+users:DONE v1b | phase2=records-sync:DONE | phase3=events-feed:DONE | viewer-dashboard:DONE v2+charts 2026-07-31 | std-lists+sign-format+approvals:DONE | navy-theme+challenges-report:DONE | map-pick+mobile-polish:DONE v3 | user-admin+search-filters-activity:DONE | super-admin:DONE role-matrix:v2 remember-me:DONE boss-heal:DONE | black-theme+close-x:DONE x-contrast:fix | panel-dark-unify:v5b | leaflet-dark+early-scheme:v5c | fab-tap+gold:v5d | dash-export-xlsx-pdf:v6 | dashx-clearance:v6a 2026-07-31 -->
 <style id="fbGateCss">
 #fbGate{position:fixed;inset:0;z-index:99999;display:flex;align-items:center;justify-content:center;background:var(--cream,#101214);font-family:var(--ar,Tahoma,sans-serif);direction:rtl}
 #fbGate .fbC{display:block;width:min(92vw,360px);background:rgba(128,128,128,.07);border:1px solid var(--line,rgba(201,162,75,.3));border-radius:16px;padding:26px 22px;box-shadow:0 12px 40px rgba(0,0,0,.35);text-align:right}
@@ -4445,7 +4445,10 @@ header{padding-top:calc(10px + env(safe-area-inset-top,0px))}
 #coPickOv .cp-box{position:relative}
 #sheet .sh-box{position:relative}
 #nskDash .nskX{position:fixed;top:calc(env(safe-area-inset-top,0px) + 12px);
-  inset-inline-end:14px;background:rgba(255,255,255,.08)}
+  inset-inline-end:14px;background:var(--panel,#141619);border-color:var(--gold,#C9A24B)}
+/* v6a: إبعاد محتوى رأس اللوحة عن ركن الإغلاق حتى لا يتراكب مع زر الثيم */
+#nskDash .dHead{padding-inline-end:56px}
+#nskDash .dSub{padding-inline-end:56px}
 /* v5b: توحيد الثيم — لوحة الحساب وشاشة الدخول فحمي زي باقي النوافذ */
 html:not([data-theme="light"]){color-scheme:dark}
 #fbAcct .fbC{background:var(--panel,#141619);border-color:var(--line,rgba(201,162,75,.24))}
