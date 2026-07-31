@@ -3427,7 +3427,7 @@ window.NSKCORE={
 <button id="dashFab" type="button" style="display:none">📊 لوحة المتابعة</button>
 <div id="nskDash" dir="rtl"><div class="dWrap" id="dWrap"></div></div>
 
-<!-- NSK-FB phase1=auth+users:DONE v1b | phase2=records-sync:DONE | phase3=events-feed:DONE | viewer-dashboard:DONE v2+charts 2026-07-31 | std-lists+sign-format+approvals:DONE | navy-theme+challenges-report:DONE | map-pick+mobile-polish:DONE v3 | user-admin+search-filters-activity:DONE | super-admin:DONE role-matrix:v2 remember-me:DONE 2026-07-31 -->
+<!-- NSK-FB phase1=auth+users:DONE v1b | phase2=records-sync:DONE | phase3=events-feed:DONE | viewer-dashboard:DONE v2+charts 2026-07-31 | std-lists+sign-format+approvals:DONE | navy-theme+challenges-report:DONE | map-pick+mobile-polish:DONE v3 | user-admin+search-filters-activity:DONE | super-admin:DONE role-matrix:v2 remember-me:DONE boss-heal:DONE 2026-07-31 -->
 <style id="fbGateCss">
 #fbGate{position:fixed;inset:0;z-index:99999;display:flex;align-items:center;justify-content:center;background:var(--cream,#0B1730);font-family:var(--ar,Tahoma,sans-serif);direction:rtl}
 #fbGate .fbC{display:block;width:min(92vw,360px);background:rgba(128,128,128,.07);border:1px solid var(--line,rgba(201,162,75,.3));border-radius:16px;padding:26px 22px;box-shadow:0 12px 40px rgba(0,0,0,.35);text-align:right}
@@ -3580,6 +3580,20 @@ async function afterUser(user){
   if(p.err){ say('تعذّر قراءة الصلاحيات: ' + p.err); return; }
   window.NSKGATE.unlock(p);
   bindAccountPanel(p);
+  healBoss(user, p);
+}
+async function healBoss(user, p){
+  if(String(user.email||'').toLowerCase()!==BOSS_EMAIL) return;
+  try{
+    const ref=doc(db,'users',user.uid);
+    const s=await getDoc(ref);
+    if(!s.exists()){
+      await setDoc(ref,{email:user.email||'', name:p.name||'Mohamed Safwat',
+        role:'admin', active:true, createdAt:serverTimestamp()},{merge:true});
+    } else if(s.data().role!=='admin' || s.data().active===false){
+      await setDoc(ref,{role:'admin', active:true},{merge:true});
+    }
+  }catch(e){}
 }
 
 onAuthStateChanged(auth, u=>{
@@ -3741,7 +3755,9 @@ function bindAccountPanel(p){
     try{
       const s=await getDocs(collection(db,'users'));
       USERS=[]; s.forEach(d=>{ const x=d.data()||{};
-        USERS.push({uid:d.id,name:x.name,email:x.email,role:x.role||'supervisor',active:x.active}); });
+        let role=x.role||'supervisor', active=x.active;
+        if(String(x.email||'').toLowerCase()==='mohammed.safwat@afaqy.com'){ role='admin'; active=true; }
+        USERS.push({uid:d.id,name:x.name,email:x.email,role:role,active:active}); });
       USERS.sort((a,b)=>String(a.name||'').localeCompare(String(b.name||''),'ar'));
       drawUsers(); uMsg('');
     }catch(e){ uMsg('تعذّر تحميل المستخدمين: '+((e&&e.code)||e)); }
