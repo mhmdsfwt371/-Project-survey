@@ -949,7 +949,7 @@ window.addEventListener('error', function(e){
 <div id="app">
   <header>
     <div class="t">
-      <div class="eyebrow">قارئات نُسُك ١٤٤٨هـ <span style="color:var(--muted);letter-spacing:0;font-weight:600">· نسخة V1.8</span></div>
+      <div class="eyebrow">قارئات نُسُك ١٤٤٨هـ <span style="color:var(--muted);letter-spacing:0;font-weight:600">· نسخة V1.9</span></div>
       <h1 id="ttl">المسح الميداني</h1>
     </div>
     <button class="pill" id="modeBtn" type="button">المسح</button>
@@ -1538,6 +1538,7 @@ function drawMap(){
     layer.addLayer(m); marks[r[0]]=m;
   });
   Object.values(props).forEach(p=>{
+    if(!p || typeof p.lat!=='number' || typeof p.lon!=='number') return;
     const c=SC.proposed;
     const sgn=esc((((p.v||{}).sign)||'').trim());
     const m=L.marker([p.lat,p.lon],{title:'موقع مقترح — '+p.id,
@@ -2923,7 +2924,7 @@ function coOf(r){
 function allRows(){
   const out=[];
   Object.values(recs).forEach(r=>out.push({r,p:false}));
-  Object.values(props).forEach(r=>out.push({r,p:true}));
+  Object.values(props).forEach(r=>{ if(r && r.lat!=null) out.push({r,p:true}); });
   return out.sort((a,b)=>(b.r.date||'').localeCompare(a.r.date||''));
 }
 
@@ -3366,11 +3367,12 @@ $('#thBtn').onclick=()=>setTheme(curTheme==='light'?'dark':'light');
 </script>
 <script>
 /* NSK bridge: يكشف داخليات التطبيق لموديول المزامنة واللوحة */
+const NSK_SETTINGS={};
 window.NSKCORE={
-  get:function(kind,id){ return (kind==='recs'?recs:kind==='inss'?inss:kind==='colist'?cos:props)[id]; },
-  all:function(kind){ return kind==='recs'?recs:kind==='inss'?inss:kind==='colist'?cos:props; },
-  set:function(kind,id,v){ (kind==='recs'?recs:kind==='inss'?inss:kind==='colist'?cos:props)[id]=v; },
-  rm:function(kind,id){ delete (kind==='recs'?recs:kind==='inss'?inss:kind==='colist'?cos:props)[id]; },
+  get:function(kind,id){ return (kind==='recs'?recs:kind==='inss'?inss:kind==='colist'?cos:kind==='settings'?NSK_SETTINGS:props)[id]; },
+  all:function(kind){ return kind==='recs'?recs:kind==='inss'?inss:kind==='colist'?cos:kind==='settings'?NSK_SETTINGS:props; },
+  set:function(kind,id,v){ (kind==='recs'?recs:kind==='inss'?inss:kind==='colist'?cos:kind==='settings'?NSK_SETTINGS:props)[id]=v; },
+  rm:function(kind,id){ delete (kind==='recs'?recs:kind==='inss'?inss:kind==='colist'?cos:kind==='settings'?NSK_SETTINGS:props)[id]; },
   db:function(){ return DB; },
   szOf:szOf,
   total:function(){ return DB.d.length; },
@@ -3880,7 +3882,7 @@ const KP = { recs:'rec:', inss:'ins:', props:'new:', colist:'co:', settings:'set
 let user = window.NSK_USER || null;
 let appReady = !!window.__NSK_APP_READY;
 let started=false, pendUp=0, lastSync=null, applyTimer=null, dirtyToast=false;
-const firstLoad = { recs:true, inss:true, props:true, colist:true };
+const firstLoad = { recs:true, inss:true, props:true, colist:true, settings:true };
 let dashAllowed=false;
 function updDashFab(){
   const b=$i('dashFab'); if(!b) return;
@@ -4150,7 +4152,7 @@ function counts(){
   const C=window.NSKCORE;
   const inss=C.all('inss'), recs=C.all('recs'), props=C.all('props');
   const N=C.total();
-  const c={ total:N, props:Object.keys(props).length, sch:0, run:0, ok:0, bad:0 };
+  const c={ total:N, props:Object.keys(props).filter(function(k){var p=props[k]||{};return p.lat!=null;}).length, sch:0, run:0, ok:0, bad:0 };
   Object.keys(inss).forEach(function(k){
     const s=inss[k].status;
     if(s==='مجدول') c.sch++;
@@ -4345,7 +4347,7 @@ function dxOpen(){
     ov=document.createElement('div'); ov.id='dxOv';
     var saved=dxSaved();
     var rows=DXS.map(function(s){
-      var on=!saved||saved.indexOf(s[0])>-1;
+      var on=!saved||saved.indexOf(s[0])>-1||(saved.indexOf('co')<0&&(s[0]==='co'||s[0]==='stuck'));
       return '<label class="dxR"><input type="checkbox" value="'+s[0]+'"'+(on?' checked':'')+'> '+s[1]+'</label>';
     }).join('');
     ov.innerHTML='<div class="dxB">'
@@ -4355,6 +4357,7 @@ function dxOpen(){
       +'<div class="dxA">'
       +'<button type="button" class="dBtn p" id="dxXls">Excel — القيم</button>'
       +'<button type="button" class="dBtn p" id="dxPdf">PDF — بالرسوم</button>'
+      +'<button type="button" class="dBtn" id="dxJs">JSON — بيانات خام للتكامل</button>'
       +'</div>'
       +'<p class="dxH">PDF يفتح نافذة الطباعة — اختر منها «حفظ كـ PDF».</p></div>';
     ($i('nskDash')||document.body).appendChild(ov);
@@ -4362,6 +4365,7 @@ function dxOpen(){
     ov.querySelector('#dxX').onclick=function(){ ov.hidden=true; };
     ov.querySelector('#dxXls').onclick=function(){ var s=dxSel(); if(s.length){ dxXlsx(s); ov.hidden=true; } };
     ov.querySelector('#dxPdf').onclick=function(){ var s=dxSel(); if(s.length){ ov.hidden=true; dxPdf(s); } };
+    ov.querySelector('#dxJs').onclick=function(){ ov.hidden=true; dxJson(); };
   }
   ov.hidden=false;
 }
@@ -4426,6 +4430,52 @@ function dxXlsx(sel){
       SK2.stale.map(function(x){ return ['راكد',x.n,zN(x.z),x.st,x.d,'']; })),[10,26,10,14,10,40]); }
   X.writeFile(wb,'تقرير_لوحة_المتابعة_'+tag+'.xlsx');
   try{ if(window.NSKSYNC) NSKSYNC.log('تصدير تقرير اللوحة (Excel) — '+sel.length+' أقسام'); }catch(e){}
+}
+function dxJson(){
+  var C=window.NSKCORE, dbx=C.db(), recs=C.all('recs'), inss=C.all('inss'), props=C.all('props');
+  var ZC={'منى':'MIN','عرفات':'ARF','مزدلفة':'MUZ'};
+  var IS={'مُركّب':'installed','قيد التركيب':'in_progress','مجدول':'scheduled','متعذّر':'blocked','لم يبدأ':'none'};
+  var sites=dbx.d.map(function(r){
+    var id=r[0], rec=recs[id]||null, ins=inss[id]||null;
+    var fx=(rec&&rec.fix)||{}, v=(rec&&rec.v)||{};
+    var ch=((rec&&rec.chal)||[]).filter(function(x){ return x!=='لا توجد تحديات'; });
+    var st=(ins&&ins.status)||'';
+    return {
+      id:id,
+      name:fx.name||r[1]||'',
+      region:ZC[C.szOf(r)]||'', region_ar:C.szOf(r)||'',
+      square:String(fx.square||r[8]||''), sign:String(fx.sign||r[9]||''),
+      company:fx.company||r[24]||r[10]||'',
+      lat:(typeof r[5]==='number'?r[5]:null), lon:(typeof r[6]==='number'?r[6]:null),
+      survey: rec?{ done:!!(rec.fstat==='done'||rec.status==='done'||rec.fstat==='blocked'),
+        fit:rec.fit||'', date:rec.survey_date||rec.date||'', by:rec.by||'',
+        challenges:ch, note:v.chal_note||'' }:null,
+      install: ins?{ status:(IS[st]||'none'), status_ar:st,
+        date:ins.date||'', by:ins.by||'' }:null };
+  });
+  var proposals=Object.keys(props).map(function(k){
+    var p=props[k]||{}; if(p.lat==null) return null;
+    var pv=p.v||{};
+    return { id:p.id||k, label:p.label||'', status:p.status||'',
+      region_ar:pv.region||'', type:pv.stype||'',
+      square:String(pv.square||''), sign:String(pv.sign||''),
+      company:pv.company||pv.company_req||'',
+      lat:p.lat, lon:p.lon, date:p.date||'', by:p.by||'' };
+  }).filter(Boolean);
+  var c=counts();
+  var out={ schema:'nusuk-survey/1', generated_at:new Date().toISOString(),
+    totals:{ sites:c.total, surveyed:c.svDone, installed:c.ok, in_progress:c.run,
+      scheduled:c.sch, blocked:c.bad, unscheduled:c.none, proposals:proposals.length },
+    sites:sites, proposals:proposals };
+  try{
+    var blob=new Blob([JSON.stringify(out,null,1)],{type:'application/json'});
+    var a=document.createElement('a'); a.href=URL.createObjectURL(blob);
+    a.download='nusuk-survey-'+_dk(new Date())+'.json';
+    document.body.appendChild(a); a.click();
+    setTimeout(function(){ try{URL.revokeObjectURL(a.href);}catch(e){} try{a.remove();}catch(e){} },1500);
+    try{ toast('نزل ملف JSON — جاهز لأي نظام خارجي'); }catch(e){}
+    try{ if(window.NSKSYNC) NSKSYNC.log('تصدير JSON للتكامل من اللوحة'); }catch(e){}
+  }catch(e){ try{ toast('تعذّر إنشاء الملف',1); }catch(x){} }
 }
 function dxPdf(sel){
   render();
@@ -4622,6 +4672,10 @@ function render(){
       +(pu.last?' · آخر عملية '+arS(pu.last):'')
       +' &nbsp;·&nbsp; مقترحات بانتظار الاعتماد: <b>'+AR(pp.n)+'</b>'
       +((pp.n&&pp.old!=null)?' (أقدمها منذ '+AR(pp.old)+' يوم)':'')+'</p>';
+    var _pt=new Date();
+    h+='<p class="dPrn">تقرير رسمي مُستخرج من نظام متابعة قارئات نُسُك ١٤٤٨ — بتاريخ '
+      +arS(('0'+_pt.getDate()).slice(-2)+'/'+('0'+(_pt.getMonth()+1)).slice(-2)+'/'+_pt.getFullYear()
+      +' الساعة '+('0'+_pt.getHours()).slice(-2)+':'+('0'+_pt.getMinutes()).slice(-2))+'</p>';
   })();
   h+='<section class="dSec" data-sec="pace">';
   h+='<h2>الوتيرة والهدف</h2>'+paceHtml(c);
@@ -4912,6 +4966,9 @@ header{padding-top:calc(10px + env(safe-area-inset-top,0px))}
 #nskDash .dTbl tr:first-child td{color:var(--gold,#C9A24B);font-weight:700}
 #nskDash .dTs{color:var(--grey,#9AA1AB);font-size:.82em}
 #nskDash .dPulse b{color:var(--gold,#C9A24B)}
+#nskDash .dPrn{display:none}
+body.dxPrint #nskDash .dPrn{display:block;font-size:11px;color:#555;margin:0 0 10px}
+body.dxPrint #nskDash .dPulse{display:block}
 #nskDash .evCb{position:relative}
 #nskDash .evCbBtn{background:var(--panel,#141619);color:var(--cream,#F1EDE0);border:1px solid rgba(150,158,172,.25);border-radius:10px;padding:7px 12px;font:inherit;cursor:pointer;max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 #nskDash .evCbBtn.on{border-color:var(--gold,#C9A24B);color:var(--gold,#C9A24B)}
