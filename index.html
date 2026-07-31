@@ -949,7 +949,7 @@ window.addEventListener('error', function(e){
 <div id="app">
   <header>
     <div class="t">
-      <div class="eyebrow">قارئات نُسُك ١٤٤٨هـ <span style="color:var(--muted);letter-spacing:0;font-weight:600">· نسخة V1.6</span></div>
+      <div class="eyebrow">قارئات نُسُك ١٤٤٨هـ <span style="color:var(--muted);letter-spacing:0;font-weight:600">· نسخة V1.7</span></div>
       <h1 id="ttl">المسح الميداني</h1>
     </div>
     <button class="pill" id="modeBtn" type="button">المسح</button>
@@ -1312,6 +1312,8 @@ function esc(s){ return String(s??'').replace(/[<>&"]/g,c=>({'<':'&lt;','>':'&gt
 /* ---------------- map ---------------- */
 const map = L.map('map',{preferCanvas:true,zoomControl:false}).setView([21.38,39.92],12);
 L.control.zoom({position:'topleft'}).addTo(map);
+function _nskZFar(){try{document.getElementById('map').classList.toggle('zfar',map.getZoom()<15);}catch(e){}}
+map.on('zoomend',_nskZFar); _nskZFar();
 const TILES={dark:'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',
              light:'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png'};
 let curTheme=(document.documentElement.dataset.theme==='light')?'light':'dark';
@@ -2666,7 +2668,7 @@ function openNewForm(la,lo,ac,near,editId){
     '<fieldset><legend>لماذا ليس في السجل؟</legend>'+
     field('السبب','reason','select',
       ['مخيم جديد لم يكن موجودًا','مخيم انقسم إلى أكثر من واحد',
-       'تغيّر ترقيم الشاخص','الشاخص مفقود أو غير واضح','سبب آخر'],1)+
+       'تغيّر ترقيم الشاخص','الشاخص مفقود أو غير واضح','سبب آخر'],0)+
     field('شرح مختصر','why','textarea',0,0,'اختياري — اكتبه فقط لو فيه تفصيلة تساعد المكتب')+
     '</fieldset>'+
     '<fieldset><legend>الصور</legend>'+
@@ -2746,7 +2748,7 @@ function openNewForm(la,lo,ac,near,editId){
 async function saveNew(){
   const f=document.getElementById('nf'), v={};
   f.querySelectorAll('[name]').forEach(el=>{ if(el.value) v[el.name]=el.value; });
-  const miss=['region','stype','square','sign','reason'].filter(k=>!v[k]);
+  const miss=['region','stype','square','sign'].filter(k=>!v[k]);
   if(miss.length){ toast('أكمل الحقول الإلزامية أولًا',1); return; }
   v.sign=normSign(v.sign); v.square=normSign(v.square);
   try{
@@ -3883,7 +3885,9 @@ let dashAllowed=false;
 function updDashFab(){
   const b=$i('dashFab'); if(!b) return;
   const m=document.getElementById('vMap');
-  b.style.display=(dashAllowed && m && m.classList.contains('on'))?'block':'none';
+  const on=(dashAllowed && m && m.classList.contains('on'));
+  b.style.display=on?'block':'none';
+  try{document.body.classList.toggle('nsk-dash-on',on);}catch(e){}
 }
 (function(){
   const m=document.getElementById('vMap');
@@ -4791,6 +4795,12 @@ body.dxPrint .evCtl{display:none!important}
   color:var(--cream,#F1EDE0);font-size:20px;line-height:1;padding:0;
   display:flex;align-items:center;justify-content:center;cursor:pointer;z-index:6}
 .nskX:active{transform:scale(.92)}
+/* V1.7: إبعاد عناوين النوافذ عن زر الإغلاق حتى لا يركب النص عليه */
+#sheet .sh-box h3,#coPickOv .cp-box h3,#fbAcct .fbC h3,#dxOv .dxB h3{padding-inline-end:46px}
+#fbAcct .fbC .fbRole{padding-inline-end:46px}
+/* V1.7: لافتات المواقع المقترحة تظهر عند التقريب فقط حتى لا تتراكب فوق بعضها */
+#map.zfar .prpPin .pp-l{display:none}
+#map.zfar .prpPin i{width:20px;height:20px;left:-10px;top:-10px}
 #fbAcct .fbC{position:relative}
 #coPickOv .cp-box{position:relative}
 #sheet .sh-box{position:relative}
@@ -4829,9 +4839,11 @@ html:not([data-theme="light"]){color-scheme:dark}
   color:var(--cream,#F1EDE0)!important}
 /* v5d: الأزرار العائمة — فوق شريط التنقل ومنطقة إيماءات أندرويد + طبقات لمس صريحة */
 #fab{z-index:9350;pointer-events:auto;touch-action:manipulation;
-  inset-block-end:calc(128px + env(safe-area-inset-bottom,0px));
+  inset-block-end:calc(72px + env(safe-area-inset-bottom,0px));
   background:linear-gradient(135deg,#E9CE83,#C9A24B);color:#0A0B0D;
   box-shadow:0 4px 16px rgba(0,0,0,.45)}
+/* V1.7: الزر يرتفع فقط عندما يكون زر لوحة المتابعة ظاهرًا فعلًا تحته */
+body.nsk-dash-on #fab{inset-block-end:calc(128px + env(safe-area-inset-bottom,0px))}
 #dashFab{z-index:9400;pointer-events:auto;touch-action:manipulation;
   bottom:calc(72px + env(safe-area-inset-bottom,0px));
   box-shadow:0 4px 16px rgba(0,0,0,.45)}
