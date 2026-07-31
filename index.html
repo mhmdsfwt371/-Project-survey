@@ -1491,7 +1491,7 @@ function drawMap(){
       '<span class="pn">'+esc(nameOf(r))+'</span><br/>'+
       '<span style="color:'+catOf(r).c+';font-weight:800;font-size:11px">'+
         catOf(r).i+' '+catOf(r).l+' — '+szOf(r)+'</span><br/>'+
-      kv('الشاخصة', r[9])+
+      kv('الشاخص', r[9])+
       kv('المربع', r[8])+
       kv('الشركة', r[10])+
       '<span class="pk">التصنيف:</span> '+ptHtml(r)+'<br/>'+
@@ -1523,7 +1523,7 @@ function drawMap(){
     const dir='https://www.google.com/maps/dir/?api=1&destination='+p.lat+','+p.lon;
     m.bindPopup('<b style="color:#C77DFF">موقع مقترح</b><br/>'+
       '<span class="pn">'+esc(p.id)+'</span><br/>'+
-      '<span class="pk">الشاخصة:</span> '+esc((p.v||{}).sign||'—')+'<br/>'+
+      '<span class="pk">الشاخص:</span> '+esc((p.v||{}).sign||'—')+'<br/>'+
       '<span class="pk">المربع:</span> '+esc((p.v||{}).square||'—')+'<br/>'+
       '<span class="pk">المنطقة:</span> '+esc((p.v||{}).region||'—')+
       '<div class="pbtns">'+
@@ -1711,13 +1711,13 @@ window.openForm = function(id){
   const KNOWN = [
     ['name','اسم الموقع', current.r[1]],
     ['square','رقم المربع', sq],
-    ['sign','رقم الشاخصة', sg],
+    ['sign','رقم الشاخص', sg],
     ['ptype','تصنيف الحجاج', ptype?('حجاج '+ptype):''],
     ['company','شركة الخدمة / المشغّل', coFinal],
     ['nat','الجنسية', nat],
     ['permit','الجهة المصرِّحة', PERMIT],
     ['cap','السعة المسجّلة ١٤٤٧', cap?(cap+' حاج'):''],
-    ['subnet','شبكة ١٤٤٧', sub?(sub+'.0/24'):''],
+    ['subnet','نقطة اتصال', sub?(sub+'.0/24'):''],
   ].filter(x=>x[2] || ['square','sign','company'].indexOf(x[0])>=0);
 
   const review =
@@ -1958,7 +1958,7 @@ window.openForm = function(id){
   const kn=$('#known');
   if(kn){
     const STDK=['sign','square','company'];
-    const KLBL={sign:'رقم الشاخصة', square:'رقم المربع', company:'شركة الخدمة'};
+    const KLBL={sign:'رقم الشاخص', square:'رقم المربع', company:'شركة الخدمة'};
     const isEng = nskEng();
     const stdBase = {name:current.r[1], square:sq, sign:sg, company:coFinal};
     function pendPaint(k){
@@ -2056,13 +2056,13 @@ window.openForm = function(id){
           val=normSign(val);
           if(k==='sign' && isCamp && !SIGN_RE.test(val)){
             if(SIGN_LEGACY.test(val)){
-              if(!confirm('الصيغة غير قياسية (أرقام/أرقام):\n«'+val+'»\nاحفظها فقط إن كانت مطابقة تمامًا للشاخصة الفعلية في الموقع.')){
+              if(!confirm('الصيغة غير قياسية (أرقام/أرقام):\n«'+val+'»\nاحفظها فقط إن كانت مطابقة تمامًا للشاخص الفعلي في الموقع.')){
                 inp.focus(); return;
               }
             } else { toast(SIGN_HINT,1); inp.focus(); return; }
           }
           if(k==='sign' && !isCamp && !SIGN_RE.test(val) && !SIGN_LEGACY.test(val)){
-            toast('راجع رقم الشاخصة — أرقام وحروف لاتينية وشرطات فقط',1); inp.focus(); return;
+            toast('راجع رقم الشاخص — أرقام وحروف لاتينية وشرطات فقط',1); inp.focus(); return;
           }
           if(k==='square' && !SIGN_LEGACY.test(val)){
             toast('رقم المربع بصيغة أرقام أو أرقام-أرقام — مثال 7 أو 7-14',1); inp.focus(); return;
@@ -2497,7 +2497,7 @@ function drawPend(){
     return x[1] && x[1].fixReq && Object.keys(x[1].fixReq).length;
   });
   if(!L.length && !FR.length){ box.innerHTML=''; return; }
-  const KL={sign:'رقم الشاخصة', square:'رقم المربع', company:'شركة الخدمة'};
+  const KL={sign:'رقم الشاخص', square:'رقم المربع', company:'شركة الخدمة'};
   box.innerHTML=
     '<div class="pendCard"><div class="pc-h">بانتظار اعتماد المهندس — '+(L.length+FR.length)+'</div>'+
     (L.length ? '<div class="pc-s">شركات مطلوب إضافتها للقائمة الموحّدة</div>'+
@@ -2589,7 +2589,7 @@ window.startNew = function(){
   {enableHighAccuracy:true,timeout:12000});
 };
 
-const NEW_PHOTOS = ['صورة الشاخصة بأرقامها واضحة (إلزامية)','لقطة عامة للموقع',
+const NEW_PHOTOS = ['صورة الشاخص بأرقامه واضحة (إلزامية)','لقطة عامة للموقع',
                     'المدخل','نقطة التركيب المقترحة','أي عائق أو ملاحظة'];
 const CO_NEW = 'شركة جديدة — غير مدرجة';
 
@@ -2633,8 +2633,8 @@ function openNewForm(la,lo,ac,near,editId){
     '<fieldset><legend>هوية الموقع</legend>'+
     field('المنطقة','region','select',REGIONS,1,'اختر المنطقة التي يتبعها الموقع')+
     field('نوع الموقع','stype','select',['مخيم','ممر','بوابة','محطة','أخرى'],1)+
-    field('رقم المربع','square','text',0,1,'من الشاخصة المثبتة في الموقع')+
-    field('رقم الشاخصة','sign','text',0,1,'الصيغة الموحّدة: أرقام/أرقام — مثال 57/2 أو 1-3-5/62')+
+    field('رقم المربع','square','text',0,1,'من الشاخص المثبت في الموقع')+
+    field('رقم الشاخص','sign','text',0,1,'الصيغة الموحّدة: أرقام/أرقام — مثال 57/2 أو 1-3-5/62')+
     '<label class="f"><span>شركة تقديم الخدمة'+
     '<em>إلزامية للمخيمات — الاختيار من القائمة الموحّدة فقط، وغير الموجودة تُطلب من المهندس من داخل القائمة</em></span>'+
     '<button type="button" class="in" id="coBtn" style="text-align:start;color:var(--muted);cursor:pointer">— اختر الشركة من القائمة —</button>'+
@@ -2644,7 +2644,7 @@ function openNewForm(la,lo,ac,near,editId){
     '<fieldset><legend>لماذا ليس في السجل؟</legend>'+
     field('السبب','reason','select',
       ['مخيم جديد لم يكن موجودًا','مخيم انقسم إلى أكثر من واحد',
-       'تغيّر ترقيم الشاخصة','الشاخصة مفقودة أو غير واضحة','سبب آخر'],1)+
+       'تغيّر ترقيم الشاخص','الشاخص مفقود أو غير واضح','سبب آخر'],1)+
     field('شرح مختصر','why','textarea',0,1)+
     '</fieldset>'+
     '<fieldset><legend>الصور</legend>'+
@@ -2732,16 +2732,16 @@ async function saveNew(){
     const qEl=document.querySelector('#nf [name="square"]'); if(qEl) qEl.value=v.square;
   }catch(e){}
   if(v.stype==='مخيم' && !SIGN_RE.test(v.sign)){
-    toast('رقم شاخصة المخيم بالصيغة الموحّدة أرقام/أرقام — مثال 57/2 أو 1-3-5/62',1); return; }
+    toast('رقم شاخص المخيم بالصيغة الموحّدة أرقام/أرقام — مثال 57/2 أو 1-3-5/62',1); return; }
   if(v.stype!=='مخيم' && !SIGN_RE.test(v.sign) && !SIGN_LEGACY.test(v.sign)){
-    toast('راجع رقم الشاخصة — أرقام وحروف لاتينية وشرطات فقط',1); return; }
+    toast('راجع رقم الشاخص — أرقام وحروف لاتينية وشرطات فقط',1); return; }
   if(!SIGN_LEGACY.test(v.square)){
     toast('رقم المربع بصيغة أرقام أو أرقام-أرقام — مثال 7 أو 7-14',1); return; }
   if(v.stype==='مخيم' && !v.company && !v.company_req){
     toast('اختر شركة الخدمة من القائمة الموحّدة — أو أرسل طلب إضافة للمهندس من داخل القائمة',1); return; }
   if(v.company && coExists(v.company)!=='ok'){
     toast('اسم الشركة يجب أن يكون من القائمة الموحّدة فقط',1); return; }
-  if(!current.photos[0]){ toast('صورة الشاخصة إلزامية للاعتماد',1); return; }
+  if(!current.photos[0]){ toast('صورة الشاخص إلزامية للاعتماد',1); return; }
 
   const editId = current.editId;
   const zi = REGIONS.indexOf(v.region);
@@ -2755,7 +2755,7 @@ async function saveNew(){
   const now = new Date().toISOString().slice(0,16).replace('T',' ');
   const rec = {id, zi:zi<0?0:zi, lat:current.lat, lon:current.lon, acc:current.acc,
     v, photos:current.photos, status:'proposed',
-    label:v.region+' — مربع '+v.square+' / شاخصة '+v.sign,
+    label:v.region+' — مربع '+v.square+' / شاخص '+v.sign,
     date: now, by: me||'غير محدد',
     log: (prev.log||[]).concat([{d:now, by: me||'غير محدد'}])};
 
@@ -2815,7 +2815,7 @@ function drawMgr(){
   const fitCol=f=> f==='مناسب'?'#3AD6A0': f==='غير مناسب'?'#E05252':
                    f?'#E8C34B':'#9AA1AB';
   box.innerHTML='<div class="scroll"><table class="mg"><thead><tr>'+
-    ['الموقع','المشعر','الشركة','الشاخصة','الغرف','الطول','العرض','الارتفاع','الصلاحية',
+    ['الموقع','المشعر','الشركة','الشاخص','الغرف','الطول','العرض','الارتفاع','الصلاحية',
      'التحديات','مدني','هوائي','قارئ','ساعات','الصور','المشرف','تاريخ المسح','آخر تعديل','مراجعة','الحالة']
      .map(h=>'<th>'+h+'</th>').join('')+
     '</tr></thead><tbody>'+
@@ -2873,7 +2873,7 @@ function dl(name,blob){
   a.href=URL.createObjectURL(blob); a.download=name; a.click();
   setTimeout(()=>URL.revokeObjectURL(a.href),4000);
 }
-const FIELD_AR = {name:'اسم الموقع',ptype:'تصنيف الحجاج',loc:'الإحداثيات المعدّلة',square:'رقم المربع',sign:'رقم الشاخصة',len_m:'الطول (م)',
+const FIELD_AR = {name:'اسم الموقع',ptype:'تصنيف الحجاج',loc:'الإحداثيات المعدّلة',square:'رقم المربع',sign:'رقم الشاخص',len_m:'الطول (م)',
  wid_m:'العرض (م)',hgt_m:'الارتفاع (م)',tents:'عدد الغرف',gates:'عدد البوابات',
  shared:'بوابة مشتركة',power:'مصدر الكهرباء',pdist:'مسافة الكهرباء (م)',
  cable:'مسار الكابل (م)',
@@ -3150,7 +3150,7 @@ window.addEventListener('popstate', e=>{
 });
 document.querySelectorAll('nav button').forEach(b=>b.onclick=()=>show(b.dataset.v));
 $('#q').oninput=drawList;
-$('#q').placeholder='ابحث بالمعرّف أو الشاخصة أو الشركة…';
+$('#q').placeholder='ابحث بالمعرّف أو الشاخص أو الشركة…';
 $('#mineBtn').onclick=()=>{ mineOnly=!mineOnly; drawList(); };
 $('#filt').onclick=e=>{
   const d=e.target.closest('div[data-s]'); if(!d) return;
@@ -3158,7 +3158,7 @@ $('#filt').onclick=e=>{
   drawList(); drawMap();
 };
 
-const LX_HEAD=['المعرّف','الاسم','الفئة','المشعر','المنطقة','المربع','الشاخصة',
+const LX_HEAD=['المعرّف','الاسم','الفئة','المشعر','المنطقة','المربع','الشاخص',
   'الشركة','تصنيف الحجاج','حالة الميدان','آخر فني','آخر تعديل','الإحداثيات','موقع معدَّل'];
 function listExportRows(){
   const items=(window._lastItems&&window._lastItems.length)?window._lastItems:DB.d;
@@ -3433,7 +3433,7 @@ window.NSKCORE={
 <button id="dashFab" type="button" style="display:none">📊 لوحة المتابعة</button>
 <div id="nskDash" dir="rtl"><div class="dWrap" id="dWrap"></div></div>
 
-<!-- NSK-FB phase1=auth+users:DONE v1b | phase2=records-sync:DONE | phase3=events-feed:DONE | viewer-dashboard:DONE v2+charts 2026-07-31 | std-lists+sign-format+approvals:DONE | navy-theme+challenges-report:DONE | map-pick+mobile-polish:DONE v3 | user-admin+search-filters-activity:DONE | super-admin:DONE role-matrix:v2 remember-me:DONE boss-heal:DONE | black-theme+close-x:DONE x-contrast:fix | panel-dark-unify:v5b | leaflet-dark+early-scheme:v5c | fab-tap+gold:v5d | dash-export-xlsx-pdf:v6 | dashx-clearance:v6a | dx-above-dash:v6b 2026-07-31 -->
+<!-- NSK-FB phase1=auth+users:DONE v1b | phase2=records-sync:DONE | phase3=events-feed:DONE | viewer-dashboard:DONE v2+charts 2026-07-31 | std-lists+sign-format+approvals:DONE | navy-theme+challenges-report:DONE | map-pick+mobile-polish:DONE v3 | user-admin+search-filters-activity:DONE | super-admin:DONE role-matrix:v2 remember-me:DONE boss-heal:DONE | black-theme+close-x:DONE x-contrast:fix | panel-dark-unify:v5b | leaflet-dark+early-scheme:v5c | fab-tap+gold:v5d | dash-export-xlsx-pdf:v6 | dashx-clearance:v6a | dx-above-dash:v6b | terms-shakhes-ap:v6c 2026-07-31 -->
 <style id="fbGateCss">
 #fbGate{position:fixed;inset:0;z-index:99999;display:flex;align-items:center;justify-content:center;background:var(--cream,#101214);font-family:var(--ar,Tahoma,sans-serif);direction:rtl}
 #fbGate .fbC{display:block;width:min(92vw,360px);background:rgba(128,128,128,.07);border:1px solid var(--line,rgba(201,162,75,.3));border-radius:16px;padding:26px 22px;box-shadow:0 12px 40px rgba(0,0,0,.35);text-align:right}
@@ -4166,7 +4166,7 @@ function exportChal(){
   });
   if(!sites.length){ try{toast('لا توجد تحديات مسجّلة بعد',1);}catch(e){} return; }
   var ORD={'منى':1,'عرفات':2,'مزدلفة':3};
-  var dh=['التحدي','المشعر','معرّف الموقع','اسم الموقع','رقم المربع','رقم الشاخصة','شركة الخدمة','صلاحية الموقع','وصف التحدي','سبب عدم المناسبة','ملاحظات المشرف','المشرف','تاريخ المسح','عدد الصور','القرار — تُعالَج هذا الموسم؟','الجهة المسؤولة عن الحل','موعد الحل المستهدف'];
+  var dh=['التحدي','المشعر','معرّف الموقع','اسم الموقع','رقم المربع','رقم الشاخص','شركة الخدمة','صلاحية الموقع','وصف التحدي','سبب عدم المناسبة','ملاحظات المشرف','المشرف','تاريخ المسح','عدد الصور','القرار — تُعالَج هذا الموسم؟','الجهة المسؤولة عن الحل','موعد الحل المستهدف'];
   var det=[];
   sites.forEach(function(s){
     s.ch.forEach(function(n){
@@ -4196,7 +4196,7 @@ function exportChal(){
   sum.push(['مواقع مناسبة بتعديل', vh]);
   sum.push(['إجمالي بلاغات التحديات', det.length]);
   sum.push(['تاريخ إصدار التقرير', new Date().toISOString().slice(0,10)]);
-  var sh=['المشعر','معرّف الموقع','اسم الموقع','رقم المربع','رقم الشاخصة','شركة الخدمة','صلاحية الموقع','التحديات','وصف التحدي','سبب عدم المناسبة','ملاحظات المشرف','المشرف','تاريخ المسح','عدد الصور'];
+  var sh=['المشعر','معرّف الموقع','اسم الموقع','رقم المربع','رقم الشاخص','شركة الخدمة','صلاحية الموقع','التحديات','وصف التحدي','سبب عدم المناسبة','ملاحظات المشرف','المشرف','تاريخ المسح','عدد الصور'];
   var per=sites.map(function(s){
     return [zN(s.b.z), s.id, s.fx.name||s.b.nm||s.r.site||'', s.fx.square||s.b.sq||'',
       s.fx.sign||s.b.sg||'', s.fx.company||s.b.co||'', s.r.fit||'',
