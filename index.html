@@ -3427,7 +3427,7 @@ window.NSKCORE={
 <button id="dashFab" type="button" style="display:none">📊 لوحة المتابعة</button>
 <div id="nskDash" dir="rtl"><div class="dWrap" id="dWrap"></div></div>
 
-<!-- NSK-FB phase1=auth+users:DONE v1b | phase2=records-sync:DONE | phase3=events-feed:DONE | viewer-dashboard:DONE v2+charts 2026-07-31 | std-lists+sign-format+approvals:DONE | navy-theme+challenges-report:DONE | map-pick+mobile-polish:DONE v3 | user-admin+search-filters-activity:DONE | super-admin:DONE role-matrix:v2 2026-07-31 -->
+<!-- NSK-FB phase1=auth+users:DONE v1b | phase2=records-sync:DONE | phase3=events-feed:DONE | viewer-dashboard:DONE v2+charts 2026-07-31 | std-lists+sign-format+approvals:DONE | navy-theme+challenges-report:DONE | map-pick+mobile-polish:DONE v3 | user-admin+search-filters-activity:DONE | super-admin:DONE role-matrix:v2 remember-me:DONE 2026-07-31 -->
 <style id="fbGateCss">
 #fbGate{position:fixed;inset:0;z-index:99999;display:flex;align-items:center;justify-content:center;background:var(--cream,#0B1730);font-family:var(--ar,Tahoma,sans-serif);direction:rtl}
 #fbGate .fbC{display:block;width:min(92vw,360px);background:rgba(128,128,128,.07);border:1px solid var(--line,rgba(201,162,75,.3));border-radius:16px;padding:26px 22px;box-shadow:0 12px 40px rgba(0,0,0,.35);text-align:right}
@@ -3456,6 +3456,7 @@ window.NSKCORE={
   <div class="fbSub">سجّل الدخول للمتابعة</div>
   <input id="fbEmail" type="email" placeholder="البريد الإلكتروني" autocomplete="username" dir="ltr">
   <input id="fbPass" type="password" placeholder="كلمة المرور" autocomplete="current-password" dir="ltr">
+  <label class="fbRm"><input type="checkbox" id="fbRm"> تذكرني — احفظ الإيميل وكلمة المرور على هذا الجهاز</label>
   <button id="fbGo" type="button">دخول</button>
   <div class="fbM" id="fbMsg">جارٍ التحميل…</div>
 </div></div>
@@ -3590,11 +3591,28 @@ onAuthStateChanged(auth, u=>{
   }
 });
 
+const RM_KEY='nsk.rm';
+function rmLoad(){ try{ return JSON.parse(localStorage.getItem(RM_KEY)||'null'); }catch(e){ return null; } }
+function rmSave(em,pw){ try{ localStorage.setItem(RM_KEY,
+  JSON.stringify({e:em, p:btoa(unescape(encodeURIComponent(pw)))})); }catch(e){} }
+function rmClear(){ try{ localStorage.removeItem(RM_KEY); }catch(e){} }
+(function(){
+  const r=rmLoad(); if(!r || !r.e) return;
+  const eEl=$g('fbEmail'), pEl=$g('fbPass'), cb=$g('fbRm');
+  if(eEl) eEl.value=r.e;
+  try{ if(r.p && pEl) pEl.value=decodeURIComponent(escape(atob(r.p))); }catch(e){}
+  if(cb) cb.checked=true;
+})();
 $g('fbGo').onclick = async ()=>{
   const em=$g('fbEmail').value.trim(), pw=$g('fbPass').value;
   if(!em || !pw){ say('اكتب الإيميل وكلمة المرور'); return; }
   $g('fbGo').disabled=true; say('جارٍ الدخول…', true);
-  try{ await setPersistence(auth, browserLocalPersistence); await signInWithEmailAndPassword(auth, em, pw); }
+  try{
+    await setPersistence(auth, browserLocalPersistence);
+    await signInWithEmailAndPassword(auth, em, pw);
+    const cb=$g('fbRm');
+    if(cb && cb.checked) rmSave(em, pw); else rmClear();
+  }
   catch(e){ say(arErr(e)); }
   finally{ $g('fbGo').disabled=false; }
 };
@@ -4287,6 +4305,9 @@ header{padding-top:calc(10px + env(safe-area-inset-top,0px))}
 #fbAcct .uA.uLock{color:var(--grey,#6F7D92);font-size:10.5px;border:1px dashed var(--line,#555);
   border-radius:8px;padding:7px 9px}
 #fbAcct .uRoleTxt{flex:1;align-self:center;color:var(--grey,#6F7D92);font-size:12px;font-weight:700}
+#fbGate .fbRm{display:flex;align-items:center;gap:8px;margin:-2px 0 12px;
+  color:var(--grey,#6F7D92);font-size:11.5px;cursor:pointer;user-select:none}
+#fbGate .fbRm input{display:inline-block;width:auto;margin:0;accent-color:var(--gold,#C9A24B)}
 </style>
 </body>
 </html>
