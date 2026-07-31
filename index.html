@@ -3426,7 +3426,7 @@ window.NSKCORE={
 <button id="dashFab" type="button" style="display:none">📊 لوحة المتابعة</button>
 <div id="nskDash" dir="rtl"><div class="dWrap" id="dWrap"></div></div>
 
-<!-- NSK-FB phase1=auth+users:DONE v1b | phase2=records-sync:DONE | phase3=events-feed:DONE | viewer-dashboard:DONE v2+charts 2026-07-31 | std-lists+sign-format+approvals:DONE | navy-theme+challenges-report:DONE | map-pick+mobile-polish:DONE v3 | user-admin:DONE 2026-07-31 -->
+<!-- NSK-FB phase1=auth+users:DONE v1b | phase2=records-sync:DONE | phase3=events-feed:DONE | viewer-dashboard:DONE v2+charts 2026-07-31 | std-lists+sign-format+approvals:DONE | navy-theme+challenges-report:DONE | map-pick+mobile-polish:DONE v3 | user-admin+search-filters-activity:DONE 2026-07-31 -->
 <style id="fbGateCss">
 #fbGate{position:fixed;inset:0;z-index:99999;display:flex;align-items:center;justify-content:center;background:var(--cream,#0B1730);font-family:var(--ar,Tahoma,sans-serif);direction:rtl}
 #fbGate .fbC{display:block;width:min(92vw,360px);background:rgba(128,128,128,.07);border:1px solid var(--line,rgba(201,162,75,.3));border-radius:16px;padding:26px 22px;box-shadow:0 12px 40px rgba(0,0,0,.35);text-align:right}
@@ -3476,6 +3476,8 @@ window.NSKCORE={
       <span style="flex:1">المستخدمون <span id="uCnt"></span></span>
       <button id="uRef" type="button" style="border:1px solid var(--line,#555);background:transparent;color:var(--gold,#C9A24B);border-radius:8px;padding:4px 10px;font:inherit;font-size:11.5px;cursor:pointer">تحديث</button>
     </div>
+    <input id="uSearch" type="search" placeholder="بحث بالاسم أو الإيميل…" autocomplete="off" style="font-size:16px">
+    <div id="uChips"></div>
     <div id="uList"><div class="fbM2">جارٍ التحميل…</div></div>
     <div class="fbM2" id="uMsg"></div>
   </div>
@@ -3628,25 +3630,65 @@ function bindAccountPanel(p){
   /* ---- إدارة المستخدمين (مهندس فقط) ---- */
   const ROLE_AR={supervisor:'مشرف',engineer:'مهندس',viewer:'وزارة'};
   const eh=s=>String(s==null?'':s).replace(/[<>&"]/g,c=>({'<':'&lt;','>':'&gt;','&':'&amp;','"':'&quot;'}[c]));
-  let USERS=[];
+  let USERS=[]; let uQ=''; let uF='all';
   const uMsg=(t,ok)=>{ const el=$g('uMsg'); if(el){ el.textContent=t||'';
     el.style.color= ok?'var(--green,#3AD6A0)':'var(--grey,#95A39C)'; } };
   const actEng=()=>USERS.filter(u=>u.role==='engineer'&&u.active!==false).length;
+  function uStats(){
+    const m={};
+    try{
+      const C=window.NSKCORE; if(!C) return m;
+      const add=r=>{ const k=r&&r.by; if(!k) return;
+        const d=String(r.survey_date||r.date||'').slice(0,10);
+        const s=m[k]=m[k]||{n:0,last:''}; s.n++; if(d>s.last) s.last=d; };
+      Object.values(C.all('recs')||{}).forEach(add);
+      Object.values(C.all('props')||{}).forEach(add);
+      Object.values(C.all('inss')||{}).forEach(add);
+    }catch(e){}
+    return m;
+  }
   function drawUsers(){
     const box=$g('uList'); if(!box) return;
     const c=$g('uCnt'); if(c) c.textContent='('+USERS.length+')';
-    if(!USERS.length){ box.innerHTML='<div class="fbM2">لا يوجد مستخدمون بعد</div>'; return; }
-    box.innerHTML=USERS.map(u=>{
+    const F=[['all','الكل',function(u){return true;}],
+             ['supervisor','مشرف',function(u){return u.role==='supervisor';}],
+             ['engineer','مهندس',function(u){return u.role==='engineer';}],
+             ['viewer','وزارة',function(u){return u.role==='viewer';}],
+             ['off','موقوف',function(u){return u.active===false;}]];
+    const ch=$g('uChips');
+    if(ch) ch.innerHTML=F.map(function(f){
+      return '<button type="button" data-f="'+f[0]+'"'+(uF===f[0]?' class="on"':'')+'>'+
+        f[1]+' '+USERS.filter(f[2]).length+'</button>'; }).join('');
+    const q=uQ.trim().toLowerCase();
+    const fdef=F.find(function(f){return f[0]===uF;})||F[0];
+    let L=USERS.filter(fdef[2]);
+    if(q) L=L.filter(function(u){
+      return String(u.name||'').toLowerCase().indexOf(q)>=0
+          || String(u.email||'').toLowerCase().indexOf(q)>=0; });
+    L=L.slice().sort(function(a,b){
+      return ((a.active===false)-(b.active===false))
+        || String(a.name||'').localeCompare(String(b.name||''),'ar'); });
+    if(!L.length){
+      box.innerHTML='<div class="fbM2">'+(USERS.length?'لا نتائج مطابقة للبحث أو الفلتر':'لا يوجد مستخدمون بعد')+'</div>';
+      return;
+    }
+    const ST=uStats();
+    box.innerHTML=L.map(function(u){
       const me=u.uid===p.uid, off=u.active===false;
+      const s=ST[u.name]||null;
+      const stat = u.role==='viewer' ? ''
+        : '<div class="uS">'+(s
+            ? s.n+' عملية ميدانية · آخر نشاط '+(s.last? s.last.slice(8,10)+'/'+s.last.slice(5,7) : '—')
+            : 'لا نشاط ميداني بعد')+'</div>';
       return '<div class="uRow'+(off?' uOff':'')+'" data-uid="'+u.uid+'">'+
         '<div class="uT"><b>'+eh(u.name||'—')+
         (me?' <span class="uMe">أنت</span>':'')+
         (off?' <span class="uSt">موقوف</span>':'')+
-        '</b><i>'+eh(u.email||'')+'</i></div>'+
+        '</b><i>'+eh(u.email||'')+'</i></div>'+ stat +
         '<div class="uA">'+
         '<select class="uRole"'+(me?' disabled':'')+'>'+
-          ['supervisor','engineer','viewer'].map(r=>
-            '<option value="'+r+'"'+(u.role===r?' selected':'')+'>'+ROLE_AR[r]+'</option>').join('')+
+          ['supervisor','engineer','viewer'].map(function(r){
+            return '<option value="'+r+'"'+(u.role===r?' selected':'')+'>'+ROLE_AR[r]+'</option>'; }).join('')+
         '</select>'+
         '<button type="button" class="uTg"'+(me?' disabled':'')+'>'+(off?'تفعيل':'إيقاف')+'</button>'+
         '<button type="button" class="uPw" title="إرسال رابط تعيين كلمة مرور جديدة">كلمة المرور</button>'+
@@ -3664,6 +3706,10 @@ function bindAccountPanel(p){
     }catch(e){ uMsg('تعذّر تحميل المستخدمين: '+((e&&e.code)||e)); }
   }
   const uRefBtn=$g('uRef'); if(uRefBtn) uRefBtn.onclick=loadUsers;
+  const uSrch=$g('uSearch'); if(uSrch) uSrch.oninput=function(){ uQ=uSrch.value; drawUsers(); };
+  const uChps=$g('uChips'); if(uChps) uChps.onclick=function(e){
+    const b=e.target.closest('button[data-f]'); if(!b) return;
+    uF=b.dataset.f; drawUsers(); };
   const uListEl=$g('uList');
   if(uListEl){
     uListEl.onclick=async e=>{
@@ -4204,6 +4250,12 @@ header{padding-top:calc(10px + env(safe-area-inset-top,0px))}
 #fbAcct .uRow button.uTg:not([disabled]){border-color:#E05252;color:#E05252}
 #fbAcct .uRow.uOff button.uTg{border-color:var(--green,#3AD6A0);color:var(--green,#3AD6A0)}
 #fbAcct .uRow button[disabled]{opacity:.4;cursor:default}
+#fbAcct #uSearch{margin-bottom:8px}
+#fbAcct #uChips{display:flex;gap:6px;flex-wrap:wrap;margin:0 0 10px}
+#fbAcct #uChips button{border:1px solid var(--line,#555);background:transparent;color:var(--grey,#6F7D92);
+  border-radius:999px;padding:5px 11px;font:inherit;font-size:11px;font-weight:700;cursor:pointer}
+#fbAcct #uChips button.on{border-color:var(--gold,#C9A24B);color:var(--gold,#C9A24B);background:rgba(201,162,75,.10)}
+#fbAcct .uS{color:var(--grey,#6F7D92);font-size:10.5px;margin:-2px 0 7px}
 </style>
 </body>
 </html>
