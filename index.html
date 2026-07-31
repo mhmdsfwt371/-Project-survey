@@ -824,7 +824,7 @@ textarea.in{min-height:74px;resize:vertical}
 .toast{
   position:fixed;inset-block-end:76px;inset-inline:16px;background:var(--green);
   color:#0A0B0D;padding:10px 18px;border-radius:999px;font-weight:800;text-align:center;
-  z-index:900;transform:translateY(150%);transition:transform .25s,opacity .25s;font-size:13px;
+  z-index:99999;transform:translateY(150%);transition:transform .25s,opacity .25s;font-size:13px;
   width:max-content;max-width:calc(100% - 32px);margin-inline:auto;
   pointer-events:none;opacity:0;visibility:hidden;box-shadow:0 4px 18px rgba(0,0,0,.45)
 }
@@ -949,7 +949,7 @@ window.addEventListener('error', function(e){
 <div id="app">
   <header>
     <div class="t">
-      <div class="eyebrow">قارئات نُسُك ١٤٤٨هـ <span style="color:var(--muted);letter-spacing:0;font-weight:600">· نسخة V1.9</span></div>
+      <div class="eyebrow">قارئات نُسُك ١٤٤٨هـ <span style="color:var(--muted);letter-spacing:0;font-weight:600">· نسخة V2.0</span></div>
       <h1 id="ttl">المسح الميداني</h1>
     </div>
     <button class="pill" id="modeBtn" type="button">المسح</button>
@@ -1489,6 +1489,8 @@ function drawMap(){
       if(statusFilter && S0!==statusFilter) return;
     }
     const P0 = posOf(r);
+    const _la=(P0&&(P0.lat!=null?P0.lat:P0[0])), _lo=(P0&&(P0.lng!=null?P0.lng:P0[1]));
+    if(typeof _la!=='number'||typeof _lo!=='number'||isNaN(_la)||isNaN(_lo)) return;
     const light = z<13 || !b.contains(P0);
     const c = colOf(r[0]);
     const isCor = catOf(r).k==='cor';
@@ -4646,7 +4648,10 @@ function daySummary(){
 }
 function copySummary(){
   var txt=daySummary();
-  function ok(){ try{toast('\u0627\u062a\u0646\u0633\u062e \u0627\u0644\u0645\u0644\u062e\u0635 \u2014 \u0627\u0644\u0635\u0642\u0647 \u0641\u064a \u0627\u0644\u0645\u062d\u0627\u062f\u062b\u0629');}catch(e){}
+  function ok(){
+    try{ var b=$i('dCopy'); if(b && !b._t){ b._t=b.textContent;
+      b.textContent='✓ اتنسخ'; b.disabled=true;
+      setTimeout(function(){ b.textContent=b._t; b._t=null; b.disabled=false; },1800); } }catch(e){} try{toast('\u0627\u062a\u0646\u0633\u062e \u0627\u0644\u0645\u0644\u062e\u0635 \u2014 \u0627\u0644\u0635\u0642\u0647 \u0641\u064a \u0627\u0644\u0645\u062d\u0627\u062f\u062b\u0629');}catch(e){}
     try{ if(window.NSKSYNC) NSKSYNC.log('\u0646\u0633\u062e \u0645\u0644\u062e\u0635 \u0627\u0644\u064a\u0648\u0645 \u0645\u0646 \u0627\u0644\u0644\u0648\u062d\u0629'); }catch(e){} }
   function legacy(){ try{ var ta=document.createElement('textarea'); ta.value=txt;
       ta.style.position='fixed'; ta.style.opacity='0'; document.body.appendChild(ta);
