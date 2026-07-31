@@ -949,7 +949,7 @@ window.addEventListener('error', function(e){
 <div id="app">
   <header>
     <div class="t">
-      <div class="eyebrow">قارئات نُسُك ١٤٤٨هـ <span style="color:var(--muted);letter-spacing:0;font-weight:600">· نسخة V1.1</span></div>
+      <div class="eyebrow">قارئات نُسُك ١٤٤٨هـ <span style="color:var(--muted);letter-spacing:0;font-weight:600">· نسخة V1.2</span></div>
       <h1 id="ttl">المسح الميداني</h1>
     </div>
     <button class="pill" id="modeBtn" type="button">المسح</button>
@@ -3429,7 +3429,7 @@ window.NSKCORE={
 <button id="dashFab" type="button" style="display:none">📊 لوحة المتابعة</button>
 <div id="nskDash" dir="rtl"><div class="dWrap" id="dWrap"></div></div>
 
-<!-- NSK-FB phase1=auth+users:DONE v1b | phase2=records-sync:DONE | phase3=events-feed:DONE | viewer-dashboard:DONE v2+charts 2026-07-31 | std-lists+sign-format+approvals:DONE | navy-theme+challenges-report:DONE | map-pick+mobile-polish:DONE v3 | user-admin+search-filters-activity:DONE | super-admin:DONE role-matrix:v2 remember-me:DONE boss-heal:DONE | black-theme+close-x:DONE x-contrast:fix | panel-dark-unify:v5b | leaflet-dark+early-scheme:v5c | fab-tap+gold:v5d | dash-export-xlsx-pdf:v6 | dashx-clearance:v6a | dx-above-dash:v6b | terms-shakhes-ap:v6c | names-shakhes:v6d | hide-attrib:v6e | ver:V1-final | evlog:V1.1 2026-07-31 -->
+<!-- NSK-FB phase1=auth+users:DONE v1b | phase2=records-sync:DONE | phase3=events-feed:DONE | viewer-dashboard:DONE v2+charts 2026-07-31 | std-lists+sign-format+approvals:DONE | navy-theme+challenges-report:DONE | map-pick+mobile-polish:DONE v3 | user-admin+search-filters-activity:DONE | super-admin:DONE role-matrix:v2 remember-me:DONE boss-heal:DONE | black-theme+close-x:DONE x-contrast:fix | panel-dark-unify:v5b | leaflet-dark+early-scheme:v5c | fab-tap+gold:v5d | dash-export-xlsx-pdf:v6 | dashx-clearance:v6a | dx-above-dash:v6b | terms-shakhes-ap:v6c | names-shakhes:v6d | hide-attrib:v6e | ver:V1-final | evlog:V1.1 | sheet-floaters:V1.2 2026-07-31 -->
 <style id="fbGateCss">
 #fbGate{position:fixed;inset:0;z-index:99999;display:flex;align-items:center;justify-content:center;background:var(--cream,#101214);font-family:var(--ar,Tahoma,sans-serif);direction:rtl}
 #fbGate .fbC{display:block;width:min(92vw,360px);background:rgba(128,128,128,.07);border:1px solid var(--line,rgba(201,162,75,.3));border-radius:16px;padding:26px 22px;box-shadow:0 12px 40px rgba(0,0,0,.35);text-align:right}
@@ -4503,6 +4503,10 @@ header{padding-top:calc(10px + env(safe-area-inset-top,0px))}
 #fbGate .fbRm input{display:inline-block;width:auto;margin:0;accent-color:var(--gold,#C9A24B)}
 </style>
 <style id="nskUxCss">
+/* أثناء فتح شيت «مواقع» تختفي الأزرار العائمة حتى لا تغطي المحتوى */
+body:has(#sheet:not([hidden])) #fab,
+body:has(#sheet:not([hidden])) #dashFab,
+body:has(#sheet:not([hidden])) #fbSyncChip{ display:none!important }
 #nskDash .evCtl{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:6px 0 12px}
 #nskDash .evCtl label{display:flex;align-items:center;gap:6px;color:var(--grey,#9AA1AB);font-size:.85rem}
 #nskDash .evCtl input,#nskDash .evCtl select{background:var(--panel,#141619);color:var(--cream,#F1EDE0);border:1px solid rgba(150,158,172,.25);border-radius:10px;padding:7px 10px;font:inherit;color-scheme:dark}
