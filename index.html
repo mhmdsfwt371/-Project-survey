@@ -949,7 +949,7 @@ window.addEventListener('error', function(e){
 <div id="app">
   <header>
     <div class="t">
-      <div class="eyebrow">قارئات نُسُك ١٤٤٨هـ <span style="color:var(--muted);letter-spacing:0;font-weight:600">· نسخة V1.3</span></div>
+      <div class="eyebrow">قارئات نُسُك ١٤٤٨هـ <span style="color:var(--muted);letter-spacing:0;font-weight:600">· نسخة V1.4</span></div>
       <h1 id="ttl">المسح الميداني</h1>
     </div>
     <button class="pill" id="modeBtn" type="button">المسح</button>
@@ -1428,6 +1428,29 @@ function catOf(r){
   return CAT.cmp;
 }
 function catLine(r){ const c=catOf(r); return c.i+' '+c.l+' — '+szOf(r)+' · '; }
+const CATX_ORDER=['مخيمات منى','ممر منى','قطار منى','جمرات منى','كاميرات منى','منشآت التسكين',
+ 'مخيمات عرفات','ممر عرفات','قطار عرفات','مسجد نمرة',
+ 'مخيمات مزدلفة','ممر مزدلفة','قطار مزدلفة','قطار المشاعر','مواقع مقترحة','أخرى'];
+function catFull(r){
+  const c=catOf(r), z=szOf(r)||'', n=r[1]||'';
+  let l;
+  if(c===CAT.jam) l='جمرات منى';
+  else if(c===CAT.nam) l='مسجد نمرة';
+  else if(c===CAT.trn) l = n.indexOf('منى')>=0?'قطار منى' : n.indexOf('مزدلفة')>=0?'قطار مزدلفة' : n.indexOf('عرفات')>=0?'قطار عرفات' : 'قطار المشاعر';
+  else if(c===CAT.cam) l='كاميرات '+(z||'منى');
+  else if(c===CAT.cor) l=('ممر '+z).trim();
+  else if(c===CAT.hsg) l='منشآت التسكين';
+  else l=('مخيمات '+z).trim();
+  let o=CATX_ORDER.indexOf(l); if(o<0) o=CATX_ORDER.length-1;
+  return {l:l,o:o,i:c.i,c:c.c};
+}
+function catCmp(a,b){
+  const x=catFull(a), y=catFull(b);
+  return (x.o-y.o) || x.l.localeCompare(y.l,'ar')
+      || String(a[1]||'').localeCompare(String(b[1]||''),'ar');
+}
+window.NSKCATX={order:CATX_ORDER, of:catFull, cmp:catCmp};
+
 window.setZ=function(z){ zSel=(zSel===z?'':z); cSel=''; drawList(); drawMap(); };
 window.setC=function(c){ cSel=(cSel===c?'':c); drawList(); drawMap(); };
 function ptypeOf(r){
@@ -1486,7 +1509,7 @@ function drawMap(){
       '<b style="color:#C9A24B">'+esc(r[0])+'</b><br/>'+
       '<span class="pn">'+esc(nameOf(r))+'</span><br/>'+
       '<span style="color:'+catOf(r).c+';font-weight:800;font-size:11px">'+
-        catOf(r).i+' '+catOf(r).l+' — '+szOf(r)+'</span><br/>'+
+        catFull(r).i+' '+catFull(r).l+'</span><br/>'+
       kv('الشاخص', r[9])+
       kv('المربع', r[8])+
       kv('الشركة', r[10])+
@@ -2938,13 +2961,19 @@ $('#syNow').onclick=()=>{
 $('#expXls').onclick=()=>{
   const rows=allRows();
   if(!rows.length){ toast('لا توجد مواقع مسوحة بعد',1); return; }
+  const _cix={}; DB.d.forEach(function(w){ _cix[w[0]]=w; });
+  rows.sort(function(A,B){
+    const wa=_cix[A.r.id], wb=_cix[B.r.id];
+    const xa=wa?catFull(wa):{l:'مواقع مقترحة',o:900}, xb=wb?catFull(wb):{l:'مواقع مقترحة',o:900};
+    return (xa.o-xb.o)||xa.l.localeCompare(xb.l,'ar')||String(A.r.id).localeCompare(String(B.r.id),'ar');
+  });
   const keys=[...new Set(rows.flatMap(x=>Object.keys(x.r.v||{})))];
-  const head=['معرّف الموقع','اسم الموقع','المنطقة','شركة الخدمة','النوع','نوع العمل','حالة المسح','حالة الميدان','مقترح',
+  const head=['معرّف الموقع','الفئة','اسم الموقع','المنطقة','شركة الخدمة','النوع','نوع العمل','حالة المسح','حالة الميدان','مقترح',
     'تاريخ المسح','تحديات التركيب','تصحيحات على البيانات المسجّلة',
     'الصلاحية','حالة الوصول','إحداثيات الموقع','نقطة التركيب','دقة القياس',
     'الفني','آخر تعديل','رقم المراجعة','عدد الصور',
     ...keys.map(k=>FIELD_AR[k]||k)];
-  const body=rows.map(({r,p})=>[r.id, p?r.label:r.site, p?(r.v||{}).zone||'':r.zone||'',
+  const body=rows.map(({r,p})=>[r.id, (function(){const w=_cix[r.id];return w?catFull(w).l:'مواقع مقترحة';})(), p?r.label:r.site, p?(r.v||{}).zone||'':r.zone||'',
     coOf(r), p?(r.v||{}).stype||'':r.type||'', p?'—':r.work||'', (({draft:'مسوّدة — بيانات ناقصة',done:'مكتمل',blocked:'متعذّر الوصول'})[r.status]||r.status), p?'—':SL[st(r.id)], p?'نعم':'لا',
     r.survey_date||'',
     (r.chal||[]).join(' | '),
@@ -3027,6 +3056,12 @@ $('#expXls').onclick=()=>{
 $('#expPdf').onclick=()=>{
   const rows=allRows();
   if(!rows.length){ toast('لا توجد مواقع مسوحة بعد',1); return; }
+  const _cix={}; DB.d.forEach(function(w){ _cix[w[0]]=w; });
+  rows.sort(function(A,B){
+    const wa=_cix[A.r.id], wb=_cix[B.r.id];
+    const xa=wa?catFull(wa):{l:'مواقع مقترحة',o:900}, xb=wb?catFull(wb):{l:'مواقع مقترحة',o:900};
+    return (xa.o-xb.o)||xa.l.localeCompare(xb.l,'ar')||String(A.r.id).localeCompare(String(B.r.id),'ar');
+  });
   const w=window.open('','_blank');
   if(!w){ toast('اسمح بالنوافذ المنبثقة أولًا',1); return; }
   const page=({r,p})=>{
@@ -3157,9 +3192,9 @@ $('#filt').onclick=e=>{
 const LX_HEAD=['المعرّف','الاسم','الفئة','المشعر','المنطقة','المربع','الشاخص',
   'الشركة','تصنيف الحجاج','حالة الميدان','آخر فني','آخر تعديل','الإحداثيات','موقع معدَّل'];
 function listExportRows(){
-  const items=(window._lastItems&&window._lastItems.length)?window._lastItems:DB.d;
+  const items=(((window._lastItems&&window._lastItems.length)?window._lastItems:DB.d)).slice().sort(catCmp);
   return items.map(r=>{
-    const rec=recs[r[0]]||{}; const P0=posOf(r); const c=catOf(r);
+    const rec=recs[r[0]]||{}; const P0=posOf(r); const c=catFull(r);
     const p=ptypeOf(r);
     return [r[0], nameOf(r), c.l, szOf(r), r[21]||'', r[8]||'', r[9]||'',
       ((rec.fix||{}).company)||r[10]||'', p?('حجاج '+p):'',
@@ -3429,7 +3464,7 @@ window.NSKCORE={
 <button id="dashFab" type="button" style="display:none">📊 لوحة المتابعة</button>
 <div id="nskDash" dir="rtl"><div class="dWrap" id="dWrap"></div></div>
 
-<!-- NSK-FB phase1=auth+users:DONE v1b | phase2=records-sync:DONE | phase3=events-feed:DONE | viewer-dashboard:DONE v2+charts 2026-07-31 | std-lists+sign-format+approvals:DONE | navy-theme+challenges-report:DONE | map-pick+mobile-polish:DONE v3 | user-admin+search-filters-activity:DONE | super-admin:DONE role-matrix:v2 remember-me:DONE boss-heal:DONE | black-theme+close-x:DONE x-contrast:fix | panel-dark-unify:v5b | leaflet-dark+early-scheme:v5c | fab-tap+gold:v5d | dash-export-xlsx-pdf:v6 | dashx-clearance:v6a | dx-above-dash:v6b | terms-shakhes-ap:v6c | names-shakhes:v6d | hide-attrib:v6e | ver:V1-final | evlog:V1.1 | sheet-floaters:V1.2 | evfilters3:V1.3 2026-07-31 -->
+<!-- NSK-FB phase1=auth+users:DONE v1b | phase2=records-sync:DONE | phase3=events-feed:DONE | viewer-dashboard:DONE v2+charts 2026-07-31 | std-lists+sign-format+approvals:DONE | navy-theme+challenges-report:DONE | map-pick+mobile-polish:DONE v3 | user-admin+search-filters-activity:DONE | super-admin:DONE role-matrix:v2 remember-me:DONE boss-heal:DONE | black-theme+close-x:DONE x-contrast:fix | panel-dark-unify:v5b | leaflet-dark+early-scheme:v5c | fab-tap+gold:v5d | dash-export-xlsx-pdf:v6 | dashx-clearance:v6a | dx-above-dash:v6b | terms-shakhes-ap:v6c | names-shakhes:v6d | hide-attrib:v6e | ver:V1-final | evlog:V1.1 | sheet-floaters:V1.2 | evfilters3:V1.3 | catx:V1.4 2026-07-31 -->
 <style id="fbGateCss">
 #fbGate{position:fixed;inset:0;z-index:99999;display:flex;align-items:center;justify-content:center;background:var(--cream,#101214);font-family:var(--ar,Tahoma,sans-serif);direction:rtl}
 #fbGate .fbC{display:block;width:min(92vw,360px);background:rgba(128,128,128,.07);border:1px solid var(--line,rgba(201,162,75,.3));border-radius:16px;padding:26px 22px;box-shadow:0 12px 40px rgba(0,0,0,.35);text-align:right}
