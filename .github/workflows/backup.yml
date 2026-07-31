@@ -1,0 +1,36 @@
+name: Daily Firestore Backup
+on:
+  schedule:
+    - cron: '30 2 * * *'   # 05:30 صباحًا بتوقيت السعودية يوميًا
+  workflow_dispatch: {}
+  push:
+    paths:
+      - '.github/workflows/backup.yml'
+      - 'scripts/backup.mjs'
+permissions:
+  contents: write
+concurrency: backup
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - run: npm i firebase-admin@12 --no-save --no-audit --no-fund
+      - name: Run backup
+        env:
+          FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+        run: node scripts/backup.mjs
+      - name: Commit backup
+        run: |
+          git config user.name 'nusuk-backup-bot'
+          git config user.email 'actions@github.com'
+          git add backups/latest
+          if git diff --cached --quiet; then
+            echo 'no changes'
+          else
+            git commit -m "backup: $(date -u +%F_%H%M)"
+            git push
+          fi
