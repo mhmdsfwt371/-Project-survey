@@ -949,7 +949,7 @@ window.addEventListener('error', function(e){
 <div id="app">
   <header>
     <div class="t">
-      <div class="eyebrow">قارئات نُسُك ١٤٤٨هـ <span style="color:var(--muted);letter-spacing:0;font-weight:600">· نسخة V2.0</span></div>
+      <div class="eyebrow">قارئات نُسُك ١٤٤٨هـ <span style="color:var(--muted);letter-spacing:0;font-weight:600">· نسخة V2.1</span></div>
       <h1 id="ttl">المسح الميداني</h1>
     </div>
     <button class="pill" id="modeBtn" type="button">المسح</button>
@@ -3371,6 +3371,7 @@ $('#thBtn').onclick=()=>setTheme(curTheme==='light'?'dark':'light');
 /* NSK bridge: يكشف داخليات التطبيق لموديول المزامنة واللوحة */
 const NSK_SETTINGS={};
 window.NSKCORE={
+  tyOf:function(r){ try{ var c=catOf(r); return (c&&c.l)||'أخرى'; }catch(e){ return 'أخرى'; } },
   get:function(kind,id){ return (kind==='recs'?recs:kind==='inss'?inss:kind==='colist'?cos:kind==='settings'?NSK_SETTINGS:props)[id]; },
   all:function(kind){ return kind==='recs'?recs:kind==='inss'?inss:kind==='colist'?cos:kind==='settings'?NSK_SETTINGS:props; },
   set:function(kind,id,v){ (kind==='recs'?recs:kind==='inss'?inss:kind==='colist'?cos:kind==='settings'?NSK_SETTINGS:props)[id]=v; },
@@ -4269,6 +4270,47 @@ function teamRows(){
   return Object.keys(U).map(function(k){ return U[k]; })
     .sort(function(a,b){ return (b.s7-a.s7)||(b.sAll-a.sAll)||a.by.localeCompare(b.by,'ar'); });
 }
+function goalObj(){ try{ return window.NSKCORE.get('settings','goal')||{}; }catch(e){ return {}; } }
+function saveGoal(mut){
+  try{
+    var C=window.NSKCORE, g=Object.assign({}, C.get('settings','goal')||{});
+    g.regions=Object.assign({}, g.regions||{});
+    g.types=Object.assign({}, g.types||{});
+    try{ mut(g); }catch(e){}
+    C.set('settings','goal',g);
+    try{ if(window.NSKSYNC) NSKSYNC.push('settings','goal',g); }catch(e){}
+  }catch(e){}
+}
+function regTypeStats(){
+  var C=window.NSKCORE, dbx=C.db(), rc=C.all('recs'), inss=C.all('inss');
+  var R={}, order=[];
+  dbx.d.forEach(function(r){
+    var z=C.szOf(r)||'أخرى', ty=C.tyOf(r);
+    if(!R[z]){ R[z]={z:z,t:0,sv:0,types:{},torder:[]}; order.push(z); }
+    var g=R[z]; g.t++;
+    var rec=rc[r[0]]; if(rec && _svDoneRec(rec)) g.sv++;
+    if(!g.types[ty]){ g.types[ty]={ty:ty,t:0,ok:0}; g.torder.push(ty); }
+    var tt=g.types[ty]; tt.t++;
+    if(((inss[r[0]]||{}).status)==='مُركّب') tt.ok++;
+  });
+  var pref=['منى','عرفات','مزدلفة'];
+  order.sort(function(a,b){ var ia=pref.indexOf(a), ib=pref.indexOf(b);
+    return ((ia<0?9:ia)-(ib<0?9:ib)) || a.localeCompare(b,'ar'); });
+  return order.map(function(z){ return R[z]; });
+}
+function dailySvReg(days){
+  var C=window.NSKCORE, dbx=C.db(), rc=C.all('recs');
+  var zid={}; dbx.d.forEach(function(r){ zid[r[0]]=C.szOf(r)||'أخرى'; });
+  var m={};
+  Object.keys(rc).forEach(function(k){ var r=rc[k];
+    if(!_svDoneRec(r)) return; var d=_recDay(r); if(!d) return;
+    var z=zid[k]||'أخرى'; (m[z]=m[z]||{})[d]=(m[z][d]||0)+1; });
+  var t=new Date(), keys=[];
+  for(var i=days-1;i>=0;i--){ keys.push(_dk(new Date(t.getFullYear(),t.getMonth(),t.getDate()-i))); }
+  var out={};
+  Object.keys(m).forEach(function(z){ out[z]=keys.map(function(k2){ return {lb:k2, v:(m[z][k2]||0)}; }); });
+  return {keys:keys, by:out};
+}
 function paceHtml(c){
   var dl=goalDeadline(), P=paceCalc(c.total,c.svDone,dl,dailySv(7));
   var canEdit=!!(user && (user.role==='admin'||user.role==='engineer'));
@@ -4286,6 +4328,47 @@ function paceHtml(c){
   else h+='<p class="pMsg '+(P.ok?'pOkC':'pWarn')+'">بالمعدل الحالي يكتمل المسح: '+fin+(P.ok?' — قبل الموعد المستهدف ✓':' — بعد الموعد المستهدف ⚠️')+'</p>';
   if(canEdit) h+='<label class="pDl">الموعد المستهدف <input type="date" id="paceDl" value="'+escA(dl)+'"></label>';
   else if(dl) h+='<p class="pMsg">الموعد المستهدف: '+esc2(dl)+'</p>';
+  /* V2.1: الوتيرة حسب المشعر */
+  var G=goalObj(), RT=regTypeStats(), DR=dailySvReg(7);
+  h+='<div class="pSub2">الوتيرة حسب المشعر — موعد مستهدف لكل مشعر</div>';
+  h+='<table class="dT"><thead><tr><th>المشعر</th><th>متبقٍ للمسح</th><th>متوسط ٧ أيام</th><th>المطلوب يوميًا</th><th>الاكتمال المتوقع</th><th>الموعد المستهدف</th></tr></thead><tbody>';
+  RT.forEach(function(g){
+    var rdl=(G.regions||{})[g.z]||'';
+    var pr=paceCalc(g.t, g.sv, rdl, DR.by[g.z]||DR.keys.map(function(k){return {lb:k,v:0};}));
+    var f2=pr.finish?_dk(pr.finish):'';
+    h+='<tr><td>'+esc2(g.z)+'</td><td>'+AR(pr.rem)+'</td><td>'+AR(pr.avg7)+'</td>'
+      +'<td>'+(pr.req==null?'—':'<b>'+AR(pr.req)+'</b>')+'</td>'
+      +'<td>'+(f2?arS(f2.slice(8,10)+'/'+f2.slice(5,7)):'—')+'</td>'
+      +'<td>'+(canEdit
+        ?'<input type="date" class="pRgDl" data-z="'+escA(g.z)+'" value="'+escA(rdl)+'">'
+        :(rdl?esc2(rdl):'—'))+'</td></tr>';
+  });
+  h+='</tbody></table>';
+  /* V2.1: الأنواع + متوسط زمن التركيب */
+  var TY={}, TOR=[];
+  RT.forEach(function(g){ g.torder.forEach(function(ty){
+    if(!TY[ty]){ TY[ty]={t:0,ok:0}; TOR.push(ty); }
+    TY[ty].t+=g.types[ty].t; TY[ty].ok+=g.types[ty].ok; }); });
+  h+='<div class="pSub2">أنواع النقاط — متوسط زمن تركيب النقطة بالدقيقة</div>';
+  h+='<div class="pTyStrip">';
+  TOR.forEach(function(ty){ var mn=(G.types||{})[ty]||'';
+    h+='<label>'+esc2(ty)+(canEdit
+      ?' <input type="number" inputmode="numeric" min="1" max="600" class="pTyMin" data-ty="'+escA(ty)+'" value="'+escA(mn)+'" placeholder="—">'
+      :' <b>'+(mn?arS(mn):'—')+'</b>')+'</label>'; });
+  h+='</div>';
+  h+='<table class="dT"><thead><tr><th>المشعر</th><th>النوع</th><th>الإجمالي</th><th>مُركّب</th><th>متبقٍ</th><th>ساعات متبقية</th></tr></thead><tbody>';
+  var totH=0, anyMn=false;
+  RT.forEach(function(g){ g.torder.forEach(function(ty,ix){
+    var t=g.types[ty], rem2=t.t-t.ok, mn=(G.types||{})[ty]||0;
+    var hh=(mn>0)?Math.round(rem2*mn/6)/10:null;
+    if(hh!=null){ totH+=hh; anyMn=true; }
+    h+='<tr><td>'+(ix===0?esc2(g.z):'<span class="pMut">·</span>')+'</td><td>'+esc2(ty)+'</td>'
+      +'<td>'+AR(t.t)+'</td><td style="color:#3AD6A0">'+AR(t.ok)+'</td><td>'+AR(rem2)+'</td>'
+      +'<td>'+(hh==null?'—':arS(hh))+'</td></tr>';
+  }); });
+  h+='</tbody></table>';
+  if(anyMn) h+='<p class="pMsg">إجمالي حمل التركيب المتبقي بالمعدلات المُدخلة: <b>'+arS(Math.round(totH))+'</b> ساعة عمل تقريبًا.</p>';
+  else if(canEdit) h+='<p class="pMsg">اكتب متوسط زمن التركيب بالدقيقة لكل نوع أعلاه ليُحسب حمل العمل المتبقي بالساعات.</p>';
   return h;
 }
 function teamHtml(){
@@ -4396,7 +4479,15 @@ function dxXlsx(sel){
       ['أيام متبقية',pc.daysLeft==null?'—':pc.daysLeft],
       ['المطلوب يوميًا',pc.req==null?'—':pc.req],
       ['متوسط آخر ٧ أيام',pc.avg7],
-      ['تاريخ الاكتمال المتوقع',pc.finish?_dk(pc.finish):'—']],[26,16]); }
+      ['تاريخ الاكتمال المتوقع',pc.finish?_dk(pc.finish):'—']],[26,16]);
+    var G3=goalObj(), RT3=regTypeStats(), DR3=dailySvReg(7);
+    add('الوتيرة حسب المشعر',[['المشعر','متبقٍ للمسح','متوسط ٧ أيام','المطلوب يوميًا','الموعد المستهدف','الاكتمال المتوقع']].concat(
+      RT3.map(function(g){ var pr=paceCalc(g.t,g.sv,(G3.regions||{})[g.z]||'',DR3.by[g.z]||DR3.keys.map(function(k){return {lb:k,v:0};}));
+        return [g.z,pr.rem,pr.avg7,(pr.req==null?'—':pr.req),((G3.regions||{})[g.z]||'—'),(pr.finish?_dk(pr.finish):'—')]; })),[12,14,14,14,16,18]);
+    var tyR=[['المشعر','النوع','الإجمالي','مُركّب','متبقٍ','زمن النقطة (دقيقة)','ساعات متبقية']];
+    RT3.forEach(function(g){ g.torder.forEach(function(ty){ var t=g.types[ty], mn=(G3.types||{})[ty];
+      tyR.push([g.z,ty,t.t,t.ok,t.t-t.ok,(mn||'—'),(mn?Math.round((t.t-t.ok)*mn/6)/10:'—')]); }); });
+    add('الأنواع وزمن التركيب',tyR,[10,18,10,10,10,16,14]); }
   if(sel.indexOf('inst')>-1) add('التركيب والجدولة',[['البند','العدد'],
     ['إجمالي المواقع',c.total],['دخل الجدولة',c.plan],['مجدول',c.sch],['قيد التركيب',c.run],
     ['مُركّب',c.ok],['متعذّر',c.bad],['لم يُجدول بعد',c.none],
@@ -4834,10 +4925,21 @@ function render(){
   evPaint();
   var pd=$i('paceDl'); if(pd) pd.onchange=function(){
     var v=pd.value||'';
-    try{ var C0=window.NSKCORE, g=C0.get('settings','goal')||{}; g.deadline=v; C0.set('settings','goal',g); }catch(e){}
-    try{ window.NSKSYNC.push('settings','goal',{deadline:v}); }catch(e){}
+    saveGoal(function(g){ g.deadline=v; });
     render();
   };
+  Array.prototype.forEach.call(document.querySelectorAll('#nskDash .pRgDl'),function(inp){
+    inp.onchange=function(){
+      var z=inp.getAttribute('data-z'), v=inp.value||'';
+      saveGoal(function(g){ if(v) g.regions[z]=v; else delete g.regions[z]; });
+      render();
+    }; });
+  Array.prototype.forEach.call(document.querySelectorAll('#nskDash .pTyMin'),function(inp){
+    inp.onchange=function(){
+      var ty=inp.getAttribute('data-ty'), v=parseInt(inp.value,10);
+      saveGoal(function(g){ if(v>0) g.types[ty]=v; else delete g.types[ty]; });
+      render();
+    }; });
   $i('dAcct').onclick=function(){ const a=$i('fbAcct'); if(a) a.style.display='flex'; };
   $i('dTheme').onclick=function(){ const t=document.getElementById('thBtn'); if(t) t.click(); };
 }
@@ -4974,6 +5076,12 @@ header{padding-top:calc(10px + env(safe-area-inset-top,0px))}
 #nskDash .dPrn{display:none}
 body.dxPrint #nskDash .dPrn{display:block;font-size:11px;color:#555;margin:0 0 10px}
 body.dxPrint #nskDash .dPulse{display:block}
+#nskDash .pSub2{font-size:.95em;margin:18px 0 8px;color:var(--gold,#C9A24B);font-weight:800}
+#nskDash .pTyStrip{display:flex;flex-wrap:wrap;gap:8px;margin:4px 0 10px}
+#nskDash .pTyStrip label{display:flex;align-items:center;gap:6px;font-size:.85em;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.09);border-radius:10px;padding:6px 10px}
+#nskDash .pTyStrip input{width:64px;background:transparent;border:1px solid rgba(255,255,255,.18);border-radius:8px;color:inherit;padding:4px 6px;text-align:center;font:inherit}
+#nskDash .pRgDl{background:transparent;border:1px solid rgba(255,255,255,.18);border-radius:8px;color:inherit;padding:4px 6px;font:inherit;max-width:140px}
+#nskDash table.dT td .pMut{color:var(--grey,#9AA1AB)}
 #nskDash .evCb{position:relative}
 #nskDash .evCbBtn{background:var(--panel,#141619);color:var(--cream,#F1EDE0);border:1px solid rgba(150,158,172,.25);border-radius:10px;padding:7px 12px;font:inherit;cursor:pointer;max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 #nskDash .evCbBtn.on{border-color:var(--gold,#C9A24B);color:var(--gold,#C9A24B)}
