@@ -949,7 +949,7 @@ window.addEventListener('error', function(e){
 <div id="app">
   <header>
     <div class="t">
-      <div class="eyebrow">قارئات نُسُك ١٤٤٨هـ <span style="color:var(--muted);letter-spacing:0;font-weight:600">· نسخة V2.1</span></div>
+      <div class="eyebrow">قارئات نُسُك ١٤٤٨هـ <span style="color:var(--muted);letter-spacing:0;font-weight:600">· نسخة V2.2</span></div>
       <h1 id="ttl">المسح الميداني</h1>
     </div>
     <button class="pill" id="modeBtn" type="button">المسح</button>
@@ -4423,16 +4423,16 @@ function zN(z){ z=String(z||''); return z.indexOf('عرف')>=0?'عرفات':z.in
 var DXS=[['pace','الوتيرة والهدف'],['over','نظرة عامة (الرسوم الدائرية)'],['inst','التركيب والجدولة'],
  ['daily','معدل التركيب اليومي'],['survey','المسح الميداني'],
  ['chal','التحديات الميدانية'],['reg','حسب المشعر'],
- ['co','حسب شركة الخدمة'],['stuck','المتعذر والراكد'],
+ ['co','حسب شركة الخدمة'],['stuck','المتعذر والراكد'],['pipe','سلامة خط الإنتاج'],
  ['team','إنتاجية الفريق'],['ev','آخر الأحداث']];
-function dxSaved(){ try{ return JSON.parse(localStorage.getItem('nsk.dx')||'null'); }catch(e){ return null; } }
+function dxSaved(){ try{ return JSON.parse(localStorage.getItem('nsk.dx2')||'null'); }catch(e){ return null; } }
 function dxOpen(){
   var ov=$i('dxOv');
   if(!ov){
     ov=document.createElement('div'); ov.id='dxOv';
     var saved=dxSaved();
     var rows=DXS.map(function(s){
-      var on=!saved||saved.indexOf(s[0])>-1||(saved.indexOf('co')<0&&(s[0]==='co'||s[0]==='stuck'));
+      var on=!saved||saved.indexOf(s[0])>-1;
       return '<label class="dxR"><input type="checkbox" value="'+s[0]+'"'+(on?' checked':'')+'> '+s[1]+'</label>';
     }).join('');
     ov.innerHTML='<div class="dxB">'
@@ -4457,7 +4457,7 @@ function dxOpen(){
 function dxSel(){
   var out=[], ov=$i('dxOv'); if(!ov) return out;
   ov.querySelectorAll('input[type=checkbox]').forEach(function(c){ if(c.checked) out.push(c.value); });
-  try{ localStorage.setItem('nsk.dx', JSON.stringify(out)); }catch(e){}
+  try{ localStorage.setItem('nsk.dx2', JSON.stringify(out)); }catch(e){}
   if(!out.length){ try{ toast('اختر قسمًا واحدًا على الأقل',1); }catch(e){} }
   return out;
 }
@@ -4521,6 +4521,14 @@ function dxXlsx(sel){
     add('المتعذر والراكد',[['النوع','الموقع','المشعر','الحالة','منذ (يوم)','السبب المسجّل']].concat(
       SK2.bad.map(function(x){ return ['متعذّر',x.n,zN(x.z),'متعذّر',x.d,x.why||'']; }),
       SK2.stale.map(function(x){ return ['راكد',x.n,zN(x.z),x.st,x.d,'']; })),[10,26,10,14,10,40]); }
+  if(sel.indexOf('pipe')>-1){ var PQ3=pipeChecks();
+    add('سلامة خط الإنتاج',[['الفحص','العدد'],
+      ['جاهز للجدولة الآن',PQ3.ready.length],
+      ['دخل الجدولة بلا مسح',PQ3.schedNoSurvey.length],
+      ['مُركّب رغم مسح مانع',PQ3.contra.length],
+      ['مُركّب بدون أي مسح',PQ3.instNoSurvey]],[28,12]);
+    if(PQ3.ready.length) add('طابور الجدولة',[['الموقع','المشعر','منذ المسح (يوم)']].concat(
+      PQ3.ready.map(function(x){ return [x.n,zN(x.z),x.d]; })),[28,10,16]); }
   X.writeFile(wb,'تقرير_لوحة_المتابعة_'+tag+'.xlsx');
   try{ if(window.NSKSYNC) NSKSYNC.log('تصدير تقرير اللوحة (Excel) — '+sel.length+' أقسام'); }catch(e){}
 }
@@ -4558,7 +4566,8 @@ function dxJson(){
   var c=counts();
   var out={ schema:'nusuk-survey/1', generated_at:new Date().toISOString(),
     totals:{ sites:c.total, surveyed:c.svDone, installed:c.ok, in_progress:c.run,
-      scheduled:c.sch, blocked:c.bad, unscheduled:c.none, proposals:proposals.length },
+      scheduled:c.sch, blocked:c.bad, unscheduled:c.none, proposals:proposals.length,
+      ready_to_schedule:(function(){ try{ return pipeChecks().ready.length; }catch(e){ return null; } })() },
     sites:sites, proposals:proposals };
   try{
     var blob=new Blob([JSON.stringify(out,null,1)],{type:'application/json'});
@@ -4715,6 +4724,31 @@ function pendProps(){
   });
   return {n:n, old:oldest};
 }
+function pipeChecks(){
+  var C=window.NSKCORE, dbx=C.db(), recs=C.all('recs'), inss=C.all('inss');
+  var ready=[], schedNoSurvey=[], contra=[], instNoSurvey=0;
+  dbx.d.forEach(function(r){
+    var id=r[0], rec=recs[id], ins=inss[id], st=(ins&&ins.status)||'';
+    var svDone=!!(rec && (rec.fstat==='done'||rec.status==='done'));
+    var svBlocked=!!(rec && rec.fstat==='blocked');
+    var inPipe=(st==='مجدول'||st==='قيد التركيب'||st==='مُركّب'||st==='متعذّر');
+    var nm={n:r[1]||id, z:C.szOf(r)||''};
+    if(svDone && rec.fit!=='غير مناسب' && !inPipe){
+      ready.push({n:nm.n,z:nm.z,d:(daysSince(rec.survey_date||rec.date)||0)});
+    }
+    if((st==='مجدول'||st==='قيد التركيب') && !svDone && !svBlocked){
+      schedNoSurvey.push({n:nm.n,z:nm.z,st:st});
+    }
+    if(st==='مُركّب'){
+      if(!rec) instNoSurvey++;
+      else if(rec.fit==='غير مناسب'||svBlocked){
+        contra.push({n:nm.n,z:nm.z,why:(svBlocked?'المسح متعذّر':'المسح: غير مناسب')});
+      }
+    }
+  });
+  ready.sort(function(a,b){ return b.d-a.d; });
+  return {ready:ready, schedNoSurvey:schedNoSurvey, contra:contra, instNoSurvey:instNoSurvey};
+}
 function daySummary(){
   var c=counts(), gd=goalDeadline(), pc=paceCalc(c.total,c.svDone,gd,dailySv(7));
   var SK=stuckRows(), CO=coTable(), pu=pulseCalc(), pp=pendProps();
@@ -4727,6 +4761,7 @@ function daySummary(){
   L.push('\u0627\u0644\u062a\u0631\u0643\u064a\u0628: \u066a'+arS(pct(c.ok,c.total))+' ('+arS(c.ok)+' \u0645\u0646 '+arS(c.total)+') \u00b7 \u0627\u0644\u064a\u0648\u0645 +'+arS(today));
   L.push('\u0627\u0644\u0645\u0633\u062d: \u066a'+arS(pct(c.svDone,c.total))+' ('+arS(c.svDone)+') \u00b7 \u0645\u062a\u0628\u0642\u064d '+arS(pc.rem));
   L.push('\u0645\u062a\u0639\u0630\u0651\u0631: '+arS(SK.bad.length)+(SK.bad.length?' (\u0623\u0642\u062f\u0645\u0647\u0627 '+arS(SK.bad[0].d)+' \u064a\u0648\u0645)':'')+' \u00b7 \u0631\u0627\u0643\u062f \u0665+ \u0623\u064a\u0627\u0645: '+arS(SK.stale.length));
+  try{ var PQd=pipeChecks(); if(PQd.ready.length) L.push('جاهز للجدولة (ممسوح بلا جدولة): '+arS(PQd.ready.length)); }catch(e){}
   L.push('\u0646\u0634\u0627\u0637 \u0627\u0644\u064a\u0648\u0645: '+arS(pu.act)+' \u0645\u0646 '+arS(pu.tot)+' \u0639\u0646\u0635\u0631\u064b\u0627 \u0645\u064a\u062f\u0627\u0646\u064a\u064b\u0627'+(pu.last?' \u00b7 \u0622\u062e\u0631 \u0639\u0645\u0644\u064a\u0629 '+arS(pu.last):''));
   if(CO.length){
     var low=CO.slice(0,2).map(function(m){ return m.co+' \u066a'+arS(m.p); }).join('\u060c ');
@@ -4764,7 +4799,12 @@ function render(){
   h+='<button class="dBtn p" id="dMap" type="button">عرض الخريطة</button></div>';
   h+='<p class="dSub">آخر مزامنة: '+(lastSync?fmtT(lastSync):'—')+' · الأرقام لحظية من الميدان</p>';
   (function(){ var pu=pulseCalc(), pp=pendProps();
-    h+='<p class="dSub dPulse">نشاط اليوم: <b>'+AR(pu.act)+'</b> من '+AR(pu.tot)+' عنصرًا ميدانيًا'
+    var t0=_dk(new Date()), sT=0, iT=0;
+    var rc0=window.NSKCORE.all('recs'), in0=window.NSKCORE.all('inss');
+    Object.keys(rc0).forEach(function(k){ var r=rc0[k]; if(_svDoneRec(r)&&_recDay(r)===t0) sT++; });
+    Object.keys(in0).forEach(function(k){ var r=in0[k]; if(r.status==='مُركّب'&&String(r.date||'').slice(0,10)===t0) iT++; });
+    var rq=null; try{ rq=paceCalc(c.total,c.svDone,goalDeadline(),dailySv(7)).req; }catch(e){}
+    h+='<p class="dSub dPulse">نشاط اليوم: <b>'+AR(pu.act)+'</b> من '+AR(pu.tot)+' عنصرًا ميدانيًا · مسح اليوم <b>'+AR(sT)+'</b>'+(rq!=null?' من مطلوب '+AR(rq):'')+' · تركيب اليوم <b>'+AR(iT)+'</b>'
       +(pu.last?' · آخر عملية '+arS(pu.last):'')
       +' &nbsp;·&nbsp; مقترحات بانتظار الاعتماد: <b>'+AR(pp.n)+'</b>'
       +((pp.n&&pp.old!=null)?' (أقدمها منذ '+AR(pp.old)+' يوم)':'')+'</p>';
@@ -4883,6 +4923,37 @@ function render(){
       if(SK.stale.length>10) h+='<div class="dTs">…وباقي '+AR(SK.stale.length-10)+'.</div>';
     }
     if(!SK.bad.length && !SK.stale.length) h+='<div class="dEmpty">لا يوجد متعذّر قائم ولا مواقع راكدة — الوضع سليم ✅</div>';
+  })();
+
+  /* V2.2: سلامة خط الإنتاج */
+  (function(){
+    var PQ=pipeChecks();
+    h+='</section><section class="dSec" data-sec="pipe">';
+    h+='<h2>سلامة خط الإنتاج — مسح ← جدولة ← تركيب</h2>';
+    h+='<div class="dGrid">';
+    h+=card(PQ.ready.length,'جاهز للجدولة الآن','#4BC9F5');
+    h+=card(PQ.schedNoSurvey.length,'دخل الجدولة بلا مسح','#E8873A');
+    h+=card(PQ.contra.length+PQ.instNoSurvey,'تعارضات تحتاج تدقيقًا','#E05252');
+    h+='</div>';
+    if(PQ.ready.length){
+      h+='<h2 style="font-size:.95em;margin-top:14px">طابور الجدولة — ممسوح وصالح ولم يُجدول (الأقدم أولًا)</h2>';
+      h+='<table class="dT"><thead><tr><th>الموقع</th><th>المشعر</th><th>منذ المسح (يوم)</th></tr></thead><tbody>';
+      PQ.ready.slice(0,10).forEach(function(x){
+        h+='<tr><td>'+esc2(x.n)+'</td><td>'+zN(x.z)+'</td><td style="color:#4BC9F5;font-weight:700">'+AR(x.d)+'</td></tr>'; });
+      h+='</tbody></table>';
+      if(PQ.ready.length>10) h+='<div class="dTs">…وباقي '+AR(PQ.ready.length-10)+' — القائمة كاملة في تصدير الإكسل.</div>';
+    }
+    if(PQ.contra.length){
+      h+='<h2 style="font-size:.95em;margin-top:14px">تعارضات: مُركّب رغم أن المسح مانع</h2>';
+      h+='<table class="dT"><thead><tr><th>الموقع</th><th>المشعر</th><th>السبب</th></tr></thead><tbody>';
+      PQ.contra.slice(0,8).forEach(function(x){
+        h+='<tr><td>'+esc2(x.n)+'</td><td>'+zN(x.z)+'</td><td style="color:#E05252">'+esc2(x.why)+'</td></tr>'; });
+      h+='</tbody></table>';
+    }
+    if(PQ.instNoSurvey) h+='<p class="dTs">مُركّب بدون أي سجل مسح: '+AR(PQ.instNoSurvey)+' — يُستكمل مسحها لاحقًا للتوثيق.</p>';
+    if(PQ.schedNoSurvey.length) h+='<p class="dTs">دخل الجدولة قبل اكتمال المسح: '+AR(PQ.schedNoSurvey.length)+' موقعًا — راجع أولوية مسحها.</p>';
+    if(!PQ.ready.length && !PQ.schedNoSurvey.length && !PQ.contra.length && !PQ.instNoSurvey)
+      h+='<div class="dEmpty">الخط سليم: كل ما دخل الجدولة ممسوح، ولا يوجد ممسوح منسي بلا جدولة ✅</div>';
   })();
 
   h+='</section><section class="dSec" data-sec="reg">';
