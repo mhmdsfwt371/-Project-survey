@@ -1,5 +1,5 @@
 /* Nusuk Survey — offline shell cache */
-const CACHE = 'nusuk-survey-v3.2';
+const CACHE = 'nusuk-survey-v3.3';
 const SHELL = [
   './',
   './index.html',

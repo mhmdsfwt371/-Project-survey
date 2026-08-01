@@ -956,7 +956,7 @@ window.addEventListener('error', function(e){
 <div id="app">
   <header>
     <div class="t">
-      <div class="eyebrow">قارئات نُسُك ١٤٤٨هـ <span style="color:var(--muted);letter-spacing:0;font-weight:600">· نسخة V3.2</span></div>
+      <div class="eyebrow">قارئات نُسُك ١٤٤٨هـ <span style="color:var(--muted);letter-spacing:0;font-weight:600">· نسخة V3.3</span></div>
       <h1 id="ttl">المسح الميداني</h1>
     </div>
     <button class="pill" id="modeBtn" type="button">المسح</button>
@@ -4272,12 +4272,14 @@ function teamRows(){
   var t=new Date(), t0=_dk(t), wk={};
   for(var i=0;i<7;i++){ var d=new Date(t.getFullYear(),t.getMonth(),t.getDate()-i); wk[_dk(d)]=1; }
   var U={};
-  function u(by){ by=String(by||'—'); if(!U[by]) U[by]={by:by,sT:0,s7:0,sAll:0,iAll:0,last:''}; return U[by]; }
+  function u(by){ by=String(by||'—'); if(!U[by]) U[by]={by:by,sT:0,s7:0,sAll:0,iAll:0,iT:0,i7:0,last:''}; return U[by]; }
   Object.keys(rc).forEach(function(k){ var r=rc[k], x=u(r.by);
     if(_svDoneRec(r)){ x.sAll++; var d=_recDay(r); if(d===t0) x.sT++; if(d && wk[d]) x.s7++; }
     var lt=String(r.date||''); if(lt>x.last) x.last=lt; });
   Object.keys(ins).forEach(function(k){ var r=ins[k], x=u(r.by);
-    if(r.status==='مُركّب') x.iAll++;
+    if(r.status==='مُركّب'){ x.iAll++;
+      var di=String(r.date||'').slice(0,10);
+      if(di===t0) x.iT++; if(wk[di]) x.i7++; }
     var lt=String(r.date||''); if(lt>x.last) x.last=lt; });
   return Object.keys(U).map(function(k){ return U[k]; })
     .sort(function(a,b){ return (b.s7-a.s7)||(b.sAll-a.sAll)||a.by.localeCompare(b.by,'ar'); });
@@ -4567,9 +4569,10 @@ function dxXlsx(sel){
     if(sr.length===1) sr.push(['لا يوجد','السجل نظيف']);
     add('سلامة البيانات',sr,[20,60]); }
   if(sel.indexOf('race')>-1){ var TR6=teamRows().filter(function(x){ return x.by&&x.by!=='—'; });
-    TR6.sort(function(a,b){ return (b.sAll-a.sAll)||(b.sT-a.sT); });
-    add('سباق المشرفين',[['الترتيب','المشرف','اليوم','٧ أيام','الإجمالي']].concat(
-      TR6.map(function(x,i){ return [i+1,x.by,x.sT,x.s7,x.sAll]; })),[8,24,8,10,10]); }
+    TR6.forEach(function(x){ x.tot=x.sAll+(x.iAll||0); x.tD=x.sT+(x.iT||0); });
+    TR6.sort(function(a,b){ return (b.tot-a.tot)||(b.tD-a.tD); });
+    add('سباق المشرفين',[['الترتيب','المشرف','نشاط اليوم','إجمالي المسح','إجمالي التركيب','المجموع']].concat(
+      TR6.map(function(x,i){ return [i+1,x.by,x.tD,x.sAll,x.iAll||0,x.tot]; })),[8,24,10,12,12,10]); }
   X.writeFile(wb,'تقرير_لوحة_المتابعة_'+tag+'.xlsx');
   try{ if(window.NSKSYNC) NSKSYNC.log('تصدير تقرير اللوحة (Excel) — '+sel.length+' أقسام'); }catch(e){}
 }
@@ -4991,24 +4994,28 @@ function render(){
   /* V3.2: أدائي + سباق المشرفين */
   (function(){
     var TRr=teamRows().filter(function(x){ return x.by && x.by!=='—'; });
-    TRr.sort(function(a,b){ return (b.sAll-a.sAll)||(b.sT-a.sT)||(b.s7-a.s7); });
+    TRr.forEach(function(x){ x.tot=x.sAll+(x.iAll||0); x.tD=x.sT+(x.iT||0); });
+    TRr.sort(function(a,b){ return (b.tot-a.tot)||(b.tD-a.tD)||(b.s7-a.s7); });
     var me=String((user&&user.name)||'').trim();
     var myIx=-1; TRr.forEach(function(x,i){ if(x.by===me) myIx=i; });
     if(user && user.role==='supervisor'){
-      var mine=(myIx>-1)?TRr[myIx]:{sT:0,s7:0,sAll:0,iAll:0};
+      var mine=(myIx>-1)?TRr[myIx]:{sT:0,s7:0,sAll:0,iAll:0,iT:0,tot:0};
       h+='<section class="dSec" data-sec="me">';
       h+='<h2>أدائي'+(me?' — '+esc2(me):'')+'</h2>';
       h+='<div class="dGrid">';
       h+=card(mine.sT,'مسحي اليوم','#E9CE83');
-      h+=card(mine.s7,'آخر ٧ أيام','#4BC9F5');
-      h+=card(mine.sAll,'إجمالي مسحي','#3AD6A0');
+      h+=card(mine.iT||0,'تركيبي اليوم','#4BC9F5');
       if(myIx>-1) h+=card(AR(myIx+1)+' / '+AR(TRr.length),'ترتيبي','#C77DFF');
+      h+='</div><div class="dGrid" style="margin-top:8px">';
+      h+=card(mine.sAll,'إجمالي مسحي','#3AD6A0');
+      h+=card(mine.iAll||0,'إجمالي تركيبي','#4BC9F5');
+      h+=card(mine.sAll+(mine.iAll||0),'مجموع نقاطي','#E9CE83');
       h+='</div>';
       if(myIx===0 && TRr.length>1){
-        var lead=mine.sAll-TRr[1].sAll;
+        var lead=(mine.tot||0)-(TRr[1].tot||0);
         h+='<p class="dTs">أنت في الصدارة 🏆'+(lead>0?' — متقدم بفارق '+AR(lead)+' نقطة. حافظ عليها!':' — والمنافسة على حامي!')+'</p>';
       } else if(myIx>0){
-        var gap=(TRr[myIx-1].sAll-mine.sAll)||1;
+        var gap=((TRr[myIx-1].tot||0)-(mine.tot||0))||1;
         h+='<p class="dTs">يفصلك <b>'+AR(gap)+'</b> نقطة عن المركز '+AR(myIx)+' ('+esc2(TRr[myIx-1].by)+') — قدّها 💪</p>';
       } else if(myIx<0){
         h+='<p class="dTs">أول عملية مسح تُدخلك السباق 🏁</p>';
@@ -5023,16 +5030,16 @@ function render(){
       h+='</section>';
     }
     h+='<section class="dSec" data-sec="race">';
-    h+='<h2>سباق المشرفين 🏁 — بإجمالي المسح</h2>';
+    h+='<h2>سباق المشرفين 🏁 — بمجموع المسح والتركيب</h2>';
     if(TRr.length){
-      h+='<table class="dT"><thead><tr><th></th><th>المشرف</th><th>اليوم</th><th>٧ أيام</th><th>الإجمالي</th></tr></thead><tbody>';
+      h+='<table class="dT"><thead><tr><th></th><th>المشرف</th><th>اليوم</th><th>مسح</th><th>تركيب</th><th>المجموع</th></tr></thead><tbody>';
       var MD=['🥇','🥈','🥉'];
       TRr.slice(0,12).forEach(function(x,i){
         var self=(me && x.by===me);
         h+='<tr'+(self?' style="background:rgba(233,206,131,.12);font-weight:800"':'')+'>'
           +'<td>'+(MD[i]||AR(i+1))+'</td><td>'+esc2(x.by)+(self?' (أنت)':'')+'</td>'
-          +'<td>'+AR(x.sT)+'</td><td>'+AR(x.s7)+'</td>'
-          +'<td style="color:#E9CE83;font-weight:800">'+AR(x.sAll)+'</td></tr>';
+          +'<td>'+AR(x.tD)+'</td><td>'+AR(x.sAll)+'</td><td>'+AR(x.iAll||0)+'</td>'
+          +'<td style="color:#E9CE83;font-weight:800">'+AR(x.tot)+'</td></tr>';
       });
       h+='</tbody></table>';
       if(TRr.length>12) h+='<div class="dTs">…و'+AR(TRr.length-12)+' آخرون — الترتيب الكامل في الإكسل.</div>';
