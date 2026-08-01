@@ -956,7 +956,7 @@ window.addEventListener('error', function(e){
 <div id="app">
   <header>
     <div class="t">
-      <div class="eyebrow">قارئات نُسُك ١٤٤٨هـ <span style="color:var(--muted);letter-spacing:0;font-weight:600">· نسخة V2.8</span></div>
+      <div class="eyebrow">قارئات نُسُك ١٤٤٨هـ <span style="color:var(--muted);letter-spacing:0;font-weight:600">· نسخة V2.9</span></div>
       <h1 id="ttl">المسح الميداني</h1>
     </div>
     <button class="pill" id="modeBtn" type="button">المسح</button>
@@ -4430,7 +4430,7 @@ function zN(z){ z=String(z||''); return z.indexOf('عرف')>=0?'عرفات':z.in
 var DXS=[['pace','الوتيرة والهدف'],['over','نظرة عامة (الرسوم الدائرية)'],['inst','التركيب والجدولة'],
  ['daily','معدل التركيب اليومي'],['survey','المسح الميداني'],
  ['chal','التحديات الميدانية'],['reg','حسب المشعر'],
- ['co','حسب شركة الخدمة'],['stuck','المتعذر والراكد'],['pipe','سلامة خط الإنتاج'],['assign','توزيع فرق التركيب'],
+ ['co','حسب شركة الخدمة'],['stuck','المتعذر والراكد'],['pipe','سلامة خط الإنتاج'],['assign','توزيع فرق التركيب'],['qa','التدقيق والسيريالات'],
  ['team','إنتاجية الفريق'],['ev','آخر الأحداث']];
 function dxSaved(){ try{ return JSON.parse(localStorage.getItem('nsk.dx2')||'null'); }catch(e){ return null; } }
 function dxOpen(){
@@ -4538,11 +4538,18 @@ function dxXlsx(sel){
       PQ3.ready.map(function(x){ return [x.n,zN(x.z),x.d]; })),[28,10,16]); }
   if(sel.indexOf('assign')>-1){ var AD3=assignData(), T3=teamsObj();
     var nm3=(T3.list||[]).slice(); Object.keys(AD3.teams).forEach(function(n){ if(nm3.indexOf(n)<0) nm3.push(n); });
-    add('فرق التركيب',[['الفريق','مُسند نشط','ركّب']].concat(
-      nm3.map(function(n){ var t=AD3.teams[n]||{t:0,ok:0,act:0}; return [n,t.act,t.ok]; })),[24,12,10]);
+    add('فرق التركيب',[['الفريق','مُسند نشط','ركّب','مُدقّق']].concat(
+      nm3.map(function(n){ var t=AD3.teams[n]||{t:0,ok:0,act:0,ver:0}; return [n,t.act,t.ok,t.ver||0]; })),[24,12,10,10]);
     var rws=[['المشعر','المربع','النقاط','الفريق']];
     AD3.sq.forEach(function(g){ var ks=Object.keys(g.tset); rws.push([g.z,g.sq,g.n,(ks.length===1?(ks[0]||'—'):'متعدد')]); });
     add('توزيع المربعات',rws,[10,10,10,22]); }
+  if(sel.indexOf('qa')>-1){ var C4=window.NSKCORE, dbx4=C4.db(), rc4=C4.all('recs'), in4=C4.all('inss');
+    var qr=[['الموقع','المشعر','المربع','الشاخص','الفريق','السيريال','حالة التدقيق','اعتمده','تاريخ الاعتماد']];
+    dbx4.d.forEach(function(r){ var id=r[0], iv=in4[id]; if(!iv||iv.status!=='مُركّب') return;
+      var fx=((rc4[id]||{}).fix)||{};
+      qr.push([(r[1]||id), zN(C4.szOf(r)||''), String(fx.square||r[8]||''), String(fx.sign||r[9]||''),
+        _tnorm(iv.team)||'—', iv.serial||'—', (iv.verified?'معتمد':'بانتظار التدقيق'), iv.qaBy||'—', iv.qaDate||'—']); });
+    add('سجل السيريالات',qr,[22,10,8,10,16,18,14,16,16]); }
   X.writeFile(wb,'تقرير_لوحة_المتابعة_'+tag+'.xlsx');
   try{ if(window.NSKSYNC) NSKSYNC.log('تصدير تقرير اللوحة (Excel) — '+sel.length+' أقسام'); }catch(e){}
 }
@@ -4566,7 +4573,9 @@ function dxJson(){
         fit:rec.fit||'', date:rec.survey_date||rec.date||'', by:rec.by||'',
         challenges:ch, note:v.chal_note||'' }:null,
       install: ins?{ status:(IS[st]||'none'), status_ar:st,
-        date:ins.date||'', by:ins.by||'' }:null };
+        date:ins.date||'', by:ins.by||'',
+        serial:ins.serial||'', verified:!!ins.verified,
+        verified_by:ins.qaBy||'', verified_at:ins.qaDate||'' }:null };
   });
   var proposals=Object.keys(props).map(function(k){
     var p=props[k]||{}; if(p.lat==null) return null;
@@ -4581,7 +4590,8 @@ function dxJson(){
   var out={ schema:'nusuk-survey/1', generated_at:new Date().toISOString(),
     totals:{ sites:c.total, surveyed:c.svDone, installed:c.ok, in_progress:c.run,
       scheduled:c.sch, blocked:c.bad, unscheduled:c.none, proposals:proposals.length,
-      ready_to_schedule:(function(){ try{ return pipeChecks().ready.length; }catch(e){ return null; } })() },
+      ready_to_schedule:(function(){ try{ return pipeChecks().ready.length; }catch(e){ return null; } })(),
+      awaiting_qa:(function(){ try{ return qaData().pend.length; }catch(e){ return null; } })() },
     sites:sites, proposals:proposals };
   try{
     var blob=new Blob([JSON.stringify(out,null,1)],{type:'application/json'});
@@ -4738,6 +4748,43 @@ function pendProps(){
   });
   return {n:n, old:oldest};
 }
+function _now(){ var t=new Date(); function p(x){ return ('0'+x).slice(-2); }
+  return t.getFullYear()+'-'+p(t.getMonth()+1)+'-'+p(t.getDate())+' '+p(t.getHours())+':'+p(t.getMinutes()); }
+function qaData(){
+  var C=window.NSKCORE, dbx=C.db(), recs=C.all('recs'), inss=C.all('inss');
+  var pend=[], done=0;
+  dbx.d.forEach(function(r){
+    var id=r[0], ins=inss[id]; if(!ins||ins.status!=='مُركّب') return;
+    if(ins.verified){ done++; return; }
+    var fx=((recs[id]||{}).fix)||{};
+    pend.push({id:id, n:(r[1]||id), z:C.szOf(r)||'', sq:String(fx.square||r[8]||'؟'),
+      sg:String(fx.sign||r[9]||''), team:_tnorm(ins.team), d:String(ins.date||''), serial:ins.serial||''});
+  });
+  pend.sort(function(a,b){ return a.d<b.d?-1:1; });
+  return {pend:pend, done:done};
+}
+function qaApprove(id, serial, note){
+  var C=window.NSKCORE, inss=C.all('inss'), ins=inss[id]; if(!ins) return false;
+  var rec=Object.assign({}, ins, {verified:true, serial:_tnorm(serial),
+    qaBy:_tnorm(user&&user.name)||'مهندس', qaDate:_now()});
+  var nt=_tnorm(note); if(nt) rec.qaNote=nt;
+  C.set('inss',id,rec);
+  try{ window.storage.set('ins:'+id, JSON.stringify(rec), false); }catch(e){}
+  try{ if(window.NSKSYNC) NSKSYNC.push('inss',id,rec); }catch(e){}
+  try{ if(window.NSKSYNC) NSKSYNC.log('اعتماد تركيب '+id+' — سيريال '+_tnorm(serial)); }catch(e){}
+  return true;
+}
+function qaReturn(id, note){
+  var C=window.NSKCORE, inss=C.all('inss'), ins=inss[id]; if(!ins) return false;
+  var rec=Object.assign({}, ins, {status:'قيد التركيب', date:_now()});
+  delete rec.verified;
+  var nt=_tnorm(note); if(nt) rec.qaNote=nt;
+  C.set('inss',id,rec);
+  try{ window.storage.set('ins:'+id, JSON.stringify(rec), false); }catch(e){}
+  try{ if(window.NSKSYNC) NSKSYNC.push('inss',id,rec); }catch(e){}
+  try{ if(window.NSKSYNC) NSKSYNC.log('إرجاع تركيب '+id+' لفريقه'+(nt?' — '+nt:'')); }catch(e){}
+  return true;
+}
 function teamsObj(){ try{ return window.NSKCORE.get('settings','teams')||{}; }catch(e){ return {}; } }
 function saveTeams(mut){
   try{
@@ -4757,8 +4804,8 @@ function assignData(){
     var st=ins.status||'';
     var act=(st==='مجدول'||st==='قيد التركيب');
     var tm=_tnorm(ins.team);
-    if(tm){ var T=teams[tm]=teams[tm]||{t:0,ok:0,act:0}; T.t++;
-      if(st==='مُركّب') T.ok++;
+    if(tm){ var T=teams[tm]=teams[tm]||{t:0,ok:0,act:0,ver:0}; T.t++;
+      if(st==='مُركّب'){ T.ok++; if(ins.verified) T.ver++; }
       if(act) T.act++; }
     if(!act) return;
     if(!tm) un++;
@@ -4851,6 +4898,7 @@ function daySummary(){
   L.push('\u0627\u0644\u0645\u0633\u062d: \u066a'+arS(pct(c.svDone,c.total))+' ('+arS(c.svDone)+') \u00b7 \u0645\u062a\u0628\u0642\u064d '+arS(pc.rem));
   L.push('\u0645\u062a\u0639\u0630\u0651\u0631: '+arS(SK.bad.length)+(SK.bad.length?' (\u0623\u0642\u062f\u0645\u0647\u0627 '+arS(SK.bad[0].d)+' \u064a\u0648\u0645)':'')+' \u00b7 \u0631\u0627\u0643\u062f \u0665+ \u0623\u064a\u0627\u0645: '+arS(SK.stale.length));
   try{ var PQd=pipeChecks(); if(PQd.ready.length) L.push('جاهز للجدولة (ممسوح بلا جدولة): '+arS(PQd.ready.length)); }catch(e){}
+  try{ var QDd=qaData(); if(QDd.pend.length) L.push('بانتظار التدقيق الهندسي: '+arS(QDd.pend.length)); }catch(e){}
   L.push('\u0646\u0634\u0627\u0637 \u0627\u0644\u064a\u0648\u0645: '+arS(pu.act)+' \u0645\u0646 '+arS(pu.tot)+' \u0639\u0646\u0635\u0631\u064b\u0627 \u0645\u064a\u062f\u0627\u0646\u064a\u064b\u0627'+(pu.last?' \u00b7 \u0622\u062e\u0631 \u0639\u0645\u0644\u064a\u0629 '+arS(pu.last):''));
   if(CO.length){
     var low=CO.slice(0,2).map(function(m){ return m.co+' \u066a'+arS(m.p); }).join('\u060c ');
@@ -5060,10 +5108,10 @@ function render(){
       h+='</div>';
       h+='<p class="dTs">اجعل اسم الفريق مطابقًا لاسم حساب قائده في التطبيق — ليظهر له زر «جدولي» تلقائيًا.</p>';
     }
-    h+='<table class="dT"><thead><tr><th>الفريق</th><th>مُسند نشط</th><th>ركّب</th><th></th></tr></thead><tbody>';
-    if(!names.length) h+='<tr><td colspan="4" class="dTs">أضف أسماء الفرق أولًا ثم وزّع المربعات عليها.</td></tr>';
+    h+='<table class="dT"><thead><tr><th>الفريق</th><th>مُسند نشط</th><th>ركّب</th><th>مُدقّق</th><th></th></tr></thead><tbody>';
+    if(!names.length) h+='<tr><td colspan="5" class="dTs">أضف أسماء الفرق أولًا ثم وزّع المربعات عليها.</td></tr>';
     names.forEach(function(n){ var t=AD.teams[n]||{t:0,ok:0,act:0};
-      h+='<tr><td>'+esc2(n)+'</td><td><b>'+AR(t.act)+'</b></td><td style="color:#3AD6A0">'+AR(t.ok)+'</td>'
+      h+='<tr><td>'+esc2(n)+'</td><td><b>'+AR(t.act)+'</b></td><td style="color:#3AD6A0">'+AR(t.ok)+'</td><td style="color:#4BC9F5">'+AR(t.ver||0)+'</td>'
         +'<td>'+(t.act?'<button type="button" class="dBtn tmShare" data-t="'+escA(n)+'">📤 جدوله</button>':'')+'</td></tr>'; });
     h+='</tbody></table>';
     if(AD.un) h+='<p class="dTs">نقاط مجدولة بلا فريق: <b>'+AR(AD.un)+'</b></p>';
@@ -5083,6 +5131,43 @@ function render(){
         h+='</tbody></table>';
         h+='<p class="dTs">النقاط التي تُجدول لاحقًا في نفس المربع: أعد اختيار الفريق لتلحق بها.</p>';
       } else h+='<div class="dEmpty">لا توجد نقاط مجدولة بعد — أول ما تبدأ الجدولة سيظهر التوزيع هنا.</div>';
+    }
+  })();
+
+  /* V2.9: التدقيق الهندسي */
+  (function(){
+    var canE=!!(user && (user.role==='admin'||user.role==='engineer'));
+    var Q=qaData(), tq=Q.done+Q.pend.length;
+    h+='</section><section class="dSec" data-sec="qa">';
+    h+='<h2>التدقيق الهندسي — اعتماد التركيبات والسيريالات</h2>';
+    h+='<div class="dGrid">';
+    h+=card(Q.pend.length,'بانتظار التدقيق','#E8873A');
+    h+=card(Q.done,'مُدقّق ومعتمد','#3AD6A0');
+    h+=card((tq?pct(Q.done,tq):0)+'٪','نسبة التدقيق','#4BC9F5');
+    h+='</div>';
+    if(Q.pend.length){
+      h+='<h2 style="font-size:.95em;margin-top:14px">'+(canE?'طابور التدقيق — الأقدم أولًا: أدخل السيريال ثم اعتمد':'تركيبات بانتظار تدقيق المهندس — الأقدم أولًا')+'</h2>';
+      Q.pend.slice(0,20).forEach(function(x){
+        h+='<div class="qaR" data-id="'+x.id+'">'
+          +'<div><b>'+esc2(x.sg||'—')+'</b> · '+esc2(x.n)
+          +' <span class="pMut">'+zN(x.z)+' · مربع '+esc2(x.sq)
+          +(x.team?' · فريق '+esc2(x.team):'')
+          +(x.d?' · رُكّب '+esc2(x.d.slice(5,16)):'')+'</span></div>';
+        if(canE){
+          h+='<div class="qaC">'
+            +'<input class="qaSer" placeholder="سيريال القارئ" value="'+escA(x.serial||'')+'">'
+            +'<input class="qaNt" placeholder="ملاحظة (اختياري)">'
+            +'<button type="button" class="dBtn p qaOk">✔ اعتماد</button>'
+            +'<button type="button" class="dBtn qaBk">↩ إرجاع للفريق</button>'
+            +'</div>';
+        }
+        h+='</div>';
+      });
+      if(Q.pend.length>20) h+='<div class="dTs">…وباقي '+AR(Q.pend.length-20)+' — اعتمد الظاهر يظهر التالي، والسجل كامل في تصدير الإكسل.</div>';
+    } else if(Q.done){
+      h+='<div class="dEmpty">كل التركيبات مُدقّقة ومعتمدة بسيريالاتها ✅</div>';
+    } else {
+      h+='<div class="dEmpty">لا توجد تركيبات بعد — أول تركيب سيظهر هنا لاعتماده.</div>';
     }
   })();
 
@@ -5159,6 +5244,19 @@ function render(){
     var n=assignSquare(s.getAttribute('data-z'), s.getAttribute('data-sq'), v);
     try{ toast('أُسندت '+AR(n)+' نقطة'+(v?' إلى '+v:' — بدون فريق')); }catch(e){}
     render();
+  }; });
+  Array.prototype.forEach.call(document.querySelectorAll('#nskDash .qaR .qaOk'),function(b){ b.onclick=function(){
+    var R=b.closest('.qaR'); if(!R) return;
+    var id=R.getAttribute('data-id');
+    var si=R.querySelector('.qaSer'), ni=R.querySelector('.qaNt');
+    var ser=si?si.value:'', nt=ni?ni.value:'';
+    if(!_tnorm(ser)){ try{ toast('اكتب سيريال القارئ أولًا',1); }catch(e){} if(si) si.focus(); return; }
+    if(qaApprove(id, ser, nt)){ try{ toast('اعتُمد التركيب ✔'); }catch(e){} render(); }
+  }; });
+  Array.prototype.forEach.call(document.querySelectorAll('#nskDash .qaR .qaBk'),function(b){ b.onclick=function(){
+    var R=b.closest('.qaR'); if(!R) return;
+    var ni=R.querySelector('.qaNt');
+    if(qaReturn(R.getAttribute('data-id'), ni?ni.value:'')){ try{ toast('أُرجع للفريق ↩'); }catch(e){} render(); }
   }; });
   $i('dAcct').onclick=function(){ const a=$i('fbAcct'); if(a) a.style.display='flex'; };
   $i('dTheme').onclick=function(){ const t=document.getElementById('thBtn'); if(t) t.click(); };
@@ -5455,6 +5553,12 @@ html[data-theme="light"] #nskDash .pRgDl{background:#fff;border-color:rgba(60,60
 #nskMineOv .mnR{padding:8px 4px;border-bottom:1px dashed rgba(150,150,150,.3);cursor:pointer}
 #nskMineOv .mnS{color:#4BC9F5;font-size:.85em}
 #nskMineOv .mnT{color:var(--grey,#9AA1AB);font-size:.8em;margin:10px 0 0}
+#nskDash .qaR{border:1px solid rgba(150,150,150,.3);border-radius:12px;padding:10px 12px;margin-bottom:8px}
+#nskDash .qaC{display:flex;flex-wrap:wrap;gap:8px;margin-top:9px}
+#nskDash .qaC input{flex:1;min-width:130px;background:rgba(255,255,255,.07);border:1.5px solid rgba(150,150,150,.6);
+  border-radius:8px;color:inherit;padding:7px 9px;font:inherit}
+html[data-theme="light"] #nskDash .qaC input{background:#fff;border-color:rgba(60,60,60,.5)}
+#nskDash .qaC input:focus{outline:none;border-color:var(--gold,#C9A24B);box-shadow:0 0 0 2px rgba(201,162,75,.25)}
 #nskDash table.dT td .pMut{color:var(--grey,#9AA1AB)}
 #nskDash .dSec{content-visibility:auto;contain-intrinsic-size:auto 480px;overflow-x:auto;-webkit-overflow-scrolling:touch}
 body.dxPrint #nskDash .dSec{content-visibility:visible}
