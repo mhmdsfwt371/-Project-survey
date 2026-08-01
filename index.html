@@ -956,7 +956,7 @@ window.addEventListener('error', function(e){
 <div id="app">
   <header>
     <div class="t">
-      <div class="eyebrow">قارئات نُسُك ١٤٤٨هـ <span style="color:var(--muted);letter-spacing:0;font-weight:600">· نسخة V2.9</span></div>
+      <div class="eyebrow">قارئات نُسُك ١٤٤٨هـ <span style="color:var(--muted);letter-spacing:0;font-weight:600">· نسخة V3.0</span></div>
       <h1 id="ttl">المسح الميداني</h1>
     </div>
     <button class="pill" id="modeBtn" type="button">المسح</button>
@@ -4430,7 +4430,7 @@ function zN(z){ z=String(z||''); return z.indexOf('عرف')>=0?'عرفات':z.in
 var DXS=[['pace','الوتيرة والهدف'],['over','نظرة عامة (الرسوم الدائرية)'],['inst','التركيب والجدولة'],
  ['daily','معدل التركيب اليومي'],['survey','المسح الميداني'],
  ['chal','التحديات الميدانية'],['reg','حسب المشعر'],
- ['co','حسب شركة الخدمة'],['stuck','المتعذر والراكد'],['pipe','سلامة خط الإنتاج'],['assign','توزيع فرق التركيب'],['qa','التدقيق والسيريالات'],
+ ['co','حسب شركة الخدمة'],['stuck','المتعذر والراكد'],['pipe','سلامة خط الإنتاج'],['assign','توزيع فرق التركيب'],['qa','التدقيق والسيريالات'],['sys','سلامة البيانات'],
  ['team','إنتاجية الفريق'],['ev','آخر الأحداث']];
 function dxSaved(){ try{ return JSON.parse(localStorage.getItem('nsk.dx2')||'null'); }catch(e){ return null; } }
 function dxOpen(){
@@ -4550,6 +4550,11 @@ function dxXlsx(sel){
       qr.push([(r[1]||id), zN(C4.szOf(r)||''), String(fx.square||r[8]||''), String(fx.sign||r[9]||''),
         _tnorm(iv.team)||'—', iv.serial||'—', (iv.verified?'معتمد':'بانتظار التدقيق'), iv.qaBy||'—', iv.qaDate||'—']); });
     add('سجل السيريالات',qr,[22,10,8,10,16,18,14,16,16]); }
+  if(sel.indexOf('sys')>-1 && user && user.role==='admin'){ var S5=sysChecks();
+    var sr=[['السيريال المكرر','النقاط المشتركة']];
+    S5.dup.forEach(function(d){ sr.push([d.s, d.rows.map(function(x){ return x.sg+' ('+x.z+(x.team?' - '+x.team:'')+')'; }).join(' | ')]); });
+    if(sr.length===1) sr.push(['لا يوجد','السجل نظيف']);
+    add('سلامة البيانات',sr,[20,60]); }
   X.writeFile(wb,'تقرير_لوحة_المتابعة_'+tag+'.xlsx');
   try{ if(window.NSKSYNC) NSKSYNC.log('تصدير تقرير اللوحة (Excel) — '+sel.length+' أقسام'); }catch(e){}
 }
@@ -4748,6 +4753,23 @@ function pendProps(){
   });
   return {n:n, old:oldest};
 }
+function sysChecks(){
+  var C=window.NSKCORE, dbx=C.db(), inss=C.all('inss'), recs=C.all('recs'), props=C.all('props');
+  var ser={}, dup=[], noco=0, pend=0;
+  dbx.d.forEach(function(r){
+    if(!(typeof r[5]==='number'&&typeof r[6]==='number'&&isFinite(r[5])&&isFinite(r[6]))) noco++;
+    var iv=inss[r[0]];
+    if(iv&&iv.status==='مُركّب'){
+      var s=_tnorm(iv.serial);
+      if(s){ var fx=((recs[r[0]]||{}).fix)||{};
+        (ser[s]=ser[s]||[]).push({sg:String(fx.sign||r[9]||r[0]), z:C.szOf(r)||'', team:_tnorm(iv.team)}); }
+    }
+  });
+  Object.keys(ser).forEach(function(s){ if(ser[s].length>1) dup.push({s:s, rows:ser[s]}); });
+  [recs,inss,props].forEach(function(m){ Object.keys(m).forEach(function(k){
+    var r=m[k]; if(r && !r.synced) pend++; }); });
+  return {dup:dup, noco:noco, pend:pend};
+}
 function _now(){ var t=new Date(); function p(x){ return ('0'+x).slice(-2); }
   return t.getFullYear()+'-'+p(t.getMonth()+1)+'-'+p(t.getDate())+' '+p(t.getHours())+':'+p(t.getMinutes()); }
 function qaData(){
@@ -4758,7 +4780,8 @@ function qaData(){
     if(ins.verified){ done++; return; }
     var fx=((recs[id]||{}).fix)||{};
     pend.push({id:id, n:(r[1]||id), z:C.szOf(r)||'', sq:String(fx.square||r[8]||'؟'),
-      sg:String(fx.sign||r[9]||''), team:_tnorm(ins.team), d:String(ins.date||''), serial:ins.serial||''});
+      sg:String(fx.sign||r[9]||''), team:_tnorm(ins.team), d:String(ins.date||''), serial:ins.serial||'',
+      la:(typeof r[5]==='number'?r[5]:null), lo:(typeof r[6]==='number'?r[6]:null)});
   });
   pend.sort(function(a,b){ return a.d<b.d?-1:1; });
   return {pend:pend, done:done};
@@ -5134,31 +5157,38 @@ function render(){
     }
   })();
 
-  /* V2.9: التدقيق الهندسي */
+  /* V3.0: التدقيق الهندسي — بأدوات الميدان */
   (function(){
     var canE=!!(user && (user.role==='admin'||user.role==='engineer'));
     var Q=qaData(), tq=Q.done+Q.pend.length;
+    var qf=_tnorm((window.NSKDASH&&window.NSKDASH._qaF)||'');
+    if(qf){ var qfl=qf.toLowerCase();
+      Q.pend=Q.pend.filter(function(x){
+        return (x.sq+' '+x.team+' '+x.sg+' '+x.z+' '+x.n).toLowerCase().indexOf(qfl)>-1; }); }
     h+='</section><section class="dSec" data-sec="qa">';
     h+='<h2>التدقيق الهندسي — اعتماد التركيبات والسيريالات</h2>';
     h+='<div class="dGrid">';
-    h+=card(Q.pend.length,'بانتظار التدقيق','#E8873A');
+    h+=card(Q.pend.length,(qf?'مطابق للتصفية':'بانتظار التدقيق'),'#E8873A');
     h+=card(Q.done,'مُدقّق ومعتمد','#3AD6A0');
     h+=card((tq?pct(Q.done,tq):0)+'٪','نسبة التدقيق','#4BC9F5');
     h+='</div>';
+    if(canE && (Q.pend.length||qf))
+      h+='<input id="qaF" class="qaSer" style="max-width:260px;margin:2px 0 8px" placeholder="تصفية الطابور: مربع / فريق / شاخص" value="'+escA(qf)+'">';
     if(Q.pend.length){
       h+='<h2 style="font-size:.95em;margin-top:14px">'+(canE?'طابور التدقيق — الأقدم أولًا: أدخل السيريال ثم اعتمد':'تركيبات بانتظار تدقيق المهندس — الأقدم أولًا')+'</h2>';
       Q.pend.slice(0,20).forEach(function(x){
         h+='<div class="qaR" data-id="'+x.id+'">'
-          +'<div><b>'+esc2(x.sg||'—')+'</b> · '+esc2(x.n)
+          +'<div class="qaGo" data-id="'+x.id+'"><b>'+esc2(x.sg||'—')+'</b> · '+esc2(x.n)
           +' <span class="pMut">'+zN(x.z)+' · مربع '+esc2(x.sq)
           +(x.team?' · فريق '+esc2(x.team):'')
-          +(x.d?' · رُكّب '+esc2(x.d.slice(5,16)):'')+'</span></div>';
+          +(x.d?' · رُكّب '+esc2(x.d.slice(5,16)):'')+' · 🗺 اضغط للخريطة</span></div>';
         if(canE){
           h+='<div class="qaC">'
             +'<input class="qaSer" placeholder="سيريال القارئ" value="'+escA(x.serial||'')+'">'
             +'<input class="qaNt" placeholder="ملاحظة (اختياري)">'
             +'<button type="button" class="dBtn p qaOk">✔ اعتماد</button>'
             +'<button type="button" class="dBtn qaBk">↩ إرجاع للفريق</button>'
+            +((x.la!=null&&x.lo!=null)?'<button type="button" class="dBtn qaNav" data-la="'+x.la+'" data-lo="'+x.lo+'">🧭 ملاحة</button>':'')
             +'</div>';
         }
         h+='</div>';
@@ -5170,6 +5200,30 @@ function render(){
       h+='<div class="dEmpty">لا توجد تركيبات بعد — أول تركيب سيظهر هنا لاعتماده.</div>';
     }
   })();
+
+  /* V3.0: سلامة البيانات — المشرف العام */
+  if(user && user.role==='admin'){ (function(){
+    var S=sysChecks();
+    h+='</section><section class="dSec" data-sec="sys">';
+    h+='<h2>سلامة البيانات — المشرف العام</h2>';
+    h+='<div class="dGrid">';
+    h+=card(S.dup.length,'سيريالات مكرّرة','#E05252');
+    h+=card(S.noco,'مواقع بلا إحداثيات','#E8873A');
+    h+=card(S.pend,'تغييرات لم تُزامن من هذا الجهاز','#4BC9F5');
+    h+='</div>';
+    if(S.dup.length){
+      h+='<h2 style="font-size:.95em;margin-top:14px">السيريالات المكرّرة — كل سيريال يجب أن يخص نقطة واحدة</h2>';
+      h+='<table class="dT"><thead><tr><th>السيريال</th><th>النقاط المشتركة فيه</th></tr></thead><tbody>';
+      S.dup.slice(0,10).forEach(function(d){
+        h+='<tr><td style="color:#E05252;font-weight:700">'+esc2(d.s)+'</td><td>'
+          +d.rows.map(function(x){ return esc2(x.sg)+' ('+zN(x.z)+(x.team?' · '+esc2(x.team):'')+')'; }).join(' — ')
+          +'</td></tr>'; });
+      h+='</tbody></table>';
+      h+='<p class="dTs">صحّح من طابور التدقيق: أرجِع النقطة الخاطئة لفريقها وأعد اعتمادها بالسيريال الصحيح.</p>';
+    } else if(qaData().done){
+      h+='<div class="dEmpty">لا توجد سيريالات مكرّرة — السجل نظيف ✅</div>';
+    }
+  })(); }
 
   h+='</section><section class="dSec" data-sec="reg">';
   h+='<h2>حسب المشعر</h2><table class="dT"><thead><tr><th>المشعر</th><th>المواقع</th><th>دخل الجدولة</th><th>مُركّب</th><th>٪ الإنجاز</th><th style="min-width:96px">التقدم</th></tr></thead><tbody>';
@@ -5258,6 +5312,19 @@ function render(){
     var ni=R.querySelector('.qaNt');
     if(qaReturn(R.getAttribute('data-id'), ni?ni.value:'')){ try{ toast('أُرجع للفريق ↩'); }catch(e){} render(); }
   }; });
+  Array.prototype.forEach.call(document.querySelectorAll('#nskDash .qaGo'),function(el){ el.onclick=function(){
+    var id=el.getAttribute('data-id');
+    try{ var d=$i('nskDash'); if(d) d.style.display='none'; }catch(e){}
+    try{ if(typeof window.goMap==='function') window.goMap(id); }catch(e){}
+  }; });
+  Array.prototype.forEach.call(document.querySelectorAll('#nskDash .qaNav'),function(b){ b.onclick=function(){
+    var la=b.getAttribute('data-la'), lo=b.getAttribute('data-lo');
+    try{ window.open('https://www.google.com/maps/dir/?api=1&destination='+la+','+lo+'&travelmode=walking','_blank'); }catch(e){}
+  }; });
+  var qF=$i('qaF'); if(qF) qF.onchange=function(){
+    if(window.NSKDASH) window.NSKDASH._qaF=qF.value||'';
+    render();
+  };
   $i('dAcct').onclick=function(){ const a=$i('fbAcct'); if(a) a.style.display='flex'; };
   $i('dTheme').onclick=function(){ const t=document.getElementById('thBtn'); if(t) t.click(); };
 }
@@ -5361,7 +5428,8 @@ $i('dashFab').onclick=function(){ window.NSKDASH.open(); };
         if(String(ins.team||'').trim()!==me) return;
         var fx=((recs[id]||{}).fix)||{};
         out.push({id:id, z:C.szOf(r)||'', sq:String(fx.square||r[8]||'؟'),
-          sg:String(fx.sign||r[9]||''), n:(r[1]||id), st:st});
+          sg:String(fx.sign||r[9]||''), n:(r[1]||id), st:st,
+          la:(typeof r[5]==='number'?r[5]:null), lo:(typeof r[6]==='number'?r[6]:null)});
       });
       out.sort(function(a,b){ return (a.z+'|'+a.sq).localeCompare(b.z+'|'+b.sq,'ar'); });
       return out;
@@ -5395,7 +5463,9 @@ $i('dashFab').onclick=function(){ window.NSKDASH.open(); };
       h+='<div class="mnG">'+esc3(k)+' ('+arS(grp[k].length)+')</div>';
       grp[k].forEach(function(x){
         h+='<div class="mnR" data-id="'+x.id+'">شاخص <b>'+esc3(x.sg||'—')+'</b> · '+esc3(x.n)
-          +(x.st==='قيد التركيب'?' <span class="mnS">قيد التركيب</span>':'')+'</div>';
+          +(x.st==='قيد التركيب'?' <span class="mnS">قيد التركيب</span>':'')
+          +((x.la!=null&&x.lo!=null)?'<button type="button" class="mnNav" data-la="'+x.la+'" data-lo="'+x.lo+'">🧭</button>':'')
+          +'</div>';
       });
     });
     h+='</div><p class="mnT">اضغط أي نقطة للانتقال إليها على الخريطة.</p></div>';
@@ -5406,6 +5476,10 @@ $i('dashFab').onclick=function(){ window.NSKDASH.open(); };
         el.onclick=function(){ ov.style.display='none'; try{ window.goMap(el.getAttribute('data-id')); }catch(e){} };
       });
     }
+    Array.prototype.forEach.call(ov.querySelectorAll('.mnNav'),function(b){
+      b.onclick=function(ev){ ev.stopPropagation();
+        try{ window.open('https://www.google.com/maps/dir/?api=1&destination='+b.getAttribute('data-la')+','+b.getAttribute('data-lo')+'&travelmode=walking','_blank'); }catch(e){} };
+    });
     ov.style.display='flex';
   }
   function esc3(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
@@ -5559,6 +5633,10 @@ html[data-theme="light"] #nskDash .pRgDl{background:#fff;border-color:rgba(60,60
   border-radius:8px;color:inherit;padding:7px 9px;font:inherit}
 html[data-theme="light"] #nskDash .qaC input{background:#fff;border-color:rgba(60,60,60,.5)}
 #nskDash .qaC input:focus{outline:none;border-color:var(--gold,#C9A24B);box-shadow:0 0 0 2px rgba(201,162,75,.25)}
+#nskDash .qaGo{cursor:pointer}
+#nskDash input#qaF{width:100%;background:rgba(255,255,255,.07);border:1.5px solid rgba(150,150,150,.6);border-radius:8px;color:inherit;padding:7px 9px;font:inherit}
+html[data-theme="light"] #nskDash input#qaF{background:#fff;border-color:rgba(60,60,60,.5)}
+#nskMineOv .mnNav{float:left;background:transparent;border:1px solid rgba(150,150,150,.45);border-radius:8px;color:inherit;cursor:pointer;padding:2px 8px;font:inherit}
 #nskDash table.dT td .pMut{color:var(--grey,#9AA1AB)}
 #nskDash .dSec{content-visibility:auto;contain-intrinsic-size:auto 480px;overflow-x:auto;-webkit-overflow-scrolling:touch}
 body.dxPrint #nskDash .dSec{content-visibility:visible}
