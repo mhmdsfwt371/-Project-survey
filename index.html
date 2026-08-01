@@ -956,7 +956,7 @@ window.addEventListener('error', function(e){
 <div id="app">
   <header>
     <div class="t">
-      <div class="eyebrow">قارئات نُسُك ١٤٤٨هـ <span style="color:var(--muted);letter-spacing:0;font-weight:600">· نسخة V2.4</span></div>
+      <div class="eyebrow">قارئات نُسُك ١٤٤٨هـ <span style="color:var(--muted);letter-spacing:0;font-weight:600">· نسخة V2.5</span></div>
       <h1 id="ttl">المسح الميداني</h1>
     </div>
     <button class="pill" id="modeBtn" type="button">المسح</button>
@@ -5066,11 +5066,30 @@ $i('dashFab').onclick=function(){ window.NSKDASH.open(); };
         if(e.userChoice) e.userChoice.then(function(r){ if(r && r.outcome==='accepted') b.remove(); });
         window.__nskBip=null;
       } else if(IOS){
-        try{ toast('من قائمة المشاركة في المتصفح اختر: إضافة إلى الشاشة الرئيسية'); }catch(x){}
+        iosGuide();
       } else {
         try{ toast('افتح الرابط في متصفح كروم ثم من قائمة ⋮ اختر: تثبيت التطبيق'); }catch(x){}
       }
     };
+  }
+  function iosGuide(){
+    var ov=document.getElementById('nskIosOv');
+    if(!ov){
+      ov=document.createElement('div'); ov.id='nskIosOv';
+      ov.innerHTML='<div class="iosC">'
+        +'<button type="button" class="nskX" id="nskIosX" aria-label="إغلاق">×</button>'
+        +'<h3>التثبيت على آيفون</h3>'
+        +'<ol>'
+        +'<li>افتح الرابط في متصفح <b>سفاري</b> (لو أنت فيه بالفعل كمّل مباشرة — التثبيت لا يعمل من داخل واتساب أو كروم).</li>'
+        +'<li>اضغط زر <b>المشاركة</b> <span class="iosG">&#x2BAD;</span> — المربع الذي يخرج منه سهم لأعلى في شريط سفاري.</li>'
+        +'<li>انزل في القائمة واختر <b>«إضافة إلى الشاشة الرئيسية»</b>.</li>'
+        +'<li>اضغط <b>«إضافة»</b> — ستجد أيقونة «قارئات نُسُك» على شاشتك، وتفتح بشاشة كاملة بلا أي شريط.</li>'
+        +'</ol></div>';
+      document.body.appendChild(ov);
+      ov.addEventListener('click',function(e){ if(e.target===ov) ov.style.display='none'; });
+      ov.querySelector('#nskIosX').onclick=function(){ ov.style.display='none'; };
+    }
+    ov.style.display='flex';
   }
   if(window.__nskBip) mk();
   document.addEventListener('nsk-bip', mk);
@@ -5211,6 +5230,15 @@ body.dxPrint #nskDash .dSec{content-visibility:visible}
 @media(max-width:400px){#nskDash table.dT{font-size:.8em}}
 #nskInst{background:linear-gradient(135deg,#E9CE83,#C9A24B);color:#0A0B0D;border:0;border-radius:999px;
   padding:8px 14px;font-weight:800;font:inherit;font-size:.9em;cursor:pointer;box-shadow:0 2px 10px rgba(0,0,0,.3)}
+#nskIosOv{position:fixed;inset:0;z-index:99998;display:none;align-items:center;justify-content:center;
+  background:rgba(0,0,0,.66);padding:20px}
+#nskIosOv .iosC{position:relative;max-width:420px;width:100%;background:var(--ink,#14161A);
+  color:var(--cream,#F1EDE0);border:1px solid rgba(233,206,131,.35);border-radius:18px;padding:20px 18px 14px}
+#nskIosOv h3{margin:0 0 10px;color:var(--gold,#C9A24B);padding-inline-end:44px}
+#nskIosOv ol{margin:0;padding-inline-start:20px;line-height:1.9;font-size:.95em}
+#nskIosOv li{margin-bottom:8px}
+#nskIosOv .iosG{display:inline-block;border:1.5px solid currentColor;border-radius:5px;
+  padding:0 5px;font-weight:700;line-height:1.35}
 #nskDash .evCb{position:relative}
 #nskDash .evCbBtn{background:var(--panel,#141619);color:var(--cream,#F1EDE0);border:1px solid rgba(150,158,172,.25);border-radius:10px;padding:7px 12px;font:inherit;cursor:pointer;max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 #nskDash .evCbBtn.on{border-color:var(--gold,#C9A24B);color:var(--gold,#C9A24B)}
