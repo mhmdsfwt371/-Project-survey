@@ -956,7 +956,7 @@ window.addEventListener('error', function(e){
 <div id="app">
   <header>
     <div class="t">
-      <div class="eyebrow">قارئات نُسُك ١٤٤٨هـ <span style="color:var(--muted);letter-spacing:0;font-weight:600">· نسخة V2.5</span></div>
+      <div class="eyebrow">قارئات نُسُك ١٤٤٨هـ <span style="color:var(--muted);letter-spacing:0;font-weight:600">· نسخة V2.6</span></div>
       <h1 id="ttl">المسح الميداني</h1>
     </div>
     <button class="pill" id="modeBtn" type="button">المسح</button>
@@ -5066,34 +5066,42 @@ $i('dashFab').onclick=function(){ window.NSKDASH.open(); };
         if(e.userChoice) e.userChoice.then(function(r){ if(r && r.outcome==='accepted') b.remove(); });
         window.__nskBip=null;
       } else if(IOS){
-        iosGuide();
+        instGuide('ios');
       } else {
-        try{ toast('افتح الرابط في متصفح كروم ثم من قائمة ⋮ اختر: تثبيت التطبيق'); }catch(x){}
+        instGuide('and');
       }
     };
   }
-  function iosGuide(){
+  function instGuide(kind){
     var ov=document.getElementById('nskIosOv');
     if(!ov){
       ov=document.createElement('div'); ov.id='nskIosOv';
-      ov.innerHTML='<div class="iosC">'
-        +'<button type="button" class="nskX" id="nskIosX" aria-label="إغلاق">×</button>'
-        +'<h3>التثبيت على آيفون</h3>'
-        +'<ol>'
-        +'<li>افتح الرابط في متصفح <b>سفاري</b> (لو أنت فيه بالفعل كمّل مباشرة — التثبيت لا يعمل من داخل واتساب أو كروم).</li>'
-        +'<li>اضغط زر <b>المشاركة</b> <span class="iosG">&#x2BAD;</span> — المربع الذي يخرج منه سهم لأعلى في شريط سفاري.</li>'
-        +'<li>انزل في القائمة واختر <b>«إضافة إلى الشاشة الرئيسية»</b>.</li>'
-        +'<li>اضغط <b>«إضافة»</b> — ستجد أيقونة «قارئات نُسُك» على شاشتك، وتفتح بشاشة كاملة بلا أي شريط.</li>'
-        +'</ol></div>';
+      ov.innerHTML='<div class="iosC"></div>';
       document.body.appendChild(ov);
       ov.addEventListener('click',function(e){ if(e.target===ov) ov.style.display='none'; });
-      ov.querySelector('#nskIosX').onclick=function(){ ov.style.display='none'; };
     }
+    var A=(kind==='ios');
+    var steps=A?[
+      'افتح الرابط في متصفح <b>سفاري</b> (لو أنت فيه بالفعل كمّل مباشرة — التثبيت لا يعمل من داخل واتساب أو كروم).',
+      'اضغط زر <b>المشاركة</b> <span class="iosG">&#x2BAD;</span> — المربع الذي يخرج منه سهم لأعلى في شريط سفاري.',
+      'انزل في القائمة واختر <b>«إضافة إلى الشاشة الرئيسية»</b>.',
+      'اضغط <b>«إضافة»</b> — ستجد أيقونة «قارئات نُسُك» على شاشتك، وتفتح بشاشة كاملة بلا أي شريط.'
+    ]:[
+      'افتح الرابط في متصفح <b>كروم</b> نفسه — لو فاتح من داخل واتساب أو أي تطبيق: اضغط قائمة النقاط <b>⋮</b> بالأعلى ثم اختر <b>«فتح في Chrome»</b>.',
+      'من كروم: اضغط قائمة النقاط <b>⋮</b> أعلى الشاشة.',
+      'اختر <b>«تثبيت التطبيق»</b> (وقد تظهر باسم «إضافة إلى الشاشة الرئيسية»).',
+      'اضغط <b>«تثبيت»</b> — ستجد أيقونة «قارئات نُسُك» على شاشتك، وتفتح بشاشة كاملة بلا أي شريط ولا رابط.'
+    ];
+    var c=ov.querySelector('.iosC');
+    c.innerHTML='<button type="button" class="nskX" id="nskIosX" aria-label="إغلاق">×</button>'
+      +'<h3>'+(A?'التثبيت على آيفون':'التثبيت على أندرويد — كروم')+'</h3>'
+      +'<ol><li>'+steps.join('</li><li>')+'</li></ol>';
+    c.querySelector('#nskIosX').onclick=function(){ ov.style.display='none'; };
     ov.style.display='flex';
   }
   if(window.__nskBip) mk();
   document.addEventListener('nsk-bip', mk);
-  if(IOS) mk();
+  mk();
   window.addEventListener('appinstalled', function(){
     var b=document.getElementById('nskInst'); if(b) b.remove();
     try{ toast('تم التثبيت ✓ افتحه من أيقونة «قارئات نُسُك»'); }catch(e){}
