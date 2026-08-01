@@ -1,0 +1,29 @@
+name: Sync Devices Registry
+on:
+  schedule:
+    - cron: '0 */6 * * *'
+  workflow_dispatch: {}
+permissions:
+  contents: read
+concurrency: devices
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - run: npm i firebase-admin@12 --no-save --no-audit --no-fund
+      - name: Sync devices
+        env:
+          FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+          DEVICES_API_URL:      ${{ secrets.DEVICES_API_URL }}
+          DEVICES_API_TOKEN:    ${{ secrets.DEVICES_API_TOKEN }}
+          DEVICES_AUTH_HEADER:  ${{ vars.DEVICES_AUTH_HEADER }}
+          DEVICES_AUTH_PREFIX:  ${{ vars.DEVICES_AUTH_PREFIX }}
+          DEVICES_JSON_PATH:    ${{ vars.DEVICES_JSON_PATH }}
+          DEVICES_FIELD_SERIAL: ${{ vars.DEVICES_FIELD_SERIAL }}
+          DEVICES_FIELD_NAME:   ${{ vars.DEVICES_FIELD_NAME }}
+          DEVICES_NAME_FILTER:  ${{ vars.DEVICES_NAME_FILTER }}
+        run: node scripts/devices.mjs

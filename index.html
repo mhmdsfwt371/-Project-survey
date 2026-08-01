@@ -956,7 +956,7 @@ window.addEventListener('error', function(e){
 <div id="app">
   <header>
     <div class="t">
-      <div class="eyebrow">قارئات نُسُك ١٤٤٨هـ <span style="color:var(--muted);letter-spacing:0;font-weight:600">· نسخة V3.5</span></div>
+      <div class="eyebrow">قارئات نُسُك ١٤٤٨هـ <span style="color:var(--muted);letter-spacing:0;font-weight:600">· نسخة V3.6</span></div>
       <h1 id="ttl">المسح الميداني</h1>
     </div>
     <button class="pill" id="modeBtn" type="button">المسح</button>
@@ -4567,7 +4567,13 @@ function dxXlsx(sel){
     add('عُهدة الأجهزة',[['الفريق','مصروف له','ركّب','متبقٍ معه','مطلوب لمهامه']].concat(
       K7.rows.map(function(r){ return [r.n,r.iss,r.used,r.left,r.need]; })).concat(
       [['— الإجمالي —',K7.issued,K7.used,K7.issued-K7.used,''],
-       ['المخزن المتبقي',K7.store,'','','']]),[24,12,10,12,14]); }
+       ['المخزن المتبقي',K7.store,'','','']]),[24,12,10,12,14]);
+    var DL=(devicesObj().list)||[];
+    if(DL.length){ var uz={};
+      try{ var in8=window.NSKCORE.all('inss');
+        Object.keys(in8).forEach(function(k){ var s=_tnorm(in8[k].serial); if(s) uz[s]=1; }); }catch(e){}
+      add('سجل الأجهزة',[['السيريال','الاسم / الموديل','الحالة']].concat(
+        DL.map(function(d){ return [d.s, d.n||'', (uz[_tnorm(d.s)]?'مُركّب':'متاح')]; })),[22,28,12]); } }
   if(sel.indexOf('sys')>-1 && user && user.role==='admin'){ var S5=sysChecks();
     var sr=[['السيريال المكرر','النقاط المشتركة']];
     S5.dup.forEach(function(d){ sr.push([d.s, d.rows.map(function(x){ return x.sg+' ('+x.z+(x.team?' - '+x.team:'')+')'; }).join(' | ')]); });
@@ -4844,6 +4850,55 @@ function saveTeams(mut){
     C.set('settings','teams',t);
     try{ if(window.NSKSYNC) NSKSYNC.push('settings','teams',t); }catch(e){}
   }catch(e){}
+}
+function devicesObj(){ try{ return window.NSKCORE.get('settings','devices')||{}; }catch(e){ return {}; } }
+function saveDevices(list, srcTag){
+  var d={list:list, n:list.length, at:_now(), src:srcTag||'import'};
+  try{
+    window.NSKCORE.set('settings','devices',d);
+    if(window.NSKSYNC) NSKSYNC.push('settings','devices',d);
+    if(window.NSKSYNC) NSKSYNC.log('تحديث سجل الأجهزة: '+list.length+' جهاز ('+(srcTag||'import')+')');
+  }catch(e){}
+  return d;
+}
+function devParse(text, nameFilter){
+  var lines=String(text||'').split(/\r?\n/), out=[], seen={};
+  var nf=_tnorm(nameFilter).toLowerCase();
+  lines.forEach(function(ln,i){
+    ln=String(ln||'').trim(); if(!ln) return;
+    var p=ln.split(/[\t,;|]/).map(function(x){ return String(x||'').trim().replace(/^"|"$/g,''); });
+    var s=p[0]||'', n=p[1]||'';
+    if(i===0 && /serial|سيريال|رقم|barcode|كود/i.test(s) && !/^\d+$/.test(s)) return;
+    if(!s) return;
+    if(nf && (s+' '+n).toLowerCase().indexOf(nf)<0) return;
+    if(seen[s]) return; seen[s]=1;
+    out.push({s:s, n:n});
+  });
+  return out;
+}
+function devStats(){
+  var D=devicesObj(), L=D.list||[], used={}, u=0;
+  try{
+    var inss=window.NSKCORE.all('inss');
+    Object.keys(inss).forEach(function(k){ var s=_tnorm(inss[k].serial); if(s) used[s]=1; });
+  }catch(e){}
+  L.forEach(function(d){ if(used[_tnorm(d.s)]) u++; });
+  return {n:L.length, used:u, free:L.length-u, at:D.at||'', src:D.src||''};
+}
+function serialIssue(id, ser){
+  var s=_tnorm(ser); if(!s) return '';
+  try{
+    var inss=window.NSKCORE.all('inss'), dup=false;
+    Object.keys(inss).forEach(function(k){ if(k!==id && _tnorm(inss[k].serial)===s) dup=true; });
+    if(dup) return 'هذا السيريال مسجّل على نقطة أخرى';
+    var L=(devicesObj().list)||[];
+    if(L.length){
+      var known=false;
+      L.forEach(function(d){ if(_tnorm(d.s)===s) known=true; });
+      if(!known) return 'سيريال غير موجود في سجل الأجهزة';
+    }
+  }catch(e){}
+  return '';
 }
 function stockObj(){ try{ return window.NSKCORE.get('settings','stock')||{}; }catch(e){ return {}; } }
 function saveStock(mut){
@@ -5321,6 +5376,24 @@ function render(){
         if(K.short) h+='<p class="dTs">فرق عهدتها لا تكفي مهامها المُسندة: <b style="color:#E05252">'+AR(K.short)+'</b> — جهّز صرفًا قبل نزولها.</p>';
         h+='<p class="dTs">«ركّب» يُحتسب تلقائيًا من التركيبات المسجّلة — يكفي تسجيل ما صُرف لكل فريق.</p>';
       } else h+='<div class="dEmpty">أضف الفرق أولًا من قسم التوزيع ليظهر توزيع العُهدة.</div>';
+      var DS=devStats();
+      h+='<h2 style="font-size:.95em;margin-top:16px">سجل الأجهزة — المستورد من نظامك</h2>';
+      if(DS.n){
+        h+='<div class="dGrid">';
+        h+=card(DS.n,'جهاز مسجّل','#E9CE83');
+        h+=card(DS.used,'سيريالاته رُكّبت','#3AD6A0');
+        h+=card(DS.free,'لم يُستخدم بعد','#4BC9F5');
+        h+='</div>';
+        h+='<p class="dTs">آخر تحديث: '+esc2(DS.at||'—')+' · المصدر: '+(DS.src==='api'?'مزامنة تلقائية من نظامك':'ملف مستورد')+'</p>';
+      }
+      if(canS){
+        h+='<div class="pTyStrip" style="margin-top:8px">';
+        h+='<label>ملف الأجهزة <input id="dvFile" type="file" accept=".csv,.txt,.tsv,.xlsx,.xls" style="width:140px"></label>';
+        h+='<label>فلترة بالاسم <input id="dvName" placeholder="جزء من الاسم" style="width:120px;text-align:start"></label>';
+        h+='</div>';
+        h+='<p class="dTs">العمود الأول: السيريال، والثاني: اسم أو موديل الجهاز. يقبل ملفات إكسل و CSV. اكتب الفلتر أولًا ثم اختر الملف ليُستورد المطابق فقط.</p>';
+        if(DS.n) h+='<p class="dTs">عند الاعتماد الهندسي يُنبّه النظام تلقائيًا لو السيريال غير موجود في هذا السجل أو مسجّل على نقطة أخرى.</p>';
+      }
     })();
 
     h+='</section><section class="dSec" data-sec="qa">';
@@ -5469,6 +5542,13 @@ function render(){
     var si=R.querySelector('.qaSer'), ni=R.querySelector('.qaNt');
     var ser=si?si.value:'', nt=ni?ni.value:'';
     if(!_tnorm(ser)){ try{ toast('اكتب سيريال القارئ أولًا',1); }catch(e){} if(si) si.focus(); return; }
+    var isu=serialIssue(id, ser);
+    if(isu && b.getAttribute('data-w')!=='1'){
+      b.setAttribute('data-w','1');
+      b.textContent='✔ اعتماد رغم التنبيه';
+      try{ toast(isu+' — اضغط مرة أخرى للاعتماد',1); }catch(e){}
+      return;
+    }
     if(qaApprove(id, ser, nt)){ try{ toast('اعتُمد التركيب ✔'); }catch(e){} render(); }
   }; });
   Array.prototype.forEach.call(document.querySelectorAll('#nskDash .qaR .qaBk'),function(b){ b.onclick=function(){
@@ -5485,6 +5565,30 @@ function render(){
     var la=b.getAttribute('data-la'), lo=b.getAttribute('data-lo');
     try{ window.open('https://www.google.com/maps/dir/?api=1&destination='+la+','+lo+'&travelmode=walking','_blank'); }catch(e){}
   }; });
+  var dvF=$i('dvFile'); if(dvF) dvF.onchange=function(){
+    var f=dvF.files&&dvF.files[0]; if(!f) return;
+    var nf=(($i('dvName')||{}).value)||'';
+    function done(txt){
+      var L=devParse(txt, nf);
+      if(!L.length){ try{ toast('لم يُقرأ أي جهاز — تأكد أن العمود الأول هو السيريال',1); }catch(e){} return; }
+      if(L.length>8000){ try{ toast('العدد كبير جدًا — استورد دفعات أصغر',1); }catch(e){} return; }
+      saveDevices(L,'import');
+      try{ toast('استُورد '+AR(L.length)+' جهاز ✔'); }catch(e){}
+      render();
+    }
+    var rd=new FileReader();
+    if(/\.xlsx?$/i.test(f.name) && window.XLSX && XLSX.read){
+      rd.onload=function(){
+        try{
+          var wb=XLSX.read(new Uint8Array(rd.result),{type:'array'});
+          var ws=wb.Sheets[wb.SheetNames[0]];
+          var rows=XLSX.utils.sheet_to_json(ws,{header:1});
+          done(rows.map(function(r){ return (r||[]).join('\t'); }).join('\n'));
+        }catch(e){ try{ toast('تعذّرت قراءة ملف إكسل — جرّب حفظه بصيغة CSV',1); }catch(x){} }
+      };
+      rd.readAsArrayBuffer(f);
+    } else { rd.onload=function(){ done(rd.result); }; rd.readAsText(f); }
+  };
   var sT=$i('stTot'); if(sT) sT.onchange=function(){
     var v=Math.max(0,parseInt(sT.value,10)||0);
     saveStock(function(s){ if(v>0) s.tot=v; else delete s.tot; });
