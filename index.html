@@ -956,7 +956,7 @@ window.addEventListener('error', function(e){
 <div id="app">
   <header>
     <div class="t">
-      <div class="eyebrow">قارئات نُسُك ١٤٤٨هـ <span style="color:var(--muted);letter-spacing:0;font-weight:600">· نسخة V3.0</span></div>
+      <div class="eyebrow">قارئات نُسُك ١٤٤٨هـ <span style="color:var(--muted);letter-spacing:0;font-weight:600">· نسخة V3.1</span></div>
       <h1 id="ttl">المسح الميداني</h1>
     </div>
     <button class="pill" id="modeBtn" type="button">المسح</button>
@@ -2659,7 +2659,9 @@ function openNewForm(la,lo,ac,near,editId){
       'الأرجح أن هذا موقع غير مسجّل فعلًا.</div>';
 
   document.getElementById('vForm').innerHTML =
-    '<div class="fh"><div class="id" style="color:#C77DFF">'+
+    '<div class="fh">'+
+    '<button type="button" class="tback" onclick="show(\'vList\')">→ رجوع</button>'+
+    '<div class="id" style="color:#C77DFF">'+
       (editId ? esc(editId) : 'موقع مقترح جديد')+'</div>'+
     '<div class="nm">'+(editId ? 'تعديل موقع مقترح' : 'تسجيل موقع غير موجود في السجل')+'</div>'+
     '<div class="gps">الإحداثيات: <b>'+la.toFixed(6)+', '+lo.toFixed(6)+'</b> (دقة '+ac+' م)</div></div>'+
