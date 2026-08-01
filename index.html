@@ -4,6 +4,11 @@
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,viewport-fit=cover"/>
 <title>قارئات نُسُك — المسح الميداني ١٤٤٨هـ</title>
+<link rel="preconnect" href="https://a.basemaps.cartocdn.com"/>
+<link rel="preconnect" href="https://b.basemaps.cartocdn.com"/>
+<link rel="preconnect" href="https://firestore.googleapis.com" crossorigin/>
+<link rel="preconnect" href="https://www.gstatic.com" crossorigin/>
+<link rel="preconnect" href="https://identitytoolkit.googleapis.com" crossorigin/>
 <link rel="manifest" href="manifest.webmanifest"/>
 <meta name="theme-color" content="#0A0B0D"/>
 <meta name="color-scheme" content="dark light"/>
@@ -949,7 +954,7 @@ window.addEventListener('error', function(e){
 <div id="app">
   <header>
     <div class="t">
-      <div class="eyebrow">قارئات نُسُك ١٤٤٨هـ <span style="color:var(--muted);letter-spacing:0;font-weight:600">· نسخة V2.2</span></div>
+      <div class="eyebrow">قارئات نُسُك ١٤٤٨هـ <span style="color:var(--muted);letter-spacing:0;font-weight:600">· نسخة V2.3</span></div>
       <h1 id="ttl">المسح الميداني</h1>
     </div>
     <button class="pill" id="modeBtn" type="button">المسح</button>
@@ -5024,6 +5029,20 @@ window.NSKDASH={
     const a=document.activeElement;
     if(a && (/^ev(Q|From|To)$/.test(a.id||'') || (a.classList && a.classList.contains('evCbQ')))){ evPaint(); return; }
     if(document.querySelector('#nskDash .evCbP:not([hidden])')){ evPaint(); return; }
+    if(a && d.contains(a) && /^(INPUT|SELECT|TEXTAREA)$/.test(a.tagName||'')){
+      window.NSKDASH._dirty=true;
+      if(!window.NSKDASH._fw){ window.NSKDASH._fw=true;
+        d.addEventListener('focusout',function(){
+          setTimeout(function(){
+            const a2=document.activeElement;
+            if(window.NSKDASH._dirty && !(a2 && d.contains(a2) && /^(INPUT|SELECT|TEXTAREA)$/.test(a2.tagName||''))){
+              window.NSKDASH._dirty=false; render();
+            }
+          },120);
+        });
+      }
+      return;
+    }
     render(); }
 };
 $i('dashFab').onclick=function(){ window.NSKDASH.open(); };
@@ -5153,6 +5172,9 @@ body.dxPrint #nskDash .dPulse{display:block}
 #nskDash .pTyStrip input{width:64px;background:transparent;border:1px solid rgba(255,255,255,.18);border-radius:8px;color:inherit;padding:4px 6px;text-align:center;font:inherit}
 #nskDash .pRgDl{background:transparent;border:1px solid rgba(255,255,255,.18);border-radius:8px;color:inherit;padding:4px 6px;font:inherit;max-width:140px}
 #nskDash table.dT td .pMut{color:var(--grey,#9AA1AB)}
+#nskDash .dSec{content-visibility:auto;contain-intrinsic-size:auto 480px;overflow-x:auto;-webkit-overflow-scrolling:touch}
+body.dxPrint #nskDash .dSec{content-visibility:visible}
+@media(max-width:400px){#nskDash table.dT{font-size:.8em}}
 #nskDash .evCb{position:relative}
 #nskDash .evCbBtn{background:var(--panel,#141619);color:var(--cream,#F1EDE0);border:1px solid rgba(150,158,172,.25);border-radius:10px;padding:7px 12px;font:inherit;cursor:pointer;max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 #nskDash .evCbBtn.on{border-color:var(--gold,#C9A24B);color:var(--gold,#C9A24B)}
