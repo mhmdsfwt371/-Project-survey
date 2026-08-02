@@ -1087,7 +1087,7 @@ window.addEventListener('error', function(e){
 <div id="app">
   <header>
     <div class="t">
-      <div class="eyebrow">متابعة المشروع ١٤٤٨هـ <span style="color:var(--muted);letter-spacing:0;font-weight:600">· نسخة V8.1</span></div>
+      <div class="eyebrow">متابعة المشروع ١٤٤٨هـ <span style="color:var(--muted);letter-spacing:0;font-weight:600">· نسخة V8.2</span></div>
       <h1 id="ttl">المسح الميداني</h1>
     </div>
     <button class="pill" id="modeBtn" type="button">المسح</button>
@@ -3165,8 +3165,13 @@ function drawMgr(){
   if(appMode==='install'){
     const li=Object.values(inss).sort((a,b)=>(b.date||'').localeCompare(a.date||''));
     $('#mDone').textContent=li.filter(x=>x.status==='مُركّب').length.toLocaleString('ar-EG');
-    $('#mFit').textContent=li.filter(x=>x.status==='قيد التركيب').length.toLocaleString('ar-EG');
+    $('#mFit').textContent=li.filter(x=>x.status==='مجدول').length.toLocaleString('ar-EG');
     $('#mBad').textContent=li.filter(x=>x.status==='متعذّر').length.toLocaleString('ar-EG');
+    /* العناوين تتبع الوضع — كانت تقول «مناسب» وهي تعدّ المجدول */
+    try{
+      var lb=function(id,t){ var e=$('#'+id); if(e&&e.nextElementSibling) e.nextElementSibling.textContent=t; };
+      lb('mDone','مُركّب'); lb('mFit','مجدول'); lb('mBad','متعذّر');
+    }catch(e){}
     $('#mRooms').textContent='—'; $('#mHrs').textContent='—'; $('#mCiv').textContent='—';
     $('#mgrTbl').innerHTML = li.length
       ? '<div class="scroll"><table class="mg"><thead><tr>'+
@@ -3764,7 +3769,7 @@ window.nskGuide = function(role){
     var C2=[];
     C2.push('<h2>أمور تخص الجميع</h2>');
     C2.push('<h3>الجرس 🔔</h3>');
-    C2.push('<p>يعرض ما يخصّك أنت فقط، ولا يُنبَّه أحد على فعل نفسه. الفني يرى ما أُسند إليه وما أُرجع من تدقيقه، والمهندس يرى البلاغات والمتعذّر والمقترحات، والوزارة لا تُزعج إطلاقًا. ولا توجد تنبيهات منبثقة تقاطع العمل — العدّاد وحده هو الإشارة.</p>');
+    C2.push('<p>يعرض ما يخصّك أنت فقط، ولا يُنبَّه أحد على فعل نفسه. الفني يرى ما أُسند إليه وما أُرجع من تدقيقه، والمهندس يرى البلاغات والمتعذّر والمقترحات. أما الجهة الوزارية فترى مؤشّرات المشروع لا عملياته: معالم الإنجاز، وانحراف الوتيرة عن الموعد المستهدف، وتراكم المتعذّر، والركود، وطابور الجدولة — محسوبةً من الأرقام لحظة الفتح. ولا توجد تنبيهات منبثقة تقاطع العمل — العدّاد وحده هو الإشارة.</p>');
     C2.push('<h3>النسخ الاحتياطي</h3>');
     C2.push('<p>«نسخة احتياطية كاملة» تنزّل كل السجلات بصورها. «دمج نسخة زميل» يستقبل ملف زميل ويدمجه: الجديد يُضاف، وعند التعارض يكسب الأحدث مع الاحتفاظ بصور وسجلّ الطرفين. وللنظام نسخة تلقائية يومية على الخادم.</p>');
     C2.push('<h3>حل المشكلات الشائعة</h3>');
@@ -4604,6 +4609,10 @@ function bindAccountPanel(p){
       o.value='admin'; o.textContent='سوبر أدمن — إدارة كاملة';
       nuR.appendChild(o);
     } else {
+    try{
+      var lb2=function(id,t){ var e=$('#'+id); if(e&&e.nextElementSibling) e.nextElementSibling.textContent=t; };
+      lb2('mDone','مكتمل'); lb2('mFit','مناسب'); lb2('mBad','غير مناسب');
+    }catch(e){}
       const oe=nuR.querySelector('option[value="engineer"]'); if(oe) oe.remove();
       const ov=nuR.querySelector('option[value="viewer"]'); if(ov) ov.remove();
     }
@@ -5822,7 +5831,8 @@ function qaApprove(id, serial, note){
 }
 function qaReturn(id, note){
   var C=window.NSKCORE, inss=C.all('inss'), ins=inss[id]; if(!ins) return false;
-  var rec=Object.assign({}, ins, {status:'قيد التركيب', date:_now()});
+  /* V8.2: «قيد التركيب» حُذفت في V7.9 — المُرجَع يعود «مجدول» ليدخل طابور الفريق */
+  var rec=Object.assign({}, ins, {status:'مجدول', date:_now()});
   delete rec.verified;
   var nt=_tnorm(note); if(nt) rec.qaNote=nt;
   C.set('inss',id,rec);
