@@ -1,0 +1,388 @@
+{
+  "schema": "nusuk-docs/1",
+  "app_version": "V4.2",
+  "generated_at": "2026-08-02",
+  "description": "المخطط الآلي الكامل لنظام قارئات نُسُك ١٤٤٨ — كل الكائنات والحقول والواجهات والاستجابات. الشرح البشري في docs/system.md",
+
+  "app": {
+    "live_url": "https://mhmdsfwt371.github.io/-Project-survey/",
+    "repo": "github.com/mhmdsfwt371/-Project-survey",
+    "firebase_project": "project-survey-60600",
+    "files": ["index.html", "sw.js", "manifest.webmanifest", "firestore.rules", "scripts/backup.mjs", "scripts/devices.mjs"],
+    "versioning_rule": "كل نشر يرفع الرقم في هيدر التطبيق وفي سلسلة CACHE داخل sw.js (nusuk-survey-vX.Y)"
+  },
+
+  "roles": {
+    "supervisor": "مشرف ميداني — مسح وتركيب واقتراح مواقع وطلب شركة (st:req) وزر جدولي لنقاطه",
+    "engineer": "مهندس مكتب — كل صلاحيات المشرف + اللوحة والجدولة والإسناد والاعتماد والتدقيق وإنشاء حسابات مشرفين فقط",
+    "admin": "سوبر أدمن — كل شيء؛ البريد mohammed.safwat@afaqy.com أدمن دائم بحكم القواعد (isBoss)",
+    "viewer": "متابعة وزارية — قراءة فقط في اللوحة، لا يرفع أي كتابة"
+  },
+
+  "site_registry": {
+    "storage": "كائن DB ثابت مدمج داخل index.html — لا يُعدَّل إلا بنشر نسخة",
+    "compose": "DB.d = [...DB.g, ...DB.p, ...DB.q] — إجمالي 1787 صفًا",
+    "arrays": {
+      "z": {"desc": "المشاعر", "values": ["منى", "عرفات", "الجمرات", "منشآت التسكين", "قطار المشاعر", "مسجد نمرة"]},
+      "t": {"desc": "أنواع المواقع", "values": ["مخيم", "ممر", "كاميرا", "جسر", "مبنى", "محطة", "بوابة"]},
+      "w": {"desc": "أنواع العمل", "values": ["إعادة تركيب ١٤٤٧", "إطار معدني جديد", "نقطة ممر جديدة", "تفعيل كاميرا قائمة", "ترقية كاميرا", "خارج النطاق"]},
+      "co": {"desc": "شركات حجاج الخارج المرجعية", "count": 42},
+      "dm": {"desc": "مشغّلو حجاج الداخل", "count": 120},
+      "g": {"desc": "صفوف المخيمات", "count": 1392, "row_width": 30},
+      "p": {"desc": "صفوف الممرات والمحطات والكاميرات والبوابات", "count": 395, "row_width": 28},
+      "q": {"desc": "قائمة انتظار — معرّفاتها تُعامل بحالة pending", "count": 0}
+    },
+    "id_patterns": {
+      "camp": "NSK-{ARF|MIN}-CMP-nnnn",
+      "corridor": "NSK-{ARF|MIN}-COR-nnnn",
+      "train_station": "NSK-TRN-STN-nnnn",
+      "jamarat_point": "NSK-JMR-PNT-nnnn",
+      "proposal": "NEW-{MIN|ARF}-nnn"
+    },
+    "camp_row_columns": {
+      "0": {"name": "id", "type": "string"},
+      "1": {"name": "label", "type": "string", "desc": "الاسم المولّد: مشعر - مربع س - شاخص ص"},
+      "2": {"name": "zone_index", "type": "number", "desc": "فهرس في z"},
+      "3": {"name": "type_index", "type": "number", "desc": "فهرس في t"},
+      "4": {"name": "work_index", "type": "number", "desc": "فهرس في w"},
+      "5": {"name": "lat", "type": "number"},
+      "6": {"name": "lon", "type": "number"},
+      "7": {"name": "polygon", "type": "array", "desc": "حدود المخيم [[lon,lat],…]"},
+      "8": {"name": "square", "type": "string", "desc": "رقم المربع"},
+      "9": {"name": "sign", "type": "string", "desc": "رقم الشاخص"},
+      "10": {"name": "company_raw", "type": "string", "desc": "اسم الشركة الخام من ملفات التخصيص — 33 اسمًا مميزًا"},
+      "11": {"name": "nationality", "type": "string"},
+      "12": {"name": "sovereign_host", "type": "string", "desc": "الجهة السيادية إن وُجدت"},
+      "13": {"name": "domestic_operator", "type": "string", "desc": "مشغّل حجاج الداخل"},
+      "14": {"name": "capacity_1447", "type": "string", "desc": "السعة المسجّلة ١٤٤٧ بالحاج"},
+      "15": {"name": "occupancy_pct_1447", "type": "string"},
+      "16": {"name": "obstacle_1447", "type": "string", "desc": "نعم إن وُجد عائق موسم ١٤٤٧"},
+      "17": {"name": "pilgrims_aux_1447", "type": "string"},
+      "18": {"name": "install_1447", "type": "string", "enum": ["تم", "لم يتم"]},
+      "19": {"name": "power_note", "type": "string"},
+      "20": {"name": "subnet_1447", "type": "string", "desc": "أساس شبكة ١٤٤٧ مثل 172.16.104"},
+      "21": {"name": "region_label", "type": "string", "desc": "منطقة منى / منطقة عرفات"},
+      "22": {"name": "initial_status", "type": "string", "desc": "ثابتة: لم يبدأ"},
+      "23": {"name": "_empty", "type": "string", "desc": "فارغة — لا تُقرأ (خلل قديم أُصلح في V4.1/V4.2)"},
+      "24": {"name": "_empty", "type": "string", "desc": "فارغة — لا تُقرأ"},
+      "25": {"name": "_empty", "type": "string", "desc": "فارغة — لا تُقرأ"},
+      "26": {"name": "pilgrim_class", "type": "string", "enum": ["داخل", "خارج"]},
+      "27": {"name": "company_canonical", "type": "string", "desc": "الشركة الموحّدة — 162 اسمًا مميزًا — المصدر المعتمد"},
+      "28": {"name": "operator_alert", "type": "string", "desc": "مثل: المشغّل غير معروف — يُحدَّد ميدانيًا"},
+      "29": {"name": "flag", "type": "string"}
+    },
+    "path_row_columns": {
+      "filled_only": {"0": "id", "1": "label", "2": "zone_index", "3": "type_index", "4": "work_index", "5": "lat", "6": "lon", "19": "region_label", "20": "initial_status"},
+      "note": "بقية الأعمدة حتى 27 فارغة — قراءات أعمدة المخيمات عليها تُرجِع فراغًا بأمان"
+    },
+    "company_read_order": ["recs[id].fix.company", "row[27]", "row[10]"],
+    "pilgrim_class_read_order": ["recs[id].fix.ptype", "row[26]"],
+    "sign_format": {
+      "SIGN_RE": "^\\d+(?:-\\d+)*\\/\\d+$",
+      "SIGN_RE_scope": "إلزامية لشواخص المخيمات — أمثلة: 57/2 و 1-3-5/506",
+      "SIGN_LEGACY": "^(?=.*\\d)[A-Za-z0-9]+(?:-[A-Za-z0-9]+)*(?:\\/\\d+)?$",
+      "SIGN_LEGACY_scope": "مقبولة لغير المخيمات",
+      "excel_rule": "أعمدة الشاخص تُصدَّر نصًا مُجبرًا حتى لا يحوّلها إكسل لتواريخ"
+    },
+    "derivations": {
+      "szOf(r)": "المشعر التقريري منى|عرفات|مزدلفة — الجمرات ومنشآت التسكين→منى، مسجد نمرة→عرفات، قطار المشاعر حسب اسم المحطة",
+      "catFull(r)": "فئة من 16 فئة مرتبة — انظر enums.categories16",
+      "ptypeOf(r)": "داخل | خارج | فراغ (يُحدَّد ميدانيًا)",
+      "nskIPs(subnet)": {"input": "أي نص يحوي a.b.c", "output": {"cidr": "a.b.c.0/24", "router": "a.b.c.1", "reader": "a.b.c.2", "camera": "a.b.c.3"}, "null_if": "لا يوجد نمط IP صالح"}
+    }
+  },
+
+  "enums": {
+    "install_status": {
+      "values_ar": ["لم يبدأ", "مجدول", "قيد التركيب", "مُركّب", "متعذّر"],
+      "en_map": {"مُركّب": "installed", "قيد التركيب": "in_progress", "مجدول": "scheduled", "متعذّر": "blocked", "لم يبدأ": "none"}
+    },
+    "field_status_fstat": {
+      "new": "لم يُزر",
+      "pending": "قائمة انتظار (نقاط q فقط)",
+      "done": "تمت الزيارة — وتظهر (جاهز للتركيب) في وضع التركيب",
+      "draft": "مجدول للتركيب",
+      "blocked": "تم التركيب"
+    },
+    "fit": ["مناسب", "مناسب بتعديل", "غير مناسب"],
+    "assignable_statuses": ["مجدول", "قيد التركيب"],
+    "challenges_camp": ["العارضة الحديدية ناقصة أو غير مكتملة", "يوجد ديكور أو لافتات على العارضة", "تصميم المدخل لا يسمح بالتركيب", "المدخل مشترك مع مخيم آخر", "المدخل غير واضح — لم يُستدل عليه", "مبنى متعدد الأدوار (أبراج)", "لا يوجد سطح تثبيت — يحتاج هيكلًا جديدًا", "ارتفاع صعب الوصول", "لا يوجد مسار كابل", "عائق إنشائي", "أخرى — اذكرها في وصف التحدي"],
+    "challenges_path": ["المسار داخل نفق", "المسار تحت كوبري", "المسار أعرض من طقم واحد", "ازدحام دائم يمنع العمل نهارًا", "لا يوجد سطح تثبيت — يحتاج عمودًا أو هيكلًا جديدًا", "ارتفاع صعب الوصول", "لا يوجد مسار كابل", "عائق إنشائي", "أخرى — اذكرها في وصف التحدي"],
+    "challenges_none_option": "لا توجد تحديات",
+    "proposal_reasons": ["مخيم جديد لم يكن موجودًا", "مخيم انقسم إلى أكثر من واحد", "عدم وجود تخصيص", "تغيّر ترقيم الشاخص", "الشاخص مفقود أو غير واضح", "سبب آخر"],
+    "proposal_reason_company_waiver": "عدم وجود تخصيص — عند اختياره لا تُلزَم شركة الخدمة للمخيم",
+    "categories16": ["مخيمات منى", "ممر منى", "قطار منى", "جمرات منى", "كاميرات منى", "منشآت التسكين", "مخيمات عرفات", "ممر عرفات", "قطار عرفات", "مسجد نمرة", "مخيمات مزدلفة", "ممر مزدلفة", "قطار مزدلفة", "قطار المشاعر", "مواقع مقترحة", "أخرى"],
+    "survey_photo_slots": ["لقطة عامة تُظهر رقم الموقع", "نقطة التركيب عن قرب", "مصدر الكهرباء", "مسار الكابل", "الاتجاه شمال", "الاتجاه جنوب", "الارتفاع / السقف", "العائق إن وُجد", "لقطة اختبار الشبكة"],
+    "install_photo_slots": ["قبل التركيب", "بعد التركيب (إلزامية عند مُركّب)", "لوحة رقم الموقع"],
+    "proposal_photo_slots": ["صورة الشاخص بأرقامه واضحة (إلزامية)", "لقطة عامة للموقع", "المدخل", "نقطة التركيب المقترحة", "أي عائق أو ملاحظة"]
+  },
+
+  "objects": {
+    "LogEntry": {"d": {"type": "string", "desc": "YYYY-MM-DD HH:mm"}, "s": {"type": "string", "desc": "وصف الحدث/الحالة"}, "by": {"type": "string"}},
+    "FixObject": {
+      "desc": "تصحيحات المشرف الميداني للبيانات المسجّلة — لها الأولوية على DB في كل القراءات",
+      "fields": {"name": "string?", "square": "string?", "sign": "string?", "ptype": "string?", "company": "string?", "nat": "string?", "permit": "string?", "cap": "string?", "subnet": "string?"}
+    },
+    "SurveyRecord (recs)": {
+      "id": {"type": "string", "desc": "معرّف الموقع نفسه"},
+      "status": {"type": "string", "enum": ["draft", "done"]},
+      "fstat": {"type": "string", "enum": ["", "new", "pending", "done", "draft", "blocked"], "desc": "انظر enums.field_status_fstat"},
+      "fit": {"type": "string", "enum": ["مناسب", "مناسب بتعديل", "غير مناسب"]},
+      "v": {"type": "object", "desc": "حقول القياس — المفاتيح في objects.SurveyFields_v"},
+      "fix": {"type": "FixObject"},
+      "chal": {"type": "array<string>", "desc": "من قوائم التحديات"},
+      "photos": {"type": "object", "desc": "{فهرس الخانة: dataURL} — تُفصل عند الرفع"},
+      "gps": {"type": "string?", "desc": "إحداثيات لحظة الحفظ"},
+      "loc": {"type": "string?", "desc": "إحداثيات معدّلة يدويًا (تحريك النقطة)"},
+      "date": {"type": "string", "desc": "YYYY-MM-DD HH:mm"},
+      "survey_date": {"type": "string?"},
+      "by": {"type": "string"},
+      "log": {"type": "array<LogEntry>"}
+    },
+    "SurveyFields_v": {
+      "desc": "54 حقلًا — المفتاح: التسمية العربية",
+      "fields": {
+        "name": "اسم الموقع", "ptype": "تصنيف الحجاج", "loc": "الإحداثيات المعدّلة", "square": "رقم المربع", "sign": "رقم الشاخص",
+        "len_m": "الطول (م)", "wid_m": "العرض (م)", "hgt_m": "الارتفاع (م)", "tents": "عدد الغرف", "gates": "عدد البوابات",
+        "shared": "بوابة مشتركة", "power": "مصدر الكهرباء", "pdist": "مسافة الكهرباء (م)", "cable": "مسار الكابل (م)",
+        "equip": "معدات الوصول", "metal": "هياكل معدنية", "n_ant": "عدد الهوائيات", "n_rdr": "عدد القارئات",
+        "n_cam": "عدد الكاميرات", "n_sens": "عدد الحساسات", "civil": "أعمال مدنية", "hours": "ساعات التركيب",
+        "crew": "أفراد الطاقم", "notes": "ملاحظات", "fit_why": "سبب عدم المناسبة", "old_base": "القاعدة القديمة",
+        "old_cable": "الكابل القديم", "span_m": "المسافة الحرة (م)", "clear_m": "الخلوص (م)", "ground": "نوع الأرضية",
+        "can_dig": "إمكانية الحفر", "utils": "مرافق مدفونة", "frame_fit": "صلاحية الإطار", "corr_w": "عرض الممر (م)",
+        "scenario": "سيناريو التركيب", "cam_ok": "حالة الكاميرا", "router_sp": "مكان الراوتر", "zone": "المشعر",
+        "stype": "نوع الموقع", "company": "شركة الخدمة", "company_new": "شركة مقترحة للإضافة", "operator": "مشغّل حجاج الداخل",
+        "op_count": "عدد المشغّلين", "power_yn": "وجود مصدر كهرباء", "power_note": "ما تغيّر في الكهرباء",
+        "p24": "كهرباء ٢٤ ساعة", "p_amp": "سعة القاطع", "kits": "عدد الأطقم", "jam_pos": "الدور والجهة",
+        "chal_note": "وصف التحدي", "reason": "سبب الاقتراح", "why": "شرح", "domestic": "مشغّل حجاج الداخل",
+        "obst_now": "حالة عائق ١٤٤٧"
+      }
+    },
+    "InstallRecord (inss)": {
+      "id": {"type": "string"},
+      "status": {"type": "string", "enum": ["لم يبدأ", "مجدول", "قيد التركيب", "مُركّب", "متعذّر"]},
+      "sched": {"type": "string?", "desc": "موعد الجدولة"},
+      "date": {"type": "string", "desc": "آخر تحديث YYYY-MM-DD HH:mm"},
+      "done_date": {"type": "string?", "desc": "YYYY-MM-DD عند مُركّب"},
+      "by": {"type": "string"},
+      "team": {"type": "string?", "desc": "الفني/الفريق المُسند (V4.0) — الإسناد لا يغيّر الحالة"},
+      "serial": {"type": "string?", "desc": "سيريال القارئ — يُدخله المهندس في التدقيق"},
+      "verified": {"type": "boolean?", "desc": "اعتماد هندسي"},
+      "qaBy": {"type": "string?"},
+      "qaDate": {"type": "string?"},
+      "qaNote": {"type": "string?", "desc": "ملاحظة الإرجاع للفريق"},
+      "v": {"type": "object", "fields": {"kits_done": "عدد الأطقم المركّبة", "ins_note": "ملاحظة"}},
+      "photos": {"type": "object", "desc": "خانات 0/1/2 — انظر enums.install_photo_slots"},
+      "log": {"type": "array<LogEntry>"}
+    },
+    "ProposalRecord (props)": {
+      "id": {"type": "string", "pattern": "NEW-{MIN|ARF}-nnn"},
+      "zi": {"type": "number", "desc": "فهرس المشعر"},
+      "lat": {"type": "number"}, "lon": {"type": "number"}, "acc": {"type": "number", "desc": "دقة GPS بالمتر"},
+      "v": {"type": "object", "fields": {"region": "المنطقة", "stype": "مخيم|ممر|بوابة|محطة|أخرى", "square": "المربع", "sign": "الشاخص", "company": "الشركة من القائمة", "company_req": "شركة مطلوب اعتمادها", "tents": "عدد الخيام/الغرف", "reason": "من enums.proposal_reasons", "why": "شرح"}},
+      "photos": {"type": "object", "desc": "انظر enums.proposal_photo_slots — الأولى إلزامية"},
+      "status": {"type": "string", "const": "proposed"},
+      "label": {"type": "string", "desc": "المنطقة — مربع س / شاخص ص"},
+      "date": {"type": "string"}, "by": {"type": "string"},
+      "log": {"type": "array<LogEntry>"}
+    },
+    "PhotoDoc (photos)": {
+      "doc_id": "{kind}__{siteId}__{encodeURIComponent(slotKey)}",
+      "kind": {"type": "string", "enum": ["recs", "inss", "props"]},
+      "site": {"type": "string"},
+      "k": {"type": "string", "desc": "مفتاح الخانة"},
+      "d": {"type": "string", "desc": "dataURL — الحد الأقصى 980000 حرف وإلا بقيت على الجهاز"},
+      "_up": {"type": "timestamp"}, "_by": {"type": "string"}
+    },
+    "GoalSettings (settings/goal)": {"deadline": "string? تاريخ الهدف العام", "regions": "object {مشعر: تاريخ}", "types": "object {نوع الموقع: دقائق للنقطة}"},
+    "TeamsSettings (settings/teams)": {"list": "array<string> أسماء الفنيين/الفرق — الاسم المطابق لحساب مشرف يفعّل له زر جدولي"},
+    "StockSettings (settings/stock)": {"tot": "number إجمالي القارئات", "iss": "object {فريق: عدد مصروف}"},
+    "DevicesSettings (settings/devices)": {"list": "array<{s: سيريال, n: اسم}>", "n": "number العدد", "at": "string وقت التحديث", "src": "string مصدر التحديث (بوت/استيراد)"},
+    "CompanyListEntry (colist)": {
+      "name": {"type": "string"},
+      "st": {"type": "string", "enum": ["req", "ok"], "desc": "req طلب مشرف — ok معتمدة"},
+      "by": {"type": "string"}, "at": {"type": "string"},
+      "site": {"type": "string?", "desc": "الموقع الذي نشأ منه الطلب"},
+      "okBy": {"type": "string?"}, "okAt": {"type": "string?"}
+    },
+    "EventDoc (events)": {"t": {"type": "timestamp"}, "by": {"type": "string"}, "role": {"type": "string"}, "txt": {"type": "string", "max_len": 240}, "append_only": true},
+    "UserDoc (users)": {"doc_id": "Firebase Auth uid", "email": "string", "name": "string", "role": {"enum": ["supervisor", "engineer", "admin", "viewer"]}, "active": "boolean", "createdAt": "timestamp", "createdBy": "string uid"}
+  },
+
+  "firestore": {
+    "sync_semantics": {
+      "push": "setDoc استبدال كامل (بلا merge) + إضافة _up (serverTimestamp) و _by — الصور تُفصل ويُرفَع عددها phN",
+      "listen": "onSnapshot حي على recs/inss/props/colist/settings/photos + آخر 500 من events",
+      "offline": "تخزين Firestore الدائم + نسخة محلية بمفاتيح rec:/ins:/new:",
+      "quota_note": "خطة Spark: 20000 كتابة يوميًا — العدّاد يتصفّر نحو 10–11 صباحًا بتوقيت السعودية"
+    },
+    "collections": {
+      "recs": {"doc_id": "site id", "object": "SurveyRecord", "read": "ok", "write": "canW"},
+      "inss": {"doc_id": "site id", "object": "InstallRecord", "read": "ok", "write": "canW"},
+      "props": {"doc_id": "NEW-…", "object": "ProposalRecord", "read": "ok", "write": "canW"},
+      "photos": {"doc_id": "{kind}__{site}__{k}", "object": "PhotoDoc", "read": "ok", "write": "canW"},
+      "settings": {"docs": ["goal", "teams", "stock", "devices"], "read": "ok", "write": "mgr"},
+      "colist": {"object": "CompanyListEntry", "read": "ok", "write": "mgr", "create_supervisor_condition": "st == 'req'"},
+      "events": {"object": "EventDoc", "read": "ok", "create": "canW", "update_delete": "ممنوع على الجميع"},
+      "users": {"object": "UserDoc", "read": "صاحب الحساب أو mgr", "write": "admin كامل — engineer ينشئ ويعدّل مشرفين فقط", "delete": "ممنوع"}
+    },
+    "rules_functions": {
+      "isBoss": "request.auth.token.email == 'mohammed.safwat@afaqy.com'",
+      "ok": "isBoss أو مستخدم مستنده active == true",
+      "role": "admin لو isBoss وإلا من مستند users",
+      "mgr": "ok && role in [engineer, admin]",
+      "canW": "ok && role in [engineer, admin, supervisor]"
+    },
+    "rules_deploy": "تعديل firestore.rules في المستودع → deploy-rules.yml ينشرها تلقائيًا — أي كولكشن جديد يستلزم قاعدة يدوية"
+  },
+
+  "local_storage_keys": {
+    "rec:{id}": "SurveyRecord JSON",
+    "ins:{id}": "InstallRecord JSON",
+    "new:{id}": "ProposalRecord JSON",
+    "nsk.dx2": "أقسام تصدير اللوحة المختارة"
+  },
+
+  "bridges": {
+    "NSKCORE": {
+      "db()": "كائن DB الخام",
+      "all(kind)": "الخريطة كاملة — kind: recs|inss|props|colist|settings",
+      "get(kind,id)": "سجل واحد",
+      "set(kind,id,v)": "كتابة محلية (بلا رفع)",
+      "rm(kind,id)": "حذف محلي",
+      "szOf(r)": "منى|عرفات|مزدلفة",
+      "tyOf(r)": "اسم الفئة المنطقية",
+      "total()": "1787",
+      "redraw()": "إعادة رسم كل الشاشات"
+    },
+    "NSKSYNC": {
+      "push(kind,id,rec)": "رفع لفايرستور + فصل الصور لكولكشن photos + تسجيل حدث تلقائي — viewer لا يرفع",
+      "del(kind,id)": "حذف المستند من السحابة",
+      "log(txt)": "إضافة حدث ≤ 240 حرفًا إلى events"
+    },
+    "NSKDASH": {"open()": "فتح اللوحة", "close()": "إغلاقها", "refresh()": "تحديث إن كانت مفتوحة (يحفظ تركيز الحقول)"},
+    "NSKCATX": {"order": "مصفوفة الفئات الـ16", "of(r)": "{l,o,i,c}", "cmp(a,b)": "مقارن ترتيب موحّد"},
+    "nskIPs(v)": "{cidr, router, reader, camera} أو null"
+  },
+
+  "exports": {
+    "integration_json": {
+      "trigger": "لوحة المتابعة ← تصدير ← JSON — ينزّل ملف nusuk-survey-YYYY-MM-DD.json",
+      "schema_id": "nusuk-survey/1",
+      "response": {
+        "schema": {"type": "string", "const": "nusuk-survey/1"},
+        "generated_at": {"type": "string", "format": "ISO 8601"},
+        "totals": {
+          "sites": "number إجمالي النقاط",
+          "surveyed": "number تم مسحها",
+          "installed": "number مُركّب",
+          "in_progress": "number قيد التركيب",
+          "scheduled": "number مجدول",
+          "blocked": "number متعذّر",
+          "unscheduled": "number لم يُجدول",
+          "proposals": "number مقترحات",
+          "ready_to_schedule": "number|null ممسوح صالح بلا جدولة",
+          "awaiting_qa": "number|null مُركّب بانتظار التدقيق"
+        },
+        "sites[]": {
+          "id": "string",
+          "name": "string — fix.name أولًا",
+          "region": {"type": "string", "enum": ["MIN", "ARF", "MUZ", ""]},
+          "region_ar": "string",
+          "square": "string", "sign": "string",
+          "company": "string — fix.company ← row[27] ← row[10]",
+          "lat": "number|null", "lon": "number|null",
+          "survey": {
+            "nullable": true,
+            "done": "boolean",
+            "fit": {"enum": ["مناسب", "مناسب بتعديل", "غير مناسب", ""]},
+            "date": "string", "by": "string",
+            "challenges": "array<string> بدون خيار لا توجد تحديات",
+            "note": "string وصف التحدي"
+          },
+          "network": {
+            "nullable": true,
+            "subnet": "string a.b.c.0/24", "router": "string", "reader": "string", "camera": "string"
+          },
+          "install": {
+            "nullable": true,
+            "status": {"enum": ["installed", "in_progress", "scheduled", "blocked", "none"]},
+            "status_ar": "string",
+            "date": "string", "by": "string",
+            "serial": "string", "verified": "boolean",
+            "verified_by": "string", "verified_at": "string"
+          }
+        },
+        "proposals[]": {
+          "id": "string", "label": "string", "status": "string proposed",
+          "region_ar": "string", "type": "string",
+          "square": "string", "sign": "string", "company": "string company أو company_req",
+          "lat": "number", "lon": "number", "date": "string", "by": "string"
+        }
+      },
+      "example": {
+        "schema": "nusuk-survey/1",
+        "generated_at": "2026-08-02T14:00:00.000Z",
+        "totals": {"sites": 1787, "surveyed": 950, "installed": 400, "in_progress": 60, "scheduled": 120, "blocked": 8, "unscheduled": 1199, "proposals": 14, "ready_to_schedule": 210, "awaiting_qa": 35},
+        "sites": [{
+          "id": "NSK-ARF-CMP-0003",
+          "name": "عرفات - مربع 7-16 - شاخص 4/506",
+          "region": "ARF", "region_ar": "عرفات",
+          "square": "7-16", "sign": "4/506",
+          "company": "إكرام الضيف",
+          "lat": 21.338197, "lon": 39.985804,
+          "survey": {"done": true, "fit": "مناسب", "date": "2026-07-30 09:41", "by": "مشرف ١", "challenges": ["ارتفاع صعب الوصول"], "note": ""},
+          "network": {"subnet": "172.16.104.0/24", "router": "172.16.104.1", "reader": "172.16.104.2", "camera": "172.16.104.3"},
+          "install": {"status": "installed", "status_ar": "مُركّب", "date": "2026-08-01 16:20", "by": "فني ٣", "serial": "RDR-88214", "verified": true, "verified_by": "مهندس أ", "verified_at": "2026-08-01 18:05"}
+        }],
+        "proposals": [{
+          "id": "NEW-MIN-004", "label": "منى — مربع 63 / شاخص 9/63", "status": "proposed",
+          "region_ar": "منى", "type": "مخيم", "square": "63", "sign": "9/63",
+          "company": "", "lat": 21.4132, "lon": 39.8931, "date": "2026-08-01 11:02", "by": "مشرف ٤"
+        }]
+      }
+    },
+    "excel_dashboard": {
+      "trigger": "لوحة المتابعة ← تصدير ← Excel — أقسام قابلة للاختيار تُحفظ محليًا (nsk.dx2)",
+      "sections": ["الوتيرة والهدف (٣ أوراق)", "نظرة عامة", "التركيب والجدولة", "التركيب اليومي", "المسح الميداني", "التحديات", "حسب المشعر", "حسب الشركة", "المتعذر والراكد", "سلامة خط الإنتاج + طابور الجدولة", "فرق التركيب + توزيع المربعات + إسناد النقاط", "سجل السيريالات", "عُهدة الأجهزة + سجل الأجهزة", "إنتاجية الفريق", "سباق المسح والتركيب", "الأحداث", "سلامة البيانات (أدمن فقط)"],
+      "assign_points_sheet_columns": ["الشاخص", "المشعر", "المربع", "الحالة", "الفني المسند", "تاريخ الجدولة"]
+    },
+    "sites_list_export_columns": ["المعرّف", "الاسم", "الفئة", "المشعر", "المنطقة", "المربع", "الشاخص", "الشركة (fix ← الموحّدة ← الخام)", "تصنيف الحجاج", "حالة الميدان", "آخر فني", "آخر تعديل", "الإحداثيات", "موقع معدَّل"],
+    "events_export": "١٠ أعمدة تشمل التاريخ والمنفّذ والدور والنص والموقع والمشعر والفئة",
+    "pdf": "طباعة اللوحة بالأقسام المختارة — حفظ كـ PDF من نافذة الطباعة"
+  },
+
+  "automation": {
+    "backup": {
+      "workflow": ".github/workflows/backup.yml",
+      "schedule": "cron 30 2 * * * UTC = 05:30 صباحًا بتوقيت السعودية يوميًا",
+      "script": "scripts/backup.mjs",
+      "auth": "secret FIREBASE_SERVICE_ACCOUNT",
+      "output": "backups/latest/{collection}.json لكل الكولكشنز — photos تُحصى عددًا فقط — commit يومي (تاريخ git = الأرشيف)",
+      "timestamps": "قيم Firestore الزمنية تُحوَّل ISO"
+    },
+    "devices_sync": {
+      "workflow": ".github/workflows/devices.yml",
+      "schedule": "كل ٦ ساعات + تشغيل يدوي",
+      "script": "scripts/devices.mjs",
+      "behavior": "يخرج بهدوء (exit 0) إن لم تُضبط DEVICES_API_URL أو FIREBASE_SERVICE_ACCOUNT",
+      "env_contract": {
+        "DEVICES_API_URL": "رابط GET يرجع JSON بسجل الأجهزة (إلزامي)",
+        "DEVICES_API_TOKEN": "توكن اختياري",
+        "DEVICES_AUTH_HEADER": "اسم الهيدر — الافتراضي Authorization",
+        "DEVICES_AUTH_PREFIX": "الافتراضي Bearer — القيمة none تلغي البادئة",
+        "DEVICES_JSON_PATH": "مسار المصفوفة داخل الاستجابة إن لم تكن في الجذر",
+        "DEVICES_FIELD_SERIAL": "اسم حقل السيريال — الافتراضي serial",
+        "DEVICES_FIELD_NAME": "اسم حقل الاسم — الافتراضي name",
+        "DEVICES_NAME_FILTER": "فلتر اختياري على الاسم"
+      },
+      "writes": "settings/devices = {list:[{s,n}], n, at, src}"
+    },
+    "rules_deploy": {"workflow": ".github/workflows/deploy-rules.yml", "trigger": "push يلمس firestore.rules أو firebase.json"}
+  },
+
+  "external": {
+    "afaqy_reference": "docs/afaqy-api.md — يُقرأ أولًا عند أي عمل على تكامل أفاقي (myafaqy.com / AVL / SenseWare) ويُحدَّث بأي واجهة جديدة",
+    "note": "المستودع عام — لا يُكتب فيه أي توكن أبدًا"
+  }
+}
