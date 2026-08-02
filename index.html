@@ -965,7 +965,7 @@ window.addEventListener('error', function(e){
 <div id="app">
   <header>
     <div class="t">
-      <div class="eyebrow">قارئات نُسُك ١٤٤٨هـ <span style="color:var(--muted);letter-spacing:0;font-weight:600">· نسخة V4.6</span></div>
+      <div class="eyebrow">قارئات نُسُك ١٤٤٨هـ <span style="color:var(--muted);letter-spacing:0;font-weight:600">· نسخة V4.7</span></div>
       <h1 id="ttl">المسح الميداني</h1>
     </div>
     <button class="pill" id="modeBtn" type="button">المسح</button>
@@ -1062,6 +1062,7 @@ window.addEventListener('error', function(e){
           <button class="btn p" id="bkBtn" type="button" style="margin-bottom:10px">
             ⬇ نسخة احتياطية كاملة</button>
           <button class="btn s" id="mgBtn" type="button">⬆ دمج نسخة زميل / استعادة</button>
+          <button class="btn s" id="schBtn" type="button" style="margin-top:10px">🧩 ملف الواجهات JSON — للمطوّرين والتكامل</button>
           <input id="mergeFile" type="file" accept=".json,application/json" hidden/>
           <div style="font-size:11px;color:var(--muted);line-height:1.8;margin-top:9px">
             النسخة تشمل كل المسوحات والتركيبات والمواقع المقترحة بصورها.
@@ -3380,6 +3381,90 @@ function buildBackup(){
     by:me||'', recs:recs, inss:inss, props:props});
 }
 window.buildBackup = buildBackup;
+/* يبني ملف الواجهات من ثوابت التطبيق الحية — يعمل بلا إنترنت ويطابق النسخة المشغّلة */
+window.nskSchema = function(){
+  var V=''; try{ V=(document.querySelector('.eyebrow')||{}).textContent||''; }catch(e){}
+  var m=String(V).match(/V[\d.]+/); var ver=m?m[0]:'';
+  function cnt(o){ try{ return Object.keys(o||{}).length; }catch(e){ return 0; } }
+  return {
+    schema:'nusuk-docs/1',
+    app_version:ver,
+    generated_at:new Date().toISOString(),
+    generated_from:'التطبيق مباشرة — الثوابت الحية للنسخة المشغّلة',
+    full_docs:'https://github.com/mhmdsfwt371/-Project-survey/blob/main/docs/system.md',
+    full_schema:'https://raw.githubusercontent.com/mhmdsfwt371/-Project-survey/main/docs/api-schema.json',
+    site_registry:{
+      totals:{ sites:DB.d.length, camps:(DB.g||[]).length,
+               paths_and_others:(DB.p||[]).length, queue:(DB.q||[]).length },
+      zones:DB.z, types:DB.t, work_types:DB.w,
+      companies_external:(DB.co||[]).length, domestic_operators:(DB.dm||[]).length,
+      camp_row_columns:{ '0':'id','1':'label','2':'zone_index','3':'type_index','4':'work_index',
+        '5':'lat','6':'lon','7':'polygon','8':'square','9':'sign','10':'company_raw',
+        '11':'nationality','12':'sovereign_host','13':'domestic_operator','14':'capacity_1447',
+        '15':'occupancy_pct_1447','16':'obstacle_1447','17':'pilgrims_aux_1447','18':'install_1447',
+        '19':'power_note','20':'subnet_1447','21':'region_label','22':'initial_status',
+        '23':'_empty','24':'_empty','25':'_empty',
+        '26':'pilgrim_class','27':'company_canonical','28':'operator_alert','29':'flag' },
+      path_row_columns:{ '0':'id','1':'label','2':'zone_index','3':'type_index','4':'work_index',
+        '5':'lat','6':'lon','19':'region_label','20':'initial_status' },
+      company_read_order:['recs[id].fix.company','row[27]','row[10]'],
+      pilgrim_class_read_order:['recs[id].fix.ptype','row[26]'],
+      sign_format:{ camp:String(SIGN_RE), other:String(SIGN_LEGACY), hint:SIGN_HINT }
+    },
+    enums:{
+      install_status:['لم يبدأ','مجدول','قيد التركيب','مُركّب','متعذّر'],
+      install_status_en:{'مُركّب':'installed','قيد التركيب':'in_progress','مجدول':'scheduled',
+                         'متعذّر':'blocked','لم يبدأ':'none'},
+      field_status_fstat:SL,
+      fit:['مناسب','مناسب بتعديل','غير مناسب'],
+      assignable_statuses:['مجدول','قيد التركيب'],
+      categories16:(window.NSKCATX&&NSKCATX.order)||[],
+      survey_photo_slots:PHOTOS,
+      install_photo_slots:['قبل التركيب','بعد التركيب (إلزامية عند مُركّب)','لوحة رقم الموقع'],
+      proposal_photo_slots:NEW_PHOTOS,
+      survey_fields:FIELD_AR
+    },
+    collections:{
+      recs:{ doc_id:'site id', write:'مشرف فأعلى', live_count:cnt(recs) },
+      inss:{ doc_id:'site id', write:'مشرف فأعلى', live_count:cnt(inss) },
+      props:{ doc_id:'NEW-{MIN|ARF}-nnn', write:'مشرف فأعلى', live_count:cnt(props) },
+      photos:{ doc_id:'{kind}__{site}__{slot}', write:'مشرف فأعلى',
+               note:'الصور تُفصل عن السجل — الحد 980000 حرف للصورة' },
+      settings:{ docs:['goal','teams','stock','devices'], write:'مهندس/أدمن' },
+      colist:{ write:'مهندس/أدمن + إنشاء مشرف بشرط st=req', live_count:cnt(cos) },
+      events:{ write:'إضافة فقط — لا تعديل ولا حذف' },
+      users:{ doc_id:'firebase uid', write:'أدمن (المهندس: مشرفين فقط)' }
+    },
+    bridges:{
+      NSKCORE:['db()','all(kind)','get(kind,id)','set(kind,id,v)','rm(kind,id)','szOf(r)','tyOf(r)','total()','redraw()'],
+      NSKSYNC:['push(kind,id,rec)','del(kind,id)','log(txt)'],
+      NSKCATX:['order','of(r)','cmp(a,b)'],
+      nskIPs:'subnet → {cidr, router:.1, reader:.2, camera:.3}'
+    },
+    exports:{
+      integration_json:{ schema:'nusuk-survey/1',
+        where:'لوحة المتابعة ← تصدير ← JSON',
+        sites_fields:['id','name','region','region_ar','square','sign','company','lat','lon','survey','network','install'],
+        install_fields:['status','status_ar','date','by','serial','verified','verified_by','verified_at'] },
+      backup_json:{ where:'تبويب الرفع ← نسخة احتياطية كاملة',
+        contains:'كل سجلات المسح والتركيب والمقترحات بصورها — قابل للدمج عبر «دمج نسخة زميل»' },
+      excel:'لوحة المتابعة ← تصدير ← Excel — أوراق حسب الأقسام المختارة'
+    }
+  };
+};
+window.doSchema = function(){
+  try{
+    var s=JSON.stringify(window.nskSchema(),null,1);
+    var dd=new Date(), p2=function(n){ return String(n).padStart(2,'0'); };
+    var name='nusuk-api-schema-'+dd.getFullYear()+p2(dd.getMonth()+1)+p2(dd.getDate())+'.json';
+    var a=document.createElement('a');
+    a.href=URL.createObjectURL(new Blob([s],{type:'application/json'}));
+    a.download=name; document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(function(){ try{URL.revokeObjectURL(a.href);}catch(e){} },4000);
+    toast('نزل ملف الواجهات JSON ✓');
+    try{ if(window.NSKSYNC) NSKSYNC.log('تنزيل ملف الواجهات JSON'); }catch(e){}
+  }catch(e){ toast('تعذّر إنشاء الملف',1); }
+};
 window.doBackup = function(){
   try{
     const s=buildBackup();
@@ -3437,6 +3522,7 @@ window.mergeBackupText = async function(txt){
         (fail?' · فشل حفظ '+fail:''), fail?1:0);
 };
 $('#bkBtn').onclick = ()=>window.doBackup();
+$('#schBtn').onclick = ()=>window.doSchema();
 $('#mgBtn').onclick = ()=>{ const f=$('#mergeFile'); if(f&&f.click) f.click(); };
 $('#mergeFile').onchange = async ev=>{
   const f=ev.target.files && ev.target.files[0]; if(!f) return;
@@ -5688,8 +5774,21 @@ function render(){
         nP=Object.keys(Cw.all('props')||{}).length;
     h+='<h2 style="font-size:.95em;margin-top:18px;color:#E05252">إعادة ضبط البيانات — لا يمكن التراجع</h2>';
     h+='<p class="dTs">سيُحذف من السحابة ومن كل الأجهزة: <b>'+AR(nR)+'</b> سجل مسح · <b>'+AR(nI)+'</b> سجل تركيب · <b>'+AR(nP)+'</b> موقع مقترح · وكل الصور المرتبطة بها.</p>';
+    (function(){
+      var G=goalObj(), T=teamsObj(), S=stockObj(), DV=devicesObj();
+      var nT=((T.list||[]).length), nS=Object.keys(S.iss||{}).length;
+      var nG=(G.deadline?1:0)+Object.keys(G.regions||{}).length+Object.keys(G.types||{}).length;
+      var nD=((DV.list||[]).length);
+      var bits=[];
+      if(nT) bits.push(AR(nT)+' فريق');
+      if(nS||S.tot) bits.push('أرقام العُهدة');
+      if(nG) bits.push('المواعيد المستهدفة');
+      if(nD) bits.push(AR(nD)+' جهاز في السجل');
+      h+='<p class="dTs">وستُصفَّر كذلك كل الأرقام المخزّنة'
+        +(bits.length?': <b>'+bits.join('</b> · <b>')+'</b>':' (لا يوجد منها شيء حاليًا)')+'.</p>';
+    })();
     h+='<p class="dTs">لن يُحذف: حسابات المستخدمين، وقائمة الشركات المعتمدة، وسجل الأحداث (محمي كأثر تدقيقي لا يُمحى).</p>';
-    h+='<div class="pTyStrip"><label style="gap:8px"><input type="checkbox" id="wpSet" style="width:auto"> امسح كذلك الإعدادات: الفرق والمواعيد المستهدفة والعُهدة وسجل الأجهزة</label></div>';
+    h+='<div class="pTyStrip"><label style="gap:8px"><input type="checkbox" id="wpSet" style="width:auto" checked> صفِّر كل الأرقام أيضًا: الفرق والمواعيد المستهدفة والعُهدة وسجل الأجهزة <em style="font-style:normal;color:var(--muted)">— ألغِ العلامة للاحتفاظ بها</em></label></div>';
     h+='<div class="qaC" style="margin-top:8px">';
     h+='<input id="wpTxt" placeholder="للتأكيد اكتب: مسح نهائي" autocomplete="off">';
     h+='<button type="button" class="dBtn" id="wpGo" style="border-color:#E05252;color:#E05252">🗑 تنفيذ إعادة الضبط</button>';
