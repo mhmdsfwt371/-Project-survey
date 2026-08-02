@@ -8,7 +8,10 @@ import { Readable } from 'stream';
 
 const SA_RAW = process.env.GDRIVE_SA || '';
 const ROOT   = (process.env.GDRIVE_FOLDER || '').trim();
-const KEEP   = parseInt(process.env.GDRIVE_KEEP_DAYS || '45', 10);
+/* احتفاظ بمستويين: البيانات خفيفة فتبقى طويلًا، والصور ضخمة فمدتها أقصر.
+   صفر في أيٍّ منهما = لا حذف إطلاقًا. */
+const KEEP_DATA  = parseInt(process.env.GDRIVE_KEEP_DAYS   || '120', 10);
+const KEEP_PHOTO = parseInt(process.env.GDRIVE_PHOTO_DAYS  || '21',  10);
 
 if (!SA_RAW || !ROOT) {
   console.log('drive-upload: GDRIVE_SA أو GDRIVE_FOLDER غير مضبوط — تخطّي الرفع');
@@ -54,22 +57,44 @@ async function put(localPath, name, parent) {
   console.log(`  ✓ ${name} — ${(size / 1024 / 1024).toFixed(2)} م.ب`);
 }
 
-/* حذف الفولدرات الأقدم من KEEP يومًا — حتى لا يمتلئ الدرايف */
+/* تنظيف بمستويين:
+   – أقدم من KEEP_PHOTO: يُحذف ملف الصور وحده، وتبقى البيانات كاملة.
+   – أقدم من KEEP_DATA : يُحذف الفولدر كله.
+   لا يُلمس إلا ما كان اسمه تاريخًا صالحًا. */
 async function prune(parent) {
-  if (!(KEEP > 0)) return;
-  const cut = new Date(Date.now() - KEEP * 86400000);
+  if (!(KEEP_DATA > 0) && !(KEEP_PHOTO > 0)) return;
+  const dayMs = 86400000;
+  const cutData  = KEEP_DATA  > 0 ? new Date(Date.now() - KEEP_DATA  * dayMs) : null;
+  const cutPhoto = KEEP_PHOTO > 0 ? new Date(Date.now() - KEEP_PHOTO * dayMs) : null;
   const res = await drive.files.list({
     q: `'${parent}' in parents and mimeType='application/vnd.google-apps.folder' and trashed=false`,
     fields: 'files(id,name)', pageSize: 400,
     supportsAllDrives: true, includeItemsFromAllDrives: true
   });
-  let n = 0;
+  let delFolders = 0, delPhotos = 0;
   for (const f of res.data.files || []) {
-    if (!/^\d{4}-\d{2}-\d{2}$/.test(f.name)) continue;      /* لا نلمس إلا فولدرات التواريخ */
-    if (new Date(f.name + 'T00:00:00Z') >= cut) continue;
-    try { await drive.files.delete({ fileId: f.id, supportsAllDrives: true }); n++; } catch {}
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(f.name)) continue;
+    const when = new Date(f.name + 'T00:00:00Z');
+    if (cutData && when < cutData) {
+      try { await drive.files.delete({ fileId: f.id, supportsAllDrives: true }); delFolders++; } catch {}
+      continue;
+    }
+    if (cutPhoto && when < cutPhoto) {
+      try {
+        const inner = await drive.files.list({
+          q: `'${f.id}' in parents and name='photos.json' and trashed=false`,
+          fields: 'files(id)', pageSize: 2,
+          supportsAllDrives: true, includeItemsFromAllDrives: true
+        });
+        for (const ph of inner.data.files || []) {
+          await drive.files.delete({ fileId: ph.id, supportsAllDrives: true }); delPhotos++;
+        }
+      } catch {}
+    }
   }
-  if (n) console.log(`  🧹 حُذف ${n} فولدر أقدم من ${KEEP} يومًا`);
+  if (delPhotos)  console.log(`  🧹 حُذفت صور ${delPhotos} يومًا أقدم من ${KEEP_PHOTO} — البيانات باقية`);
+  if (delFolders) console.log(`  🧹 حُذف ${delFolders} فولدر أقدم من ${KEEP_DATA} يومًا`);
+  if (!delPhotos && !delFolders) console.log('  🧹 لا شيء للحذف');
 }
 
 try {

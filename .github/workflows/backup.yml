@@ -30,7 +30,8 @@ jobs:
         env:
           GDRIVE_SA: ${{ secrets.GDRIVE_SA }}
           GDRIVE_FOLDER: ${{ secrets.GDRIVE_FOLDER }}
-          GDRIVE_KEEP_DAYS: '45'
+          GDRIVE_KEEP_DAYS: '120'    # البيانات — ٤ شهور
+          GDRIVE_PHOTO_DAYS: '21'    # الصور ضخمة — ٣ أسابيع
         run: |
           if [ -z "$GDRIVE_SA" ]; then
             echo "::notice::GDRIVE_SA غير مضبوط — تخطّي الرفع للدرايف"
