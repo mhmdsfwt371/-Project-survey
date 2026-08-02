@@ -956,7 +956,7 @@ window.addEventListener('error', function(e){
 <div id="app">
   <header>
     <div class="t">
-      <div class="eyebrow">قارئات نُسُك ١٤٤٨هـ <span style="color:var(--muted);letter-spacing:0;font-weight:600">· نسخة V3.6</span></div>
+      <div class="eyebrow">قارئات نُسُك ١٤٤٨هـ <span style="color:var(--muted);letter-spacing:0;font-weight:600">· نسخة V3.7</span></div>
       <h1 id="ttl">المسح الميداني</h1>
     </div>
     <button class="pill" id="modeBtn" type="button">المسح</button>
@@ -1077,7 +1077,7 @@ window.addEventListener('error', function(e){
         </button>
         <button class="btn s" id="clr" type="button"
           style="background:none;border-color:var(--red);color:var(--red)">
-          مسح بيانات التجربة
+          مسح محلي لهذا الجهاز فقط
         </button>
       </div>
     </section>
@@ -3888,7 +3888,7 @@ function bindAccountPanel(p){
 </script>
 <script type="module">
 /* NSK-P23: مزامنة لحظية + سجل أحداث ٥٠٠ + لوحة متابعة الوزارة */
-import { collection, doc, setDoc, deleteDoc, addDoc, onSnapshot, query, orderBy, limit, serverTimestamp }
+import { collection, doc, setDoc, deleteDoc, getDocs, addDoc, onSnapshot, query, orderBy, limit, serverTimestamp }
   from "https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js";
 
 const db = window.NSKFB && window.NSKFB.db;
@@ -4851,6 +4851,33 @@ function saveTeams(mut){
     try{ if(window.NSKSYNC) NSKSYNC.push('settings','teams',t); }catch(e){}
   }catch(e){}
 }
+async function wipeCloud(withSettings, onProg){
+  if(!db) throw new Error('no-db');
+  var KP={recs:'rec:', inss:'ins:', props:'new:'};
+  var kinds=['recs','inss','props','photos'];
+  if(withSettings) kinds.push('settings');
+  var n=0;
+  for(var qi=0; qi<kinds.length; qi++){
+    var kind=kinds[qi];
+    var snap=await getDocs(collection(db,kind));
+    for(var di=0; di<snap.docs.length; di++){
+      try{ await deleteDoc(snap.docs[di].ref); }catch(e){}
+      n++; if(onProg && n%5===0){ try{ onProg(n); }catch(e){} }
+    }
+    if(KP[kind]){
+      var m=window.NSKCORE.all(kind)||{}, ids=Object.keys(m);
+      for(var ii=0; ii<ids.length; ii++){
+        try{ await window.storage.delete(KP[kind]+ids[ii], false); }catch(e){}
+        try{ window.NSKCORE.rm(kind, ids[ii]); }catch(e){}
+      }
+    }
+  }
+  if(withSettings){
+    try{ var s=window.NSKCORE.all('settings')||{};
+      Object.keys(s).forEach(function(k){ window.NSKCORE.rm('settings',k); }); }catch(e){}
+  }
+  return n;
+}
 function devicesObj(){ try{ return window.NSKCORE.get('settings','devices')||{}; }catch(e){ return {}; } }
 function saveDevices(list, srcTag){
   var d={list:list, n:list.length, at:_now(), src:srcTag||'import'};
@@ -5454,6 +5481,19 @@ function render(){
     } else if(qaData().done){
       h+='<div class="dEmpty">لا توجد سيريالات مكرّرة — السجل نظيف ✅</div>';
     }
+    /* V3.7: إعادة ضبط شاملة */
+    var Cw=window.NSKCORE;
+    var nR=Object.keys(Cw.all('recs')||{}).length,
+        nI=Object.keys(Cw.all('inss')||{}).length,
+        nP=Object.keys(Cw.all('props')||{}).length;
+    h+='<h2 style="font-size:.95em;margin-top:18px;color:#E05252">إعادة ضبط البيانات — لا يمكن التراجع</h2>';
+    h+='<p class="dTs">سيُحذف من السحابة ومن كل الأجهزة: <b>'+AR(nR)+'</b> سجل مسح · <b>'+AR(nI)+'</b> سجل تركيب · <b>'+AR(nP)+'</b> موقع مقترح · وكل الصور المرتبطة بها.</p>';
+    h+='<p class="dTs">لن يُحذف: حسابات المستخدمين، وقائمة الشركات المعتمدة، وسجل الأحداث (محمي كأثر تدقيقي لا يُمحى).</p>';
+    h+='<div class="pTyStrip"><label style="gap:8px"><input type="checkbox" id="wpSet" style="width:auto"> امسح كذلك الإعدادات: الفرق والمواعيد المستهدفة والعُهدة وسجل الأجهزة</label></div>';
+    h+='<div class="qaC" style="margin-top:8px">';
+    h+='<input id="wpTxt" placeholder="للتأكيد اكتب: مسح نهائي" autocomplete="off">';
+    h+='<button type="button" class="dBtn" id="wpGo" style="border-color:#E05252;color:#E05252">🗑 تنفيذ إعادة الضبط</button>';
+    h+='</div>';
   })(); }
 
   h+='</section><section class="dSec" data-sec="reg">';
@@ -5565,6 +5605,26 @@ function render(){
     var la=b.getAttribute('data-la'), lo=b.getAttribute('data-lo');
     try{ window.open('https://www.google.com/maps/dir/?api=1&destination='+la+','+lo+'&travelmode=walking','_blank'); }catch(e){}
   }; });
+  var wg=$i('wpGo'); if(wg) wg.onclick=async function(){
+    if(!(user && user.role==='admin')){ try{ toast('هذا الإجراء للمشرف العام فقط',1); }catch(e){} return; }
+    var t=$i('wpTxt');
+    if(_tnorm(t&&t.value)!=='مسح نهائي'){
+      try{ toast('للتأكيد اكتب العبارة بالضبط: مسح نهائي',1); }catch(e){}
+      if(t) t.focus(); return;
+    }
+    var withSet=!!($i('wpSet') && $i('wpSet').checked);
+    if(!confirm('حذف نهائي من السحابة ومن كل أجهزة الفريق'+(withSet?' — بما في ذلك الإعدادات':'')+'.\nلا يمكن التراجع. متابعة؟')) return;
+    wg.disabled=true; wg.textContent='جارٍ المسح…';
+    try{
+      var n=await wipeCloud(withSet, function(k){ wg.textContent='جارٍ المسح… '+AR(k); });
+      try{ if(window.NSKSYNC) NSKSYNC.log('إعادة ضبط شاملة: حُذف '+n+' مستند'+(withSet?' + الإعدادات':'')); }catch(e){}
+      try{ toast('اكتملت إعادة الضبط: '+AR(n)+' مستند — جارٍ إعادة التحميل'); }catch(e){}
+      setTimeout(function(){ location.reload(); }, 1500);
+    }catch(e){
+      wg.disabled=false; wg.textContent='🗑 تنفيذ إعادة الضبط';
+      try{ toast('تعذّر إكمال المسح — تحقق من الاتصال',1); }catch(x){}
+    }
+  };
   var dvF=$i('dvFile'); if(dvF) dvF.onchange=function(){
     var f=dvF.files&&dvF.files[0]; if(!f) return;
     var nf=(($i('dvName')||{}).value)||'';
