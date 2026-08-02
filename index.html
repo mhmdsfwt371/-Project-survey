@@ -1018,7 +1018,7 @@ window.addEventListener('error', function(e){
 <div id="app">
   <header>
     <div class="t">
-      <div class="eyebrow">قارئات نُسُك ١٤٤٨هـ <span style="color:var(--muted);letter-spacing:0;font-weight:600">· نسخة V5.5</span></div>
+      <div class="eyebrow">قارئات نُسُك ١٤٤٨هـ <span style="color:var(--muted);letter-spacing:0;font-weight:600">· نسخة V5.6</span></div>
       <h1 id="ttl">المسح الميداني</h1>
     </div>
     <button class="pill" id="modeBtn" type="button">المسح</button>
@@ -6717,6 +6717,36 @@ function render(){
 function seenAt(){ try{ return +(localStorage.getItem('nsk.seen')||0); }catch(e){ return 0; } }
 function markSeen(){ try{ localStorage.setItem('nsk.seen', String(Date.now())); }catch(e){} }
 /* هل هذا الحدث يخصّ هذا المستخدم؟ يُرجع {ok, hot} — hot = يستحق تنبيهًا فوريًا */
+/* ===== V5.6: تصنيف الأحداث لأنواع + استخراج ما يمكّن من التصرّف ===== */
+var NCATS=[
+  ['all',   'الكل',      '',        null],
+  ['report','بلاغات',    '📣',      /بلاغ ميداني/],
+  ['block', 'متعذّر',     '⛔',      /متعذّر/],
+  ['prop',  'مقترحات',   '📍',      /موقع مقترح|مقترح جديد|طلب إضافة شركة|اعتماد شركة|رفض طلب شركة/],
+  ['qa',    'تدقيق',     '✅',      /اعتماد تركيب|إرجاع تركيب/],
+  ['plan',  'إسناد',     '🧭',      /إسناد|إشعار موعد تركيب|صرف عُهدة/],
+  ['inst',  'تركيب',     '🔧',      /تركيب \[|مسح \[/],
+  ['sys',   'نظام',      '⚙️',      /إعادة ضبط|إنشاء حساب|تغيير دور|سجل الأجهزة|أرقام الشركات/]
+];
+function evKind(ev){
+  var t=String((ev&&ev.txt)||'');
+  for(var i=1;i<NCATS.length;i++){ if(NCATS[i][3] && NCATS[i][3].test(t)) return NCATS[i]; }
+  return ['other','أخرى','•',null];
+}
+/* معرّف الموقع داخل نص الحدث — يفتح الخريطة والنموذج */
+function evSite(ev){
+  var m=String((ev&&ev.txt)||'').match(/\b(NEW-[A-Z]+-\d+|NSK-[A-Z]+-[A-Z]+-\d+)\b/);
+  return m?m[1]:'';
+}
+/* رقم الشخص من دليل الأرقام — يتيح مراسلته مباشرة */
+function staffPhone(name){
+  var n=_tnorm(name); if(!n) return '';
+  try{
+    var L=((ctcObj().list)||[]).concat(((coCtcObj().list)||[]).map(function(x){ return {n:x.n,p:x.p}; }));
+    for(var i=0;i<L.length;i++){ if(_tnorm(L[i].n)===n) return String(L[i].p||'').replace(/[^\d]/g,''); }
+  }catch(e){}
+  return '';
+}
 /* حدث قديم يشير إلى سجل لم يعد موجودًا (حُذف أو مُسح) — لا معنى لعرضه */
 function evStale(ev){
   try{
@@ -6760,25 +6790,95 @@ function evRelevant(ev, u){
 }
 window.nskBell = function(){
   var u=window.NSK_USER||user||{};
-  var L=events.filter(function(e){ return evRelevant(e,u).ok; }).slice(0,60);
+  var ALL=events.filter(function(e){ return evRelevant(e,u).ok; }).slice(0,120);
+  var seen=seenAt();
   var ov=document.getElementById('bellOv'); if(ov) ov.remove();
   ov=document.createElement('div'); ov.id='bellOv';
+  var cnt={}; ALL.forEach(function(e){ var k=evKind(e)[0]; cnt[k]=(cnt[k]||0)+1; });
+  var chips=NCATS.filter(function(c){ return c[0]==='all' || cnt[c[0]]; })
+    .map(function(c){
+      return '<button type="button" class="blCat'+(c[0]==='all'?' on':'')+'" data-c="'+c[0]+'">'
+        +(c[2]?c[2]+' ':'')+c[1]+' <i>'+AR(c[0]==='all'?ALL.length:cnt[c[0]])+'</i></button>'; }).join('');
   ov.innerHTML='<div class="bl-box">'
-    +'<button type="button" class="nskX" id="blX" aria-label="إغلاق">×</button>'
-    +'<h3>ما يخصّك</h3>'
+    +'<div class="bl-top"><h3>ما يخصّك</h3>'
+    +'<button type="button" id="blX" aria-label="إغلاق">×</button></div>'
     +'<p class="bl-h">'+(u.role==='supervisor'
-        ? 'يظهر هنا ما أُسند إليك وما أُرجع من تدقيقك — لا يظهر نشاط الآخرين.'
-        : 'البلاغات الميدانية والمتعذّر والمقترحات والاعتمادات — أفعالك أنت لا تظهر.')+'</p>'
-    +(L.length? '<div class="bl-l">'+L.map(function(e){
-        var hot=evRelevant(e,u).hot;
-        return '<div class="bl-r'+(hot?' hot':'')+'">'
-          +'<b>'+esc2(e.txt||'')+'</b>'
-          +'<span>'+esc2(e.by||'—')+' · '+(e.t?arS(fmtT(e.t)):'—')+'</span></div>';
-      }).join('')+'</div>'
-      : '<div class="dEmpty">لا جديد يخصّك 👌</div>')
-    +'<p class="bl-h" style="margin:10px 0 0">لا تظهر هنا الأحداث الأقدم من أسبوعين ولا التي حُذفت سجلاتها.</p>'
+        ? 'ما أُسند إليك وما أُرجع من تدقيقك. اضغط أي سطر لتفتح موقعه أو تراسل صاحبه.'
+        : 'ما يحتاج قرارك. اضغط أي سطر لتفتح موقعه على الخريطة أو تراسل من نفّذه.')+'</p>'
+    +'<div class="bl-cats">'+chips+'</div>'
+    +'<div class="bl-l" id="blList"></div>'
+    +'<p class="bl-h" style="margin:12px 0 0">لا تظهر الأحداث الأقدم من أسبوعين ولا التي حُذفت سجلاتها.</p>'
     +'</div>';
   document.body.appendChild(ov);
+
+  var cur='all';
+  function paint(){
+    var L=ALL.filter(function(e){ return cur==='all' || evKind(e)[0]===cur; });
+    var h='';
+    if(!L.length){ h='<div class="dEmpty">لا جديد في هذا التصنيف 👌</div>'; }
+    else L.forEach(function(e,i){
+      var k=evKind(e), hot=evRelevant(e,u).hot, sid=evSite(e);
+      var isNew=(e.t?e.t.getTime():0)>seen;
+      var ph=staffPhone(e.by);
+      var acts='';
+      if(sid){
+        acts+='<button type="button" class="nbAct" data-a="map" data-i="'+i+'">🗺 الخريطة</button>';
+        acts+='<button type="button" class="nbAct" data-a="open" data-i="'+i+'">📄 النقطة</button>';
+      }
+      if(ph) acts+='<button type="button" class="nbAct wa" data-a="wa" data-i="'+i+'">💬 '+esc2(e.by||'مراسلة')+'</button>';
+      else if(e.by) acts+='<button type="button" class="nbAct" data-a="copy" data-i="'+i+'">📋 نسخ</button>';
+      h+='<div class="blRow'+(hot?' hot':'')+(isNew?' new':'')+'" data-i="'+i+'">'
+        +'<div class="bl-hd"><em>'+(k[2]||'•')+' '+esc2(k[1])+'</em>'
+        +(isNew?'<u>جديد</u>':'')+'</div>'
+        +'<b>'+esc2(e.txt||'')+'</b>'
+        +'<span>'+esc2(e.by||'—')+' · '+(e.t?arS(fmtT(e.t)):'—')+'</span>'
+        +(acts?'<div class="bl-acts">'+acts+'</div>':'')
+        +'</div>';
+    });
+    var box=document.getElementById('blList'); if(box) box.innerHTML=h;
+    Array.prototype.forEach.call(ov.querySelectorAll('.nbAct'),function(b){
+      b.onclick=function(ev2){
+        ev2.stopPropagation();
+        var e=L[parseInt(b.getAttribute('data-i'),10)]; if(!e) return;
+        var a=b.getAttribute('data-a'), sid2=evSite(e);
+        if(a==='map'){ closeBell(); try{ var d=$i('nskDash'); if(d) d.style.display='none'; }catch(x){}
+          try{ if(typeof window.goMap==='function') window.goMap(sid2); }catch(x){} return; }
+        if(a==='open'){ closeBell(); try{ var d2=$i('nskDash'); if(d2) d2.style.display='none'; }catch(x){}
+          try{
+            if(sid2.indexOf('NEW-')===0){ if(window.editProp) window.editProp(sid2); else if(window.goMap) window.goMap(sid2); }
+            else if(window.mode==='install' && window.openInstall) window.openInstall(sid2);
+            else if(window.openForm) window.openForm(sid2);
+          }catch(x){} return; }
+        if(a==='wa'){
+          var p=staffPhone(e.by);
+          var msg='بخصوص: '+String(e.txt||'')+(sid2?('\n'+ (function(){ try{ return siteMsg(sid2,'',''); }catch(x){ return sid2; } })()):'');
+          try{ window.open('https://wa.me/'+p+'?text='+encodeURIComponent(msg),'_blank'); }catch(x){}
+          try{ if(window.NSKSYNC) NSKSYNC.log('مراسلة '+e.by+' بخصوص '+(sid2||'حدث')); }catch(x){}
+          return; }
+        if(a==='copy'){
+          try{ var ta=document.createElement('textarea'); ta.value=String(e.txt||'')+' — '+String(e.by||'');
+            ta.style.position='fixed'; ta.style.opacity='0'; document.body.appendChild(ta); ta.select();
+            document.execCommand('copy'); ta.remove(); toast('اتنسخ ✓'); }catch(x){}
+          return; }
+      };
+    });
+    /* الضغط على السطر نفسه = افتح الخريطة لو فيه موقع */
+    Array.prototype.forEach.call(ov.querySelectorAll('.blRow'),function(r){
+      r.onclick=function(){
+        var e=L[parseInt(r.getAttribute('data-i'),10)]; if(!e) return;
+        var sid3=evSite(e); if(!sid3) return;
+        closeBell(); try{ var d=$i('nskDash'); if(d) d.style.display='none'; }catch(x){}
+        try{ if(typeof window.goMap==='function') window.goMap(sid3); }catch(x){}
+      };
+    });
+  }
+  paint();
+  Array.prototype.forEach.call(ov.querySelectorAll('.blCat'),function(b){
+    b.onclick=function(){
+      Array.prototype.forEach.call(ov.querySelectorAll('.blCat'),function(x){ x.classList.remove('on'); });
+      b.classList.add('on'); cur=b.getAttribute('data-c'); paint();
+    };
+  });
   ov.addEventListener('click', function(e){ if(e.target===ov) closeBell(); });
   ov.querySelector('#blX').onclick=function(e){ e.stopPropagation(); closeBell(); };
   markSeen(); paintBell();
@@ -7141,19 +7241,42 @@ html[data-theme="light"] #nskDash .pRgDl{background:#fff;border-color:rgba(60,60
 #nskDash select.tmSel{max-width:150px}
 #nskDash .dBtn#bellBtn.has{border-color:#4BC9F5;color:#4BC9F5}
 #nskDash .dBtn#bellBtn.hot{border-color:#E8873A;color:#E8873A;font-weight:800}
-#bellOv{position:fixed;inset:0;z-index:9750;background:rgba(0,0,0,.6);display:flex;
-  align-items:flex-end;justify-content:center;direction:rtl}
-#bellOv .bl-box{background:var(--panel,#141619);border:1px solid var(--line,#3a4a42);
-  border-radius:16px 16px 0 0;width:100%;max-width:560px;max-height:82vh;overflow:auto;
-  padding:16px 15px 18px;box-sizing:border-box;position:relative}
-#bellOv h3{margin:0 0 6px;font-size:15px;color:var(--gold,#C9A24B)}
+#bellOv{position:fixed;inset:0;z-index:9750;background:rgba(0,0,0,.72);display:flex;
+  align-items:stretch;justify-content:center;direction:rtl}
+#bellOv .bl-box{background:var(--panel,#141619);border:0;border-radius:0;width:100%;max-width:640px;
+  height:100%;overflow:auto;padding:calc(14px + env(safe-area-inset-top,0px)) 16px
+  calc(18px + env(safe-area-inset-bottom,0px));box-sizing:border-box;position:relative}
+#bellOv .bl-top{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:6px}
+#bellOv h3{margin:0;font-size:16px;color:var(--gold,#C9A24B)}
+#bellOv #blX{background:transparent;border:1.5px solid rgba(150,150,150,.5);border-radius:0;
+  color:inherit;width:34px;height:34px;font:inherit;font-size:19px;line-height:1;cursor:pointer;flex:0 0 auto}
 #bellOv .bl-h{font-size:11.5px;color:var(--muted,#9AA1AB);line-height:1.8;margin:0 0 12px}
-#bellOv .bl-l{display:flex;flex-direction:column;gap:2px}
-#bellOv .bl-r{padding:9px 10px;border-radius:9px;font-size:12.5px;line-height:1.7}
-#bellOv .bl-r:nth-child(odd){background:rgba(150,150,150,.08)}
-#bellOv .bl-r.hot{border-inline-start:3px solid #E8873A}
-#bellOv .bl-r b{display:block;font-weight:600}
-#bellOv .bl-r span{color:var(--muted,#9AA1AB);font-size:11px}
+#bellOv .bl-cats{display:flex;gap:6px;overflow-x:auto;padding-bottom:8px;margin-bottom:10px;
+  scrollbar-width:none;border-bottom:1px solid rgba(150,150,150,.2)}
+#bellOv .bl-cats::-webkit-scrollbar{display:none}
+#bellOv .blCat{flex:0 0 auto;background:transparent;border:1.5px solid rgba(150,150,150,.4);
+  border-radius:0;padding:7px 11px;font:inherit;font-size:12px;color:inherit;cursor:pointer;white-space:nowrap}
+#bellOv .blCat i{font-style:normal;opacity:.65;font-size:11px}
+#bellOv .blCat.on{background:var(--gold,#C9A24B);border-color:var(--gold,#C9A24B);color:#0A0B0D;font-weight:700}
+#bellOv .blCat.on i{opacity:.8}
+#bellOv .bl-l{display:flex;flex-direction:column;gap:1px}
+#bellOv .blRow{padding:11px 12px;border-radius:0;font-size:12.5px;line-height:1.7;
+  background:rgba(150,150,150,.06);border-inline-start:3px solid transparent;cursor:pointer}
+#bellOv .blRow.hot{border-inline-start-color:#E8873A}
+#bellOv .blRow.new{background:rgba(75,201,245,.09)}
+#bellOv .bl-hd{display:flex;align-items:center;gap:8px;margin-bottom:3px}
+#bellOv .bl-hd em{font-style:normal;font-size:10.5px;color:var(--muted,#9AA1AB);
+  border:1px solid rgba(150,150,150,.35);padding:1px 7px}
+#bellOv .blRow.new .bl-hd u{text-decoration:none;font-size:10px;color:#4BC9F5;
+  border:1px solid rgba(75,201,245,.5);padding:1px 6px}
+#bellOv .blRow b{display:block;font-weight:600}
+#bellOv .blRow span{color:var(--muted,#9AA1AB);font-size:11px}
+#bellOv .bl-acts{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}
+#bellOv .nbAct{background:transparent;border:1px solid rgba(150,150,150,.45);border-radius:0;
+  color:inherit;font:inherit;font-size:11.5px;padding:6px 10px;cursor:pointer}
+#bellOv .nbAct.wa{border-color:rgba(58,214,160,.6);color:#3AD6A0}
+#bellOv .nbAct:active{opacity:.6}
+html[data-theme="light"] #bellOv .bl-box{background:#fff}
 #tellOv{position:fixed;inset:0;z-index:9700;background:rgba(0,0,0,.6);display:flex;
   align-items:flex-end;justify-content:center;direction:rtl}
 #tellOv .tl-box{background:var(--panel,#141619);border:1px solid var(--line,#3a4a42);
