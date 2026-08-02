@@ -956,7 +956,7 @@ window.addEventListener('error', function(e){
 <div id="app">
   <header>
     <div class="t">
-      <div class="eyebrow">قارئات نُسُك ١٤٤٨هـ <span style="color:var(--muted);letter-spacing:0;font-weight:600">· نسخة V4.0</span></div>
+      <div class="eyebrow">قارئات نُسُك ١٤٤٨هـ <span style="color:var(--muted);letter-spacing:0;font-weight:600">· نسخة V4.1</span></div>
       <h1 id="ttl">المسح الميداني</h1>
     </div>
     <button class="pill" id="modeBtn" type="button">المسح</button>
@@ -1738,7 +1738,7 @@ window.openForm = function(id){
   const nat = r[11]||'', host = r[12]||'', dom = r[13]||'';
   const cap = r[14]||'', pct = r[15]||'', obst = r[16]||'', dj = r[17]||'', tst = r[18]||'';
   const iss = r[19]||'', sub = r[20]||'', team = r[21]||'', pri = r[22]||'';
-  const ptype = r[23]||'', coFinal = r[24]||'', todoOp = r[25]||'';
+  const ptype = r[26]||'', coFinal = r[27]||r[10]||'', todoOp = r[28]||'';
   const pwrShort = (DB.z[r[2]]==='منى' && DB.t[r[3]]==='مخيم');
 
   const isCamp = ty===0;
@@ -2406,7 +2406,7 @@ function coSeed(){
   const m=new Map();
   const put=function(n){ n=coNorm(n); if(n) m.set(n,true); };
   (DB.co||[]).forEach(put); (DB.dm||[]).forEach(put);
-  (DB.d||[]).forEach(function(r){ put(r[10]); put(r[24]); });
+  (DB.d||[]).forEach(function(r){ put(r[10]); put(r[27]); });
   return m;
 }
 function coAll(){
@@ -4650,7 +4650,7 @@ function dxJson(){
       name:fx.name||r[1]||'',
       region:ZC[C.szOf(r)]||'', region_ar:C.szOf(r)||'',
       square:String(fx.square||r[8]||''), sign:String(fx.sign||r[9]||''),
-      company:fx.company||r[24]||r[10]||'',
+      company:fx.company||r[27]||r[10]||'',
       lat:(typeof r[5]==='number'?r[5]:null), lon:(typeof r[6]==='number'?r[6]:null),
       survey: rec?{ done:!!(rec.fstat==='done'||rec.status==='done'||rec.fstat==='blocked'),
         fit:rec.fit||'', date:rec.survey_date||rec.date||'', by:rec.by||'',
@@ -4709,7 +4709,7 @@ function exportChal(){
   if(!X||!X.utils){ try{toast('مكتبة الإكسل غير جاهزة',1);}catch(e){} return; }
   var C=window.NSKCORE, recs=C.all('recs'), dbx=C.db();
   var bm={}; dbx.d.forEach(function(r){
-    bm[r[0]]={z:C.szOf(r),nm:r[1]||'',sq:r[8]||'',sg:r[9]||'',co:r[24]||r[10]||''};
+    bm[r[0]]={z:C.szOf(r),nm:r[1]||'',sq:r[8]||'',sg:r[9]||'',co:r[27]||r[10]||''};
   });
   var sites=[];
   Object.keys(recs).forEach(function(id){
@@ -4787,7 +4787,7 @@ function coTable(){
   var M={};
   dbx.d.forEach(function(r){
     var id=r[0], fx=((recs[id]||{}).fix)||{};
-    var co=String(fx.company||r[24]||r[10]||'').trim();
+    var co=String(fx.company||r[27]||r[10]||'').trim();
     if(!co) return;
     var m=M[co]=M[co]||{co:co,t:0,ok:0,bad:0};
     m.t++;
