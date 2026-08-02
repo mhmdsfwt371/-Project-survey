@@ -1018,7 +1018,7 @@ window.addEventListener('error', function(e){
 <div id="app">
   <header>
     <div class="t">
-      <div class="eyebrow">قارئات نُسُك ١٤٤٨هـ <span style="color:var(--muted);letter-spacing:0;font-weight:600">· نسخة V5.7</span></div>
+      <div class="eyebrow">قارئات نُسُك ١٤٤٨هـ <span style="color:var(--muted);letter-spacing:0;font-weight:600">· نسخة V5.8</span></div>
       <h1 id="ttl">المسح الميداني</h1>
     </div>
     <button class="pill" id="modeBtn" type="button">المسح</button>
@@ -6457,10 +6457,10 @@ function render(){
     };
   });
   applyTab();
-  var bb=$i('bellBtn'); if(bb) bb.onclick=function(){ window.nskBell(); };
+  var bb=$i('bellBtn'); if(bb) bb.onclick=function(){ window.nskBell(bb); };
   try{ paintBell(); }catch(e){}
   try{ var bp=document.getElementById('belPill');
-    if(bp && !bp._w){ bp._w=1; bp.onclick=function(){ window.nskBell(); }; } }catch(e){}
+    if(bp && !bp._w){ bp._w=1; bp.onclick=function(){ window.nskBell(bp); }; } }catch(e){}
   $i('dMap').onclick=function(){ window.NSKDASH.close(); };
   $i('dRef').onclick=function(){ render(); };
   var xb=$i('dChalX'); if(xb) xb.onclick=exportChal;
@@ -6751,6 +6751,28 @@ function evSite(ev){
   var m=String((ev&&ev.txt)||'').match(/\b(NEW-[A-Z]+-\d+|NSK-[A-Z]+-[A-Z]+-\d+)\b/);
   return m?m[1]:'';
 }
+/* نص البحث: نص الحدث + منفّذه + اسم النقطة وشاخصها ومربعها وشركتها */
+function evText(ev){
+  var t=String((ev&&ev.txt)||'')+' '+String((ev&&ev.by)||'');
+  var id=evSite(ev);
+  if(id){
+    try{
+      var C=window.NSKCORE;
+      if(id.indexOf('NEW-')===0){
+        var p=(C.all('props')||{})[id]; var pv=(p&&p.v)||{};
+        t+=' '+[pv.name,pv.sign,pv.square,pv.company,pv.zone].filter(Boolean).join(' ');
+      } else {
+        var r=C.db().d.find(function(x){ return x[0]===id; });
+        if(r){
+          var fx=(((C.all('recs')||{})[id])||{}).fix||{};
+          t+=' '+[r[1], fx.sign||r[9], fx.square||r[8], fx.company||r[27]||r[10]]
+                 .filter(Boolean).join(' ');
+        }
+      }
+    }catch(e){}
+  }
+  return t.toLowerCase();
+}
 /* رقم الشخص من دليل الأرقام — يتيح مراسلته مباشرة */
 function staffPhone(name){
   var n=_tnorm(name); if(!n) return '';
@@ -6801,7 +6823,26 @@ function evRelevant(ev, u){
   if(isQaOk) return {ok:true, hot:false};
   return {ok:false, hot:false};
 }
-window.nskBell = function(){
+function placeBell(box, anchor){
+  try{
+    var W=Math.min(420, window.innerWidth-16);
+    box.style.width=W+'px';
+    var top=64, right=8;
+    if(anchor && anchor.getBoundingClientRect){
+      var r=anchor.getBoundingClientRect();
+      if(r.width || r.height){
+        top=Math.round(r.bottom+8);
+        right=Math.round(Math.max(8, window.innerWidth-r.right));
+      }
+    }
+    if(right+W > window.innerWidth-8) right=Math.max(8, window.innerWidth-W-8);
+    box.style.top=top+'px';
+    box.style.insetInlineEnd='';
+    box.style.right=right+'px';
+    box.style.maxHeight=Math.max(240, window.innerHeight-top-14)+'px';
+  }catch(e){}
+}
+window.nskBell = function(blAnchor){
   var u=window.NSK_USER||user||{};
   var ALL=events.filter(function(e){ return evRelevant(e,u).ok; }).slice(0,120);
   var seen=seenAt();
@@ -6818,17 +6859,22 @@ window.nskBell = function(){
     +'<p class="bl-h">'+(u.role==='supervisor'
         ? 'ما أُسند إليك وما أُرجع من تدقيقك. اضغط أي سطر لتفتح موقعه أو تراسل صاحبه.'
         : 'ما يحتاج قرارك. اضغط أي سطر لتفتح موقعه على الخريطة أو تراسل من نفّذه.')+'</p>'
+    +'<input id="blQ" type="search" placeholder="ابحث باسم النقطة أو الشاخص أو المربع أو الشركة…" autocomplete="off">'
     +'<div class="bl-cats">'+chips+'</div>'
     +'<div class="bl-l" id="blList"></div>'
     +'<p class="bl-h" style="margin:12px 0 0">لا تظهر الأحداث الأقدم من أسبوعين ولا التي حُذفت سجلاتها.</p>'
     +'</div>';
   document.body.appendChild(ov);
 
-  var cur='all';
+  var cur='all', q='';
   function paint(){
-    var L=ALL.filter(function(e){ return cur==='all' || evKind(e)[0]===cur; });
+    var L=ALL.filter(function(e){
+      if(cur!=='all' && evKind(e)[0]!==cur) return false;
+      if(q && evText(e).indexOf(q)<0) return false;
+      return true;
+    });
     var h='';
-    if(!L.length){ h='<div class="dEmpty">لا جديد في هذا التصنيف 👌</div>'; }
+    if(!L.length){ h='<div class="dEmpty">'+(q?'لا نتائج لـ «'+esc2(q)+'»':'لا جديد في هذا التصنيف 👌')+'</div>'; }
     else L.forEach(function(e,i){
       var k=evKind(e), hot=evRelevant(e,u).hot, sid=evSite(e);
       var isNew=(e.t?e.t.getTime():0)>seen;
@@ -6886,6 +6932,15 @@ window.nskBell = function(){
     });
   }
   paint();
+  (function(){
+    var qi=document.getElementById('blQ'); if(!qi) return;
+    var tm=null;
+    qi.oninput=function(){ clearTimeout(tm); tm=setTimeout(function(){
+      q=String(qi.value||'').trim().toLowerCase(); paint();
+      try{ qi.focus(); }catch(e){}
+    }, 160); };
+    qi.onclick=function(e){ e.stopPropagation(); };
+  })();
   Array.prototype.forEach.call(ov.querySelectorAll('.blCat'),function(b){
     b.onclick=function(){
       Array.prototype.forEach.call(ov.querySelectorAll('.blCat'),function(x){ x.classList.remove('on'); });
@@ -6894,6 +6949,15 @@ window.nskBell = function(){
   });
   ov.addEventListener('click', function(e){ if(e.target===ov) closeBell(); });
   ov.querySelector('#blX').onclick=function(e){ e.stopPropagation(); closeBell(); };
+  var box=ov.querySelector('.bl-box');
+  placeBell(box, blAnchor);
+  if(!window._blRz){ window._blRz=1;
+    window.addEventListener('resize', function(){
+      var o=document.getElementById('bellOv'); if(!o) return;
+      placeBell(o.querySelector('.bl-box'), window._blA);
+    });
+  }
+  window._blA=blAnchor;
   markSeen(); paintBell();
 };
 function closeBell(){ var o=document.getElementById('bellOv'); if(o) o.remove(); }
@@ -6920,7 +6984,7 @@ function paintBell(){
 (function(){
   function wireBel(){
     var b=document.getElementById('belPill');
-    if(b && !b._w){ b._w=1; b.onclick=function(){ window.nskBell(); }; }
+    if(b && !b._w){ b._w=1; b.onclick=function(){ window.nskBell(b); }; }
     try{ paintBell(); }catch(e){}
   }
   if(document.readyState==='loading') document.addEventListener('DOMContentLoaded', wireBel);
@@ -7254,38 +7318,44 @@ html[data-theme="light"] #nskDash .pRgDl{background:#fff;border-color:rgba(60,60
 #nskDash select.tmSel{max-width:150px}
 #nskDash .dBtn#bellBtn.has{border-color:#4BC9F5;color:#4BC9F5}
 #nskDash .dBtn#bellBtn.hot{border-color:#E8873A;color:#E8873A;font-weight:800}
-#bellOv{position:fixed;inset:0;z-index:9750;background:rgba(0,0,0,.72);display:flex;
-  align-items:stretch;justify-content:center;direction:rtl}
-#bellOv .bl-box{background:var(--panel,#141619);border:0;border-radius:0;width:100%;max-width:640px;
-  height:100%;overflow:auto;padding:calc(14px + env(safe-area-inset-top,0px)) 16px
-  calc(18px + env(safe-area-inset-bottom,0px));box-sizing:border-box;position:relative}
+#bellOv{position:fixed;inset:0;z-index:9750;background:transparent;display:block;direction:rtl}
+#bellOv .bl-box{position:absolute;background:var(--panel,#141619);
+  border:1px solid var(--line,#2c3a34);border-radius:14px;overflow:auto;
+  box-shadow:0 16px 44px rgba(0,0,0,.55);padding:13px 14px 14px;box-sizing:border-box;
+  -webkit-overflow-scrolling:touch;overscroll-behavior:contain}
+html[data-theme="light"] #bellOv .bl-box{box-shadow:0 16px 44px rgba(0,0,0,.2)}
+#bellOv #blQ{width:100%;box-sizing:border-box;background:rgba(255,255,255,.07);
+  border:1.5px solid rgba(150,150,150,.45);border-radius:10px;color:inherit;
+  padding:9px 11px;font:inherit;font-size:12.5px;margin-bottom:10px}
+html[data-theme="light"] #bellOv #blQ{background:#fff}
+#bellOv #blQ::-webkit-search-cancel-button{filter:invert(.6)}
 #bellOv .bl-top{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:6px}
 #bellOv h3{margin:0;font-size:16px;color:var(--gold,#C9A24B)}
-#bellOv #blX{background:transparent;border:1.5px solid rgba(150,150,150,.5);border-radius:0;
-  color:inherit;width:34px;height:34px;font:inherit;font-size:19px;line-height:1;cursor:pointer;flex:0 0 auto}
+#bellOv #blX{background:transparent;border:1.5px solid rgba(150,150,150,.5);border-radius:50%;
+  color:inherit;width:30px;height:30px;font:inherit;font-size:17px;line-height:1;cursor:pointer;flex:0 0 auto}
 #bellOv .bl-h{font-size:11.5px;color:var(--muted,#9AA1AB);line-height:1.8;margin:0 0 12px}
 #bellOv .bl-cats{display:flex;gap:6px;overflow-x:auto;padding-bottom:8px;margin-bottom:10px;
   scrollbar-width:none;border-bottom:1px solid rgba(150,150,150,.2)}
 #bellOv .bl-cats::-webkit-scrollbar{display:none}
 #bellOv .blCat{flex:0 0 auto;background:transparent;border:1.5px solid rgba(150,150,150,.4);
-  border-radius:0;padding:7px 11px;font:inherit;font-size:12px;color:inherit;cursor:pointer;white-space:nowrap}
+  border-radius:999px;padding:6px 11px;font:inherit;font-size:12px;color:inherit;cursor:pointer;white-space:nowrap}
 #bellOv .blCat i{font-style:normal;opacity:.65;font-size:11px}
 #bellOv .blCat.on{background:var(--gold,#C9A24B);border-color:var(--gold,#C9A24B);color:#0A0B0D;font-weight:700}
 #bellOv .blCat.on i{opacity:.8}
-#bellOv .bl-l{display:flex;flex-direction:column;gap:1px}
-#bellOv .blRow{padding:11px 12px;border-radius:0;font-size:12.5px;line-height:1.7;
-  background:rgba(150,150,150,.06);border-inline-start:3px solid transparent;cursor:pointer}
+#bellOv .bl-l{display:flex;flex-direction:column;gap:5px}
+#bellOv .blRow{padding:10px 11px;border-radius:10px;font-size:12.5px;line-height:1.7;
+  background:rgba(150,150,150,.07);border-inline-start:3px solid transparent;cursor:pointer}
 #bellOv .blRow.hot{border-inline-start-color:#E8873A}
 #bellOv .blRow.new{background:rgba(75,201,245,.09)}
 #bellOv .bl-hd{display:flex;align-items:center;gap:8px;margin-bottom:3px}
 #bellOv .bl-hd em{font-style:normal;font-size:10.5px;color:var(--muted,#9AA1AB);
-  border:1px solid rgba(150,150,150,.35);padding:1px 7px}
+  border:1px solid rgba(150,150,150,.35);border-radius:999px;padding:1px 8px}
 #bellOv .blRow.new .bl-hd u{text-decoration:none;font-size:10px;color:#4BC9F5;
-  border:1px solid rgba(75,201,245,.5);padding:1px 6px}
+  border:1px solid rgba(75,201,245,.5);border-radius:999px;padding:1px 7px}
 #bellOv .blRow b{display:block;font-weight:600}
 #bellOv .blRow span{color:var(--muted,#9AA1AB);font-size:11px}
 #bellOv .bl-acts{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}
-#bellOv .nbAct{background:transparent;border:1px solid rgba(150,150,150,.45);border-radius:0;
+#bellOv .nbAct{background:transparent;border:1px solid rgba(150,150,150,.45);border-radius:8px;
   color:inherit;font:inherit;font-size:11.5px;padding:6px 10px;cursor:pointer}
 #bellOv .nbAct.wa{border-color:rgba(58,214,160,.6);color:#3AD6A0}
 #bellOv .nbAct:active{opacity:.6}
