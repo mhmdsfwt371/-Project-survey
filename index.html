@@ -1018,7 +1018,7 @@ window.addEventListener('error', function(e){
 <div id="app">
   <header>
     <div class="t">
-      <div class="eyebrow">قارئات نُسُك ١٤٤٨هـ <span style="color:var(--muted);letter-spacing:0;font-weight:600">· نسخة V5.6</span></div>
+      <div class="eyebrow">قارئات نُسُك ١٤٤٨هـ <span style="color:var(--muted);letter-spacing:0;font-weight:600">· نسخة V5.7</span></div>
       <h1 id="ttl">المسح الميداني</h1>
     </div>
     <button class="pill" id="modeBtn" type="button">المسح</button>
@@ -1260,8 +1260,17 @@ DB.d = [...DB.g, ...DB.p, ...(DB.q||[])];
 const PENDING = new Set((DB.q||[]).map(r=>r[0]));
 const SC = {new:'#E8C34B', draft:'#E8873A', done:'#4BC9F5', blocked:'#3AD6A0',
             proposed:'#C77DFF', pending:'#7FB3FF'};
+/* SL = الحالة الميدانية للموقع (fstat) — هي ما يظهر على الخريطة */
 const SL = {new:'لم يُزر', draft:'مجدول للتركيب', done:'تمت الزيارة', blocked:'تم التركيب',
             proposed:'مقترح — بانتظار الاعتماد', pending:'بانتظار تحديد الموقع'};
+/* RSL = اكتمال سجل المسح (rec.status) — مفردات مختلفة تمامًا.
+   قبل V5.7 كان الجدول يترجم rec.status بقاموس SL فيظهر سجل «مسوّدة» باسم «مجدول للتركيب». */
+const RSL = {draft:'مسوّدة — ناقصة', done:'مكتمل', blocked:'متعذّر الوصول',
+             proposed:'مقترح — بانتظار الاعتماد', pending:'بانتظار تحديد الموقع'};
+const RSC = {draft:'#E8873A', done:'#3AD6A0', blocked:'#E05252',
+             proposed:'#C77DFF', pending:'#9AA1AB'};
+const rlbl = r => RSL[(r||{}).status] || (r||{}).status || '—';
+const recCol = r => RSC[(r||{}).status] || '#9AA1AB';
 
 const QP = {
   test:   {px:760,  q:.55, ar:'تجربة',  kb:'~60 كيلو'},
@@ -3078,7 +3087,8 @@ function drawMgr(){
                    f?'#E8C34B':'#9AA1AB';
   box.innerHTML='<div class="scroll"><table class="mg"><thead><tr>'+
     ['الموقع','المشعر','الشركة','الشاخص','الغرف','الطول','العرض','الارتفاع','الصلاحية',
-     'التحديات','مدني','هوائي','قارئ','ساعات','الصور','المشرف','تاريخ المسح','آخر تعديل','مراجعة','الحالة']
+     'التحديات','مدني','هوائي','قارئ','ساعات','الصور','المشرف','تاريخ المسح','آخر تعديل','مراجعة',
+     'الحالة الميدانية','اكتمال السجل']
      .map(h=>'<th>'+h+'</th>').join('')+
     '</tr></thead><tbody>'+
     list.map(r=>{
@@ -3105,8 +3115,10 @@ function drawMgr(){
         '<td>'+esc(r.survey_date||'—')+'</td>'+
         '<td>'+esc(r.date||'—')+'</td>'+
         '<td>'+(r.rev||1)+'</td>'+
-        '<td><span class="tag" style="background:'+SC[r.status]+'22;color:'+SC[r.status]+'">'+
-        SL[r.status]+'</span></td></tr>';
+        '<td><span class="tag" style="background:'+SC[st(r.id)]+'22;color:'+SC[st(r.id)]+'">'+
+          SL[st(r.id)]+'</span></td>'+
+        '<td><span class="tag" style="background:'+recCol(r)+'22;color:'+recCol(r)+'">'+
+          rlbl(r)+'</span></td></tr>';
     }).join('')+'</tbody></table></div>';
 }
 
@@ -3317,7 +3329,8 @@ $('#expPdf').onclick=()=>{
       '<figure><img src="'+d+'"/><figcaption>صورة '+(+i+1)+'</figcaption></figure>').join('');
     return '<section><h1>'+esc(r.id)+'</h1>'+
       '<h2>'+esc(p?r.label:r.site)+'</h2>'+
-      '<table><tr><td class="k">الحالة</td><td>'+SL[r.status]+'</td></tr>'+
+      '<table><tr><td class="k">الحالة الميدانية</td><td>'+SL[st(r.id)]+'</td></tr>'+
+      '<tr><td class="k">اكتمال السجل</td><td>'+rlbl(r)+'</td></tr>'+
       '<tr><td class="k">شركة الخدمة</td><td>'+esc(coOf(r)||'—')+'</td></tr>'+
       '<tr><td class="k">الصلاحية</td><td>'+esc(r.fit||'—')+'</td></tr>'+
       '<tr><td class="k">تحديات التركيب</td><td>'+esc((r.chal||[]).join('، ')||'—')+'</td></tr>'+
@@ -3356,11 +3369,11 @@ $('#expCsv').onclick=()=>{
   if(!list.length && !pl.length && !il.length){ toast('لا توجد بيانات بعد',1); return; }
   const keys=[...new Set([...list.flatMap(r=>Object.keys(r.v||{})),
                           ...pl.flatMap(r=>Object.keys(r.v||{}))])];
-  const head=['معرّف الموقع','اسم الموقع','المشعر','النوع','نوع العمل','الحالة',
+  const head=['معرّف الموقع','اسم الموقع','المشعر','النوع','نوع العمل','الحالة الميدانية',
               'موقع مقترح','حالة الوصول','الإحداثيات','دقة القياس','تاريخ المسح',
               'عدد الصور',...keys];
   const lines=[head.join(',')];
-  list.forEach(r=>lines.push([r.id,r.site,r.zone,r.type,r.work,SL[r.status],'لا',
+  list.forEach(r=>lines.push([r.id,r.site,r.zone,r.type,r.work,SL[st(r.id)],'لا',
     r.access||'',r.gps||'',r.acc||'',r.date||'',Object.keys(r.photos||{}).length,
     ...keys.map(k=>(r.v||{})[k]||'')]
     .map(v=>'"'+String(v).replace(/"/g,'""')+'"').join(',')));
