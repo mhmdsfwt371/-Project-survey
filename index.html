@@ -912,8 +912,10 @@ textarea.in{min-height:74px;resize:vertical}
 #mgrTbl .mgDr{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;
   background:rgba(232,135,58,.09);border:1px solid rgba(232,135,58,.35);border-radius:10px;
   padding:9px 12px;margin-bottom:10px;font-size:11.5px;line-height:1.7;color:var(--muted,#9AA1AB)}
+#mgrTbl .mgDrB{display:flex;gap:6px;flex:0 0 auto}
 #mgrTbl .mgDr button{background:transparent;border:1px solid rgba(232,135,58,.6);border-radius:8px;
   color:#E8873A;font:inherit;font-size:11.5px;padding:6px 12px;cursor:pointer;flex:0 0 auto}
+#mgrTbl .mgDr #mgDrDel{border-color:rgba(224,82,82,.6);color:#E05252}
 #belPill.has{border-color:#4BC9F5;color:#4BC9F5}
 #belPill.hot{border-color:#E8873A;color:#E8873A;font-weight:800}
 #nskGps{position:absolute;inset-block-end:14px;inset-inline-end:14px;z-index:830;
@@ -1023,7 +1025,7 @@ window.addEventListener('error', function(e){
 <div id="app">
   <header>
     <div class="t">
-      <div class="eyebrow">قارئات نُسُك ١٤٤٨هـ <span style="color:var(--muted);letter-spacing:0;font-weight:600">· نسخة V6.0</span></div>
+      <div class="eyebrow">قارئات نُسُك ١٤٤٨هـ <span style="color:var(--muted);letter-spacing:0;font-weight:600">· نسخة V6.1</span></div>
       <h1 id="ttl">المسح الميداني</h1>
     </div>
     <button class="pill" id="modeBtn" type="button">المسح</button>
@@ -2877,6 +2879,36 @@ const NEW_PHOTOS = ['صورة الشاخص بأرقامه واضحة (إلزام
                     'المدخل','نقطة التركيب المقترحة','أي عائق أو ملاحظة'];
 const CO_NEW = 'شركة جديدة — غير مدرجة';
 
+/* معرّفات السجلات التي فُتحت ولم تكتمل زيارتها */
+window.draftIds = function(){
+  var out=[]; try{
+    Object.keys(recs).forEach(function(k){ if(!isVisited(recs[k])) out.push(k); });
+  }catch(e){}
+  return out;
+};
+/* حذف المسوّدات الناقصة — محليًا وسحابيًا */
+window.wipeDrafts = async function(){
+  var ids=window.draftIds();
+  if(!ids.length){ toast('لا توجد مسوّدات ناقصة ✓'); return; }
+  if(!confirm('حذف '+ids.length+' مسوّدة ناقصة؟\n\nهذه سجلات فُتحت ولم تُسجَّل زيارتها. '
+    +'المواقع نفسها تبقى كما هي على الخريطة، ويمكن مسحها من جديد في أي وقت.')) return;
+  var n=0;
+  for(var i=0;i<ids.length;i++){
+    var id=ids[i];
+    try{
+      delete recs[id];
+      try{ delete photos[id]; }catch(e){}
+      if(window.NSKSYNC && NSKSYNC.del) await NSKSYNC.del('recs', id);
+      n++;
+    }catch(e){}
+  }
+  try{ save(); }catch(e){}
+  try{ if(window.NSKSYNC) NSKSYNC.log('حذف '+n+' مسوّدة ناقصة'); }catch(e){}
+  toast('حُذفت '+n+' مسوّدة ✓');
+  try{ drawMgr(); }catch(e){}
+  try{ paint(); }catch(e){}
+  try{ if(window.NSKDASH) NSKDASH.refresh(); }catch(e){}
+};
 window.editProp = function(id){
   const rec = props[id]; if(!rec) return;
   openNewForm(rec.lat, rec.lon, rec.acc, [], id);
@@ -3109,7 +3141,10 @@ function drawMgr(){
       ? '<div class="mgDr"><span>'+(MG_DR
           ? 'المسوّدات الناقصة ظاهرة الآن ضمن الجدول — '+DR.length.toLocaleString('ar-EG')+' سجلًا لم تكتمل زيارته.'
           : 'مخفيّ: '+DR.length.toLocaleString('ar-EG')+' سجلًا فُتح ولم تكتمل زيارته — لا يظهر هنا حتى تُسجَّل الزيارة.')
-        +'</span><button type="button" id="mgDrBtn">'+(MG_DR?'إخفاء المسوّدات':'إظهار المسوّدات')+'</button></div>'
+        +'</span><span class="mgDrB">'
+        +'<button type="button" id="mgDrBtn">'+(MG_DR?'إخفاء':'إظهار')+'</button>'
+        +'<button type="button" id="mgDrDel">حذف نهائيًا</button>'
+        +'</span></div>'
       : '')
     +'<div class="scroll"><table class="mg"><thead><tr>'+
     ['الموقع','المشعر','الشركة','الشاخص','الغرف','الطول','العرض','الارتفاع','الصلاحية',
@@ -3147,6 +3182,7 @@ function drawMgr(){
           rlbl(r)+'</span></td></tr>';
     }).join('')+'</tbody></table></div>';
   var _db=$('#mgDrBtn'); if(_db) _db.onclick=function(){ window.mgDrafts(); };
+  var _dd=$('#mgDrDel'); if(_dd) _dd.onclick=function(){ window.wipeDrafts(); };
 }
 
 function drawOut(){
@@ -6404,6 +6440,7 @@ function render(){
   /* V3.0: سلامة البيانات — المشرف العام */
   if(user && user.role==='admin'){ (function(){
     var S=sysChecks();
+    var nDraft=0; try{ nDraft=(window.draftIds&&window.draftIds().length)||0; }catch(e){}
     h+='</section><section class="dSec" data-sec="sys">';
     h+='<h2>سلامة البيانات — المشرف العام</h2>';
     h+='<div class="dGrid">';
@@ -6411,6 +6448,9 @@ function render(){
     h+=card(S.noco,'مواقع بلا إحداثيات','#E8873A');
     h+=card(S.pend,'تغييرات لم تُزامن من هذا الجهاز','#4BC9F5');
     h+='</div>';
+    if(nDraft) h+='<p class="dTs" style="color:#E8873A">'+AR(nDraft)
+      +' سجل مسح مسوّدة ناقصة — فُتح الموقع وعُدّل دون تسجيل زيارة، فلا يُحتسب مسحًا ولا يظهر في لوحة الإدارة. '
+      +'نظّفها من لوحة الإدارة ← شريط المسوّدات ← «حذف نهائيًا».</p>';
     if(S.dup.length){
       h+='<h2 style="font-size:.95em;margin-top:14px">السيريالات المكرّرة — كل سيريال يجب أن يخص نقطة واحدة</h2>';
       h+='<table class="dT"><thead><tr><th>السيريال</th><th>النقاط المشتركة فيه</th></tr></thead><tbody>';
@@ -6429,7 +6469,9 @@ function render(){
         nI=Object.keys(Cw.all('inss')||{}).length,
         nP=Object.keys(Cw.all('props')||{}).length;
     h+='<h2 style="font-size:.95em;margin-top:18px;color:#E05252">إعادة ضبط البيانات — لا يمكن التراجع</h2>';
-    h+='<p class="dTs">سيُحذف من السحابة ومن كل الأجهزة: <b>'+AR(nR)+'</b> سجل مسح · <b>'+AR(nI)+'</b> سجل تركيب · <b>'+AR(nP)+'</b> موقع مقترح · وكل الصور المرتبطة بها.</p>';
+    h+='<p class="dTs">سيُحذف من السحابة ومن كل الأجهزة: <b>'+AR(nR)+'</b> سجل مسح'
+      +(nDraft?' <i style="color:#E8873A">(منها '+AR(nDraft)+' مسوّدة ناقصة لم تكتمل زيارتها)</i>':'')
+      +' · <b>'+AR(nI)+'</b> سجل تركيب · <b>'+AR(nP)+'</b> موقع مقترح · وكل الصور المرتبطة بها.</p>';
     (function(){
       var G=goalObj(), T=teamsObj(), S=stockObj(), DV=devicesObj();
       var nT=((T.list||[]).length), nS=Object.keys(S.iss||{}).length;
