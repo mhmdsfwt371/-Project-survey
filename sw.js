@@ -1,5 +1,5 @@
 /* Nusuk Survey — offline shell cache */
-const CACHE = 'nusuk-survey-v6.3';
+const CACHE = 'nusuk-survey-v6.4';
 const SHELL = [
   './',
   './index.html',
@@ -12,7 +12,8 @@ self.addEventListener('install', function (e) {
   e.waitUntil(
     caches.open(CACHE).then(function (c) {
       return Promise.all(SHELL.map(function (u) {
-        return c.add(new Request(u, { mode: 'cors' })).catch(function () { /* skip */ });
+        return c.add(new Request(u, { cache: 'reload', credentials: 'same-origin' }))
+                .catch(function () { /* skip */ });
       }));
     }).then(function () { return self.skipWaiting(); })
   );
@@ -53,7 +54,9 @@ self.addEventListener('fetch', function (e) {
 
   // the app itself (navigations + index.html): NETWORK FIRST with 3.5s timeout,
   // fall back to cache — so new versions arrive on next open, and offline still works
-  const isShellPage = req.mode === 'navigate' || req.url.indexOf('index.html') !== -1;
+  const isShellPage = req.mode === 'navigate'
+    || req.url.indexOf('index.html') !== -1
+    || req.url.indexOf('manifest.webmanifest') !== -1;   /* اسم التطبيق وأيقونته */
   if (isShellPage) {
     e.respondWith(
       fetchWithTimeout(new Request(req.url, { cache: 'reload', credentials: 'same-origin' }), 3500).then(function (res) {
