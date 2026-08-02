@@ -1,11 +1,10 @@
 {
- "at": "2026-08-02T15:31:59.337Z",
+ "at": "2026-08-02T22:19:06.437Z",
  "collections": [
-  "events: 132",
-  "recs: 1",
-  "settings: 3",
+  "events: 142",
+  "settings: 1",
   "users: 4"
  ],
- "totalDocs": 140,
+ "totalDocs": 147,
  "note": "البيانات الخام في backup.enc — مشفّرة. هذا الملف أعداد فقط."
 }
