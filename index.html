@@ -1087,7 +1087,7 @@ window.addEventListener('error', function(e){
 <div id="app">
   <header>
     <div class="t">
-      <div class="eyebrow">متابعة المشروع ١٤٤٨هـ <span style="color:var(--muted);letter-spacing:0;font-weight:600">· نسخة V8.2</span></div>
+      <div class="eyebrow">متابعة المشروع ١٤٤٨هـ <span style="color:var(--muted);letter-spacing:0;font-weight:600">· نسخة V8.3</span></div>
       <h1 id="ttl">المسح الميداني</h1>
     </div>
     <button class="pill" id="modeBtn" type="button">المسح</button>
@@ -3279,7 +3279,7 @@ function drawOut(){
   $('#oHint').textContent = mb>30
     ? 'المساحة شارفت على الامتلاء — صدّر ونزّل الصور ثم امسح بيانات التجربة.'
     : mb>18 ? 'يُفضّل التصدير الآن قبل مواصلة المسح.'
-    : 'صدّر بنهاية كل يوم ميداني حتى لا تتراكم الصور على الجهاز.';
+    : 'صدّر بنهاية كل يوم ميداني حتى لا تزيادة الصور على الجهاز.';
 }
 function dl(name,blob){
   const a=document.createElement('a');
@@ -3459,7 +3459,7 @@ $('#expPdf').onclick=()=>{
     return (xa.o-xb.o)||xa.l.localeCompare(xb.l,'ar')||String(A.r.id).localeCompare(String(B.r.id),'ar');
   });
   const w=window.open('','_blank');
-  if(!w){ toast('اسمح بالنوافذ المنبثقة أولًا',1); return; }
+  if(!w){ toast('اسمح بالنوافذ التقفز على الشاشة أولًا',1); return; }
   const page=({r,p})=>{
     const v=r.v||{};
     const info=Object.keys(v).map(k=>
@@ -3616,7 +3616,7 @@ $('#lxPdf').onclick=()=>{
   const body=listExportRows();
   if(!body.length){ toast('لا توجد مواقع في القائمة الحالية',1); return; }
   const w=window.open('','_blank');
-  if(!w){ toast('اسمح بالنوافذ المنبثقة أولًا',1); return; }
+  if(!w){ toast('اسمح بالنوافذ التقفز على الشاشة أولًا',1); return; }
   w.document.write('<!doctype html><html lang="ar" dir="rtl"><head><meta charset="utf-8"/>'+
     '<title>قائمة المواقع</title><style>body{font-family:Tahoma,Arial;font-size:11px;margin:18px}'+
     'table{border-collapse:collapse;width:100%}th,td{border:1px solid #999;padding:4px 6px;text-align:right}'+
@@ -3769,7 +3769,7 @@ window.nskGuide = function(role){
     var C2=[];
     C2.push('<h2>أمور تخص الجميع</h2>');
     C2.push('<h3>الجرس 🔔</h3>');
-    C2.push('<p>يعرض ما يخصّك أنت فقط، ولا يُنبَّه أحد على فعل نفسه. الفني يرى ما أُسند إليه وما أُرجع من تدقيقه، والمهندس يرى البلاغات والمتعذّر والمقترحات. أما الجهة الوزارية فترى مؤشّرات المشروع لا عملياته: معالم الإنجاز، وانحراف الوتيرة عن الموعد المستهدف، وتراكم المتعذّر، والركود، وطابور الجدولة — محسوبةً من الأرقام لحظة الفتح. ولا توجد تنبيهات منبثقة تقاطع العمل — العدّاد وحده هو الإشارة.</p>');
+    C2.push('<p>يعرض ما يخصّك أنت فقط، ولا يصل أحدًا تنبيه عن عمله هو. الفني يرى ما أُسند إليه وما أُرجع من تدقيقه، والمهندس يرى البلاغات والمتعذّر والمقترحات. أما الجهة الوزارية فترى مؤشّرات المشروع لا عملياته: معالم الإنجاز، والتأخّر عن الموعد المستهدف، وزيادة المتعذّر، والتوقّف، وقائمة انتظار الجدولة — تُحسب من الأرقام وقت فتح الجرس. ولا يقفز أي تنبيه على شاشتك أثناء العمل — الرقم على الجرس وحده هو الإشارة.</p>');
     C2.push('<h3>النسخ الاحتياطي</h3>');
     C2.push('<p>«نسخة احتياطية كاملة» تنزّل كل السجلات بصورها. «دمج نسخة زميل» يستقبل ملف زميل ويدمجه: الجديد يُضاف، وعند التعارض يكسب الأحدث مع الاحتفاظ بصور وسجلّ الطرفين. وللنظام نسخة تلقائية يومية على الخادم.</p>');
     C2.push('<h3>حل المشكلات الشائعة</h3>');
@@ -3888,7 +3888,7 @@ window.nskGuide = function(role){
 
   B.push('<h2>٤ · رحلة النقطة الواحدة</h2>');
   B.push('<p><b>المسح الميداني:</b> يقف المشرف أمام الموقع، يراجع البيانات المسجّلة ويصحّح ما اختلف، يسجّل القياسات والتحديات ويلتقط الصور الإلزامية، ثم يحدد: مناسب أم مناسب بتعديل أم غير مناسب.</p>');
-  B.push('<p><b>الجدولة:</b> المكتب يراجع الممسوح ويقرر ما يدخل خطة التركيب، والنظام يعرض طابور «جاهز للجدولة» بالأقدم أولًا.</p>');
+  B.push('<p><b>الجدولة:</b> المكتب يراجع الممسوح ويقرر ما يدخل خطة التركيب، والنظام يعرض قائمة انتظار «جاهز للجدولة» بالأقدم أولًا.</p>');
   B.push('<p><b>إسناد الفني:</b> توزيع النقاط المجدولة — مربعًا كاملًا أو نقاطًا مختارة بالبحث. الفني يجدها في زر «جدولي».</p>');
   B.push('<p><b>التركيب:</b> الفني يحدّث الحالة، وصورة ما بعد التركيب إلزامية. ولو واجه مانعًا يضغط «بلّغ» فتصل رسالة منظّمة للمكتب فيها هوية النقطة ورابط خريطتها.</p>');
   B.push('<p><b>التدقيق الهندسي:</b> المهندس يُدخل السيريال ويعتمد أو يُرجع للفريق، والنظام ينبّه لو كان السيريال مكررًا أو غير معروف.</p>');
@@ -3922,7 +3922,7 @@ window.nskGuide = function(role){
   B.push('<p><b>هل يعمل بلا إنترنت؟</b> نعم. كل ما يُسجَّل يُحفظ على الجهاز فورًا ويرفع نفسه تلقائيًا أول ما تعود الشبكة.</p>');
   B.push('<p><b>ماذا لو وجد المشرف موقعًا غير مسجّل؟</b> يفتح «موقع غير مسجّل»، والنظام يفحص ما حوله في ١٤٠ مترًا ويعرض المواقع القريبة أولًا، فإن تأكد أنه جديد أرسل مقترحًا بصورة الشاخص لاعتماد المكتب.</p>');
   B.push('<p><b>من يستطيع حذف البيانات؟</b> الأدمن وحده وبعد كتابة عبارة تأكيد حرفية، وتبقى الحسابات وقائمة الشركات وسجل الأحداث محفوظة.</p>');
-  B.push('<p><b>كيف نتأكد أن الجهاز المركّب هو الصحيح؟</b> السيريال يُدخل عند التدقيق ويُطابق مع سجل الأجهزة، وأي تكرار أو سيريال غير معروف يُنبَّه عليه قبل الاعتماد.</p>');
+  B.push('<p><b>كيف نتأكد أن الجهاز المركّب هو الصحيح؟</b> السيريال يُدخل عند التدقيق ويُطابق مع سجل الأجهزة، وأي سيريال مكرّر أو غير معروف يظهر لك تحذير عنه قبل الاعتماد.</p>');
 
   /* المهندس يرى فصول الأدوار الأخرى أيضًا — ليفهم ما يراه كل طرف */
   B.push('<h2>ملحق أ · ما يفعله الفني في الميدان</h2>');
@@ -5130,7 +5130,7 @@ function counts(){
   });
   /* V8.0: فصل مرحلتين كانتا مدموجتين في «لم يُجدول»:
      – noSurvey   : لم يُمسح بعد — ليس بانتظار جدولة بل بانتظار زيارة.
-     – awaitPlan  : مُسح فعلًا وينتظر قرار الجدولة — وهو الطابور الحقيقي للمكتب. */
+     – awaitPlan  : مُسح فعلًا وينتظر قرار الجدولة — وهو قائمة الانتظار الحقيقية للمكتب. */
   c.awaitPlan=0;
   Object.keys(_svIds).forEach(function(k){ if(!inss[k]) c.awaitPlan++; });
   c.noSurvey=Math.max(0, N - c.svDone);
@@ -5498,7 +5498,7 @@ function dxXlsx(sel){
       ['دخل الجدولة بلا مسح',PQ3.schedNoSurvey.length],
       ['مُركّب رغم مسح مانع',PQ3.contra.length],
       ['مُركّب بدون أي مسح',PQ3.instNoSurvey]],[28,12]);
-    if(PQ3.ready.length) add('طابور الجدولة',[['الموقع','المشعر','منذ المسح (يوم)']].concat(
+    if(PQ3.ready.length) add('قائمة انتظار الجدولة',[['الموقع','المشعر','منذ المسح (يوم)']].concat(
       PQ3.ready.map(function(x){ return [x.n,zN(x.z),x.d]; })),[28,10,16]); }
   if(sel.indexOf('assign')>-1){ var AD3=assignData(), T3=teamsObj();
     var nm3=(T3.list||[]).slice(); Object.keys(AD3.teams).forEach(function(n){ if(nm3.indexOf(n)<0) nm3.push(n); });
@@ -5831,7 +5831,7 @@ function qaApprove(id, serial, note){
 }
 function qaReturn(id, note){
   var C=window.NSKCORE, inss=C.all('inss'), ins=inss[id]; if(!ins) return false;
-  /* V8.2: «قيد التركيب» حُذفت في V7.9 — المُرجَع يعود «مجدول» ليدخل طابور الفريق */
+  /* V8.2: «قيد التركيب» حُذفت في V7.9 — المُعاد يرجع «مجدول» ليدخل قائمة انتظار الفريق */
   var rec=Object.assign({}, ins, {status:'مجدول', date:_now()});
   delete rec.verified;
   var nt=_tnorm(note); if(nt) rec.qaNote=nt;
@@ -6579,7 +6579,7 @@ function render(){
     h+=card(PQ.contra.length+PQ.instNoSurvey,'تعارضات تحتاج تدقيقًا','#E05252');
     h+='</div>';
     if(PQ.ready.length){
-      h+='<h2 style="font-size:.95em;margin-top:14px">طابور الجدولة — ممسوح وصالح ولم يُجدول (الأقدم أولًا)</h2>';
+      h+='<h2 style="font-size:.95em;margin-top:14px">قائمة انتظار الجدولة — ممسوح وصالح ولم يُجدول (الأقدم أولًا)</h2>';
       h+='<table class="dT"><thead><tr><th>الموقع</th><th>المشعر</th><th>منذ المسح (يوم)</th></tr></thead><tbody>';
       PQ.ready.slice(0,10).forEach(function(x){
         h+='<tr><td>'+esc2(x.n)+'</td><td>'+zN(x.z)+'</td><td style="color:#4BC9F5;font-weight:700">'+AR(x.d)+'</td></tr>'; });
@@ -6819,9 +6819,9 @@ function render(){
     h+=card((tq?pct(Q.done,tq):0)+'٪','نسبة التدقيق','#4BC9F5');
     h+='</div>';
     if(canE && (Q.pend.length||qf))
-      h+='<input id="qaF" class="qaSer" style="max-width:260px;margin:2px 0 8px" placeholder="تصفية الطابور: مربع / فريق / شاخص" value="'+escA(qf)+'">';
+      h+='<input id="qaF" class="qaSer" style="max-width:260px;margin:2px 0 8px" placeholder="تصفية قائمة الانتظار: مربع / فريق / شاخص" value="'+escA(qf)+'">';
     if(Q.pend.length){
-      h+='<h2 style="font-size:.95em;margin-top:14px">'+(canE?'طابور التدقيق — الأقدم أولًا: أدخل السيريال ثم اعتمد':'تركيبات بانتظار تدقيق المهندس — الأقدم أولًا')+'</h2>';
+      h+='<h2 style="font-size:.95em;margin-top:14px">'+(canE?'قائمة انتظار التدقيق — الأقدم أولًا: أدخل السيريال ثم اعتمد':'تركيبات بانتظار تدقيق المهندس — الأقدم أولًا')+'</h2>';
       Q.pend.slice(0,20).forEach(function(x){
         h+='<div class="qaR" data-id="'+x.id+'">'
           +'<div class="qaGo" data-id="'+x.id+'"><b>'+esc2(x.sg||'—')+'</b> · '+esc2(x.n)
@@ -6900,7 +6900,7 @@ function render(){
           +d.rows.map(function(x){ return esc2(x.sg)+' ('+zN(x.z)+(x.team?' · '+esc2(x.team):'')+')'; }).join(' — ')
           +'</td></tr>'; });
       h+='</tbody></table>';
-      h+='<p class="dTs">صحّح من طابور التدقيق: أرجِع النقطة الخاطئة لفريقها وأعد اعتمادها بالسيريال الصحيح.</p>';
+      h+='<p class="dTs">صحّح من قائمة انتظار التدقيق: أرجِع النقطة الخاطئة لفريقها وأعد اعتمادها بالسيريال الصحيح.</p>';
     } else if(qaData().done){
       h+='<div class="dEmpty">لا توجد سيريالات مكرّرة — السجل نظيف ✅</div>';
     }
@@ -7353,9 +7353,9 @@ function evStale(ev){
   }catch(e){ return false; }
 }
 /* ===== V8.1: إشعارات الجهة الوزارية =====
-   الوزارة لا تتابع الأحداث الفردية — لا معنى لإخطارها بكل تركيب.
-   بل تتابع الحالة: بلوغ المعالم، وانحراف الوتيرة، وتراكم المتعذّر، والركود.
-   لذلك تُشتقّ إشعاراتها من الأرقام لحظةَ الفتح، لا من سجل الأحداث. */
+   الوزارة لا تتابع الأحداث الفردية — لا معنى لإشعارها بكل تركيب.
+   بل تتابع الحالة: بلوغ المعالم، والتأخّر عن الخطة، وزيادة المتعذّر، والتوقّف.
+   لذلك تُحسب إشعاراتها من الأرقام لحظةَ الفتح، لا من سجل الأحداث. */
 function minAlerts(){
   var out=[];
   try{
@@ -7363,7 +7363,7 @@ function minAlerts(){
     var tot=c.total||0; if(!tot) return out;
     var pc=function(n){ return Math.round((n||0)/tot*100); };
 
-    /* ١ — معالم الإنجاز: تُعلَن مرة واحدة عند تجاوز العتبة */
+    /* ١ — معالم الإنجاز: تُعلَن مرة واحدة عند تجاوز الحد */
     var okP=pc(c.ok), svP=pc(c.svDone);
     [100,90,75,50,25].some(function(m){
       if(okP>=m){ out.push({k:'ms', ic:'🏁', col:'#3AD6A0',
@@ -7399,16 +7399,16 @@ function minAlerts(){
       }
     }catch(e){}
 
-    /* ٣ — تراكم المتعذّر */
+    /* ٣ — زيادة المتعذّر */
     if(c.bad>0){
       var bp=pc(c.bad);
       out.push({k:'bad', ic:'⛔', col: bp>=2?'#E05252':'#E8873A',
         t:'مواقع متعذّرة: '+AR(c.bad)+(bp?' ('+AR(bp)+'٪)':''),
-        d: bp>=2 ? 'تجاوزت ٢٪ من المشروع — تستدعي مراجعة الأسباب مع المنفّذ.'
+        d: bp>=2 ? 'تجاوزت ٢٪ من المشروع — تحتاج مراجعة الأسباب مع المنفّذ.'
                  : 'ضمن الحد الطبيعي، وتُتابَع أسبابها في تقرير الشركات.'});
     }
 
-    /* ٤ — الركود: لا نشاط ميداني منذ مدة */
+    /* ٤ — التوقّف: لا نشاط ميداني منذ مدة */
     try{
       var rc=window.NSKCORE.all('recs'), ins=window.NSKCORE.all('inss'), last=0;
       [rc,ins].forEach(function(m){ Object.keys(m||{}).forEach(function(k){
@@ -7424,7 +7424,7 @@ function minAlerts(){
       }
     }catch(e){}
 
-    /* ٥ — طابور الجدولة */
+    /* ٥ — قائمة انتظار الجدولة */
     if(c.awaitPlan>0){
       out.push({k:'queue', ic:'🗓', col:'#4BC9F5',
         t:AR(c.awaitPlan)+' موقعًا مُسحت وتنتظر الجدولة',
@@ -7437,7 +7437,7 @@ function evRelevant(ev, u){
   var role=(u&&u.role)||'', me=String((u&&(u.name||u.email))||'').trim();
   var txt=String((ev&&ev.txt)||''), by=String((ev&&ev.by)||'').trim();
   if(role==='viewer') return {ok:false, hot:false};       /* الوزارة: بلا ضجيج إطلاقًا */
-  if(by && by===me)   return {ok:false, hot:false};       /* لا يُنبَّه أحد على فعل نفسه */
+  if(by && by===me)   return {ok:false, hot:false};       /* لا يصل أحدًا تنبيه عن عمله هو */
   if(evStale(ev))     return {ok:false, hot:false};       /* سجله حُذف أو الحدث قديم */
   var isProp   = /موقع مقترح|مقترح جديد|طلب إضافة شركة/.test(txt);
   var isBlock  = /متعذّر/.test(txt);
@@ -7501,7 +7501,7 @@ window.nskBell = function(blAnchor){
     +'<p class="bl-h">'+(u.role==='supervisor'
         ? 'ما أُسند إليك وما أُرجع من تدقيقك. اضغط أي سطر لتفتح موقعه أو تراسل صاحبه.'
         : isMin
-        ? 'مؤشّرات المشروع لحظة الفتح — معالم الإنجاز والوتيرة والمتعذّر والركود. محسوبة من الأرقام لا من سجل العمليات.'
+        ? 'مؤشّرات المشروع لحظة الفتح — معالم الإنجاز والوتيرة والمتعذّر والتوقّف. محسوبة من الأرقام لا من سجل العمليات.'
         : 'ما يحتاج قرارك. اضغط أي سطر لتفتح موقعه على الخريطة أو تراسل من نفّذه.')+'</p>'
     +'<input id="blQ" type="search" placeholder="ابحث باسم النقطة أو الشاخص أو المربع أو الشركة…" autocomplete="off">'
     +(isMin ? '' : '<div class="bl-cats">'+chips+'</div>')
