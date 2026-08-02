@@ -922,6 +922,13 @@ textarea.in{min-height:74px;resize:vertical}
 #lockOv h2{color:#C9A24B;font-size:19px;margin:0 0 12px}
 #lockOv p{color:#C8CDD4;font-size:13.5px;line-height:2;margin:0 0 10px}
 #lockOv span{color:#7A828C;font-size:11.5px}
+#lockOv .lk-p{margin-top:22px;display:flex;gap:7px;justify-content:center;flex-wrap:wrap}
+#lockOv .lk-p input{background:rgba(255,255,255,.07);border:1.5px solid rgba(150,150,150,.45);
+  border-radius:9px;color:#F1EDE0;padding:10px 13px;font:inherit;font-size:14px;
+  width:150px;text-align:center;letter-spacing:.3em}
+#lockOv .lk-p button{background:#C9A24B;border:0;border-radius:9px;color:#0A0B0D;
+  font:inherit;font-weight:700;padding:10px 20px;cursor:pointer}
+#lockOv .lk-p em{width:100%;font-style:normal;color:#E05252;font-size:11.5px;min-height:16px}
 #nskDash .lkBox{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;
   border:1px solid rgba(150,150,150,.3);border-radius:10px;padding:11px 13px;margin:10px 0 6px}
 #nskDash .lkBox.on{border-color:rgba(224,82,82,.55);background:rgba(224,82,82,.07)}
@@ -1058,7 +1065,7 @@ window.addEventListener('error', function(e){
 <div id="app">
   <header>
     <div class="t">
-      <div class="eyebrow">متابعة المشروع ١٤٤٨هـ <span style="color:var(--muted);letter-spacing:0;font-weight:600">· نسخة V6.7</span></div>
+      <div class="eyebrow">متابعة المشروع ١٤٤٨هـ <span style="color:var(--muted);letter-spacing:0;font-weight:600">· نسخة V6.8</span></div>
       <h1 id="ttl">المسح الميداني</h1>
     </div>
     <button class="pill" id="modeBtn" type="button">المسح</button>
@@ -4339,6 +4346,17 @@ onAuthStateChanged(auth, u=>{
 
 /* ===== V6.7: قفل مركزي — يوقف التطبيق للجميع إلا المالك ===== */
 const LOCK_KEY='nsk.lock';
+const PIN_KEY='nsk.lockpin';           /* بصمة الرمز على هذا الجهاز وحده */
+async function _lkHash(t){
+  try{
+    var b=new TextEncoder().encode('nsk:'+String(t));
+    var h=await crypto.subtle.digest('SHA-256', b);
+    return Array.from(new Uint8Array(h)).map(function(x){ return x.toString(16).padStart(2,'0'); }).join('');
+  }catch(e){
+    var s=0, x=String(t); for(var i=0;i<x.length;i++){ s=((s<<5)-s+x.charCodeAt(i))|0; }
+    return 'f'+Math.abs(s).toString(16);
+  }
+}
 function lockRead(){
   try{ return JSON.parse(localStorage.getItem(LOCK_KEY)||'null') || {on:false}; }
   catch(e){ return {on:false}; }
@@ -4352,7 +4370,25 @@ function isOwner(){
     return e===BOSS_EMAIL;
   }catch(e){ return false; }
 }
-function isLocked(){ var L=lockRead(); return !!(L && L.on) && !isOwner(); }
+/* المرور مشروط بالرمز على هذا الجهاز — امتلاك الحساب وحده لا يكفي */
+function pinOK(){
+  try{
+    var L=lockRead(); if(!L || !L.pinHash) return isOwner();
+    return localStorage.getItem(PIN_KEY)===L.pinHash;
+  }catch(e){ return false; }
+}
+function isLocked(){
+  var L=lockRead(); if(!(L && L.on)) return false;
+  return !pinOK();
+}
+/* محاولة إدخال الرمز من شاشة القفل */
+window.tryPin = async function(v){
+  var L=lockRead(); if(!L || !L.pinHash) return false;
+  var h=await _lkHash(String(v||'').trim());
+  if(h!==L.pinHash) return false;
+  try{ localStorage.setItem(PIN_KEY, h); }catch(e){}
+  paintLock(); return true;
+};
 /* شاشة القفل — لا تُغلق ولا تُتجاوز */
 function paintLock(){
   var ov=document.getElementById('lockOv');
@@ -4365,8 +4401,21 @@ function paintLock(){
     +'<h2>التطبيق مغلق مؤقتًا</h2>'
     +'<p>'+esc2(String((L&&L.msg)||'أُوقف الوصول من إدارة المشروع. لا تُفقد أي بيانات — يعود العمل عند إعادة الفتح.'))+'</p>'
     +(L&&L.at?'<span>منذ '+esc2(String(L.at).slice(0,16).replace('T',' '))+'</span>':'')
+    +(L&&L.pinHash?'<div class="lk-p">'
+      +'<input id="lkPin" type="password" inputmode="numeric" placeholder="رمز المالك" autocomplete="off">'
+      +'<button type="button" id="lkGo">دخول</button>'
+      +'<em id="lkErr"></em></div>':'')
     +'</div>';
   document.body.appendChild(ov);
+  var gi=document.getElementById('lkGo');
+  if(gi) gi.onclick=async function(){
+    var v=(document.getElementById('lkPin')||{}).value||'';
+    var er=document.getElementById('lkErr');
+    var okp=await window.tryPin(v);
+    if(!okp && er){ er.textContent='رمز غير صحيح'; }
+  };
+  var pi=document.getElementById('lkPin');
+  if(pi) pi.addEventListener('keydown', function(e){ if(e.key==='Enter') gi.click(); });
 }
 const RM_KEY='nsk.rm';
 function rmLoad(){ try{ return JSON.parse(localStorage.getItem(RM_KEY)||'null'); }catch(e){ return null; } }
@@ -5801,9 +5850,17 @@ async function wipeCloud(withSettings, onProg){
 }
 /* يتحقق فعليًا أن كل شيء صار صفرًا — ذاكرةً وتخزينًا */
 /* تبديل القفل — للمالك وحده */
-window.setLock = async function(on, msg){
-  if(!isOwner()){ toast('هذا الإجراء للمالك فقط',1); return; }
+window.setLock = async function(on, msg, pin){
+  if(!isOwner() && !pinOK()){ toast('هذا الإجراء للمالك فقط',1); return; }
   var rec={on:!!on, msg:String(msg||''), at:new Date().toISOString(), by:(window.NSK_USER||{}).email||''};
+  if(on){
+    var p=String(pin||'').trim();
+    if(p.length<4){ toast('اختر رمزًا من ٤ أرقام على الأقل',1); return; }
+    rec.pinHash=await _lkHash(p);
+    try{ localStorage.setItem(PIN_KEY, rec.pinHash); }catch(e){}   /* جهازك يمرّ فورًا */
+  } else {
+    try{ localStorage.removeItem(PIN_KEY); }catch(e){}
+  }
   try{
     if(window.NSKCORE) window.NSKCORE.set('settings','lock',rec);
     if(window.NSKSYNC) NSKSYNC.push('settings','lock',rec);
@@ -6889,10 +6946,13 @@ function render(){
   var _lk=$i('lkBtn'); if(_lk) _lk.onclick=function(){
     var L=lockRead();
     if(L.on){ window.setLock(false,''); return; }
+    var pin=prompt('اختر رمز المالك (٤ أرقام فأكثر).\n\nمن يعرف هذا الرمز وحده يمرّ — حتى لو كان معه حسابك.\nاحفظه: ستحتاجه على أي جهاز جديد.','');
+    if(pin===null) return;
+    if(String(pin).trim().length<4){ alert('الرمز قصير — ٤ أرقام على الأقل.'); return; }
     var m=prompt('رسالة تظهر للمستخدمين (اتركها فارغة للرسالة الافتراضية):','');
     if(m===null) return;
-    if(!confirm('إغلاق التطبيق لكل المستخدمين؟\n\nلن يستطيع أحد استخدامه عداك حتى تعيد فتحه. لا تُفقد أي بيانات.')) return;
-    window.setLock(true, m);
+    if(!confirm('إغلاق التطبيق لكل المستخدمين؟\n\nلن يمرّ إلا من يعرف الرمز. لا تُفقد أي بيانات.')) return;
+    window.setLock(true, m, pin);
   };
   Array.prototype.forEach.call(document.querySelectorAll('#nskDash .qaGo'),function(el){ el.onclick=function(){
     var id=el.getAttribute('data-id');
