@@ -1087,7 +1087,7 @@ window.addEventListener('error', function(e){
 <div id="app">
   <header>
     <div class="t">
-      <div class="eyebrow">متابعة المشروع ١٤٤٨هـ <span style="color:var(--muted);letter-spacing:0;font-weight:600">· نسخة V7.3</span></div>
+      <div class="eyebrow">متابعة المشروع ١٤٤٨هـ <span style="color:var(--muted);letter-spacing:0;font-weight:600">· نسخة V7.4</span></div>
       <h1 id="ttl">المسح الميداني</h1>
     </div>
     <button class="pill" id="modeBtn" type="button">المسح</button>
@@ -5998,8 +5998,13 @@ async function wipeCloud(withSettings, onProg){
 /* يتحقق فعليًا أن كل شيء صار صفرًا — ذاكرةً وتخزينًا */
 /* تبديل القفل — للمالك وحده */
 window.setLock = async function(on, msg, pin){
-  if(!(window.isOwner&&window.isOwner()) && !(window.pinOK&&window.pinOK())){
-    toast('هذا الإجراء للمالك فقط',1); return; }
+  var _cur=(window.lockRead&&window.lockRead())||{};
+  /* إن كان للقفل رمز، فالرمز شرط — امتلاك الحساب وحده لا يفتحه */
+  if(_cur.pinHash){
+    if(!(window.pinOK&&window.pinOK())){ toast('أدخل رمز المالك أولًا',1); return; }
+  } else if(!(window.isOwner&&window.isOwner())){
+    toast('هذا الإجراء للمالك فقط',1); return;
+  }
   var rec={on:!!on, msg:String(msg||''), at:new Date().toISOString(), by:(window.NSK_USER||{}).email||''};
   if(on){
     var p=String(pin||'').trim();
@@ -6834,7 +6839,7 @@ function render(){
     h+=card(S.noco,'مواقع بلا إحداثيات','#E8873A');
     h+=card(S.pend,'تغييرات لم تُزامن بعد','#4BC9F5');
     h+='</div>';
-    if(window.isOwner && window.isOwner()){
+    if(window.pinOK && window.pinOK()){
       var LK=window.lockRead();
       h+='<div class="lkBox'+(LK.on?' on':'')+'">'
         +'<div><b>'+(LK.on?'🔒 التطبيق مغلق للجميع':'🔓 التطبيق مفتوح')+'</b>'
