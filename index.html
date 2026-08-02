@@ -1087,7 +1087,7 @@ window.addEventListener('error', function(e){
 <div id="app">
   <header>
     <div class="t">
-      <div class="eyebrow">متابعة المشروع ١٤٤٨هـ <span style="color:var(--muted);letter-spacing:0;font-weight:600">· نسخة V7.8</span></div>
+      <div class="eyebrow">متابعة المشروع ١٤٤٨هـ <span style="color:var(--muted);letter-spacing:0;font-weight:600">· نسخة V7.9</span></div>
       <h1 id="ttl">المسح الميداني</h1>
     </div>
     <button class="pill" id="modeBtn" type="button">المسح</button>
@@ -1377,7 +1377,8 @@ let recs = {};        // site_id -> survey record
 let inss = {};        // site_id -> installation record
 let props = {};       // proposed sites discovered in the field
 let appMode = 'survey';   // survey | install
-const IC = {'لم يبدأ':'#9AAECB','مجدول':'#4BC9F5','قيد التركيب':'#E8C34B',
+/* «قيد التركيب» لم يعد حالة مستقلة — يأخذ لون «مجدول» لتوافق السجلات القديمة */
+const IC = {'لم يبدأ':'#9AAECB','مجدول':'#4BC9F5','قيد التركيب':'#4BC9F5',
             'مُركّب':'#3AD6A0','متعذّر':'#E05252'};
 let me = '';          // current surveyor name
 let current = null;
@@ -2463,7 +2464,7 @@ window.openInstall = function(id){
   const r = DB.d.find(x=>x[0]===id); if(!r) return;
   const rec = inss[id] || {id:id, status:'لم يبدأ', photos:{}, log:[]};
   current = {r, rec, isIns:true};
-  const S=['بدأ التركيب','تم التركيب','متعذّر'];
+  const S=['تم التركيب','متعذّر'];
   const hist=(rec.log||[]).slice(-4).reverse().map(e=>
     '<div style="font-size:11px;color:var(--muted);padding:3px 0">'+
     esc(e.d)+' — '+esc(e.s)+' — '+esc(e.by||'—')+'</div>').join('');
@@ -2544,7 +2545,7 @@ window.openInstall = function(id){
     if(rec.status==='تم التركيب' && !rec.photos[1]){
       toast('صورة ما بعد التركيب إلزامية',1); return; }
     const now=new Date().toISOString().slice(0,16).replace('T',' ');
-    rec.status = rec.status==='بدأ التركيب' ? 'قيد التركيب'
+    rec.status = rec.status==='بدأ التركيب' ? 'مجدول'   /* لم يعد خيارًا — يُطوى في مجدول */
                : rec.status==='تم التركيب'  ? 'مُركّب' : 'متعذّر';
     rec.date=now; rec.by=me||'غير محدد';
     rec.log=(rec.log||[]).concat([{d:now, s:rec.status, by:rec.by}]);
@@ -3694,12 +3695,12 @@ window.nskSchema = function(){
       sign_format:{ camp:String(SIGN_RE), other:String(SIGN_LEGACY), hint:SIGN_HINT }
     },
     enums:{
-      install_status:['لم يبدأ','مجدول','قيد التركيب','مُركّب','متعذّر'],
+      install_status:['لم يبدأ','مجدول','مُركّب','متعذّر'],
       install_status_en:{'مُركّب':'installed','قيد التركيب':'in_progress','مجدول':'scheduled',
                          'متعذّر':'blocked','لم يبدأ':'none'},
       field_status_fstat:SL,
       fit:['مناسب','مناسب بتعديل','غير مناسب'],
-      assignable_statuses:['مجدول','قيد التركيب'],
+      assignable_statuses:['مجدول'],
       categories16:(window.NSKCATX&&NSKCATX.order)||[],
       survey_photo_slots:PHOTOS,
       install_photo_slots:['قبل التركيب','بعد التركيب (إلزامية عند مُركّب)','لوحة رقم الموقع'],
@@ -3794,7 +3795,6 @@ window.nskGuide = function(role){
     B.push(tbl(['البند','العدد','النسبة'],[
       ['تم المسح', c.svDone, '٪'+_pct(c.svDone,c.total)],
       ['مُركّب', c.ok, '٪'+_pct(c.ok,c.total)],
-      ['قيد التركيب', c.run, ''],
       ['مجدول', c.sch, ''],
       ['متعذّر', c.bad, ''],
       ['لم يُجدول بعد', c.none, '']]));
@@ -3820,7 +3820,6 @@ window.nskGuide = function(role){
     B.push('<h3>عند التركيب</h3>');
     B.push('<p>افتح النقطة وحدّث حالتها:</p>');
     B.push(tbl(['الحالة','متى تختارها'],[
-      ['بدأ التركيب','عند مباشرة العمل'],
       ['تم التركيب','عند الانتهاء — وصورة ما بعد التركيب إلزامية'],
       ['متعذّر','إذا تعذّر التركيب — واذكر السبب']]));
     B.push('<h3>إذا واجهك عائق</h3>');
@@ -3853,7 +3852,7 @@ window.nskGuide = function(role){
     B.push('<h2>٣ · ماذا تعرض لكم الشاشة</h2>');
     B.push('<p>حساب المتابعة يفتح على شاشة واحدة للقراءة فقط، بلا تفاصيل تشغيلية:</p>');
     B.push(tbl(['البند','ماذا يعني'],[
-      ['نظرة عامة','توزيع النقاط على الحالات: مُركّب · قيد التركيب · مجدول · متعذّر · لم يُجدول'],
+      ['نظرة عامة','توزيع النقاط على الحالات: مُركّب · مجدول · متعذّر · لم يُجدول'],
       ['الوتيرة والهدف','المتبقي والمطلوب يوميًا وتاريخ الاكتمال المتوقع مقارنًا بالموعد المستهدف'],
       ['التركيب والجدولة','ما دخل الخطة وما نُفّذ منها ونسبة الإنجاز'],
       ['المعدل اليومي','عمليات التركيب المنفَّذة كل يوم خلال آخر أسبوعين'],
@@ -5102,11 +5101,11 @@ function counts(){
   Object.keys(inss).forEach(function(k){
     const s=inss[k].status;
     if(s==='مجدول') c.sch++;
-    else if(s==='قيد التركيب') c.run++;
+    else if(s==='قيد التركيب') c.sch++;   /* سجلات قديمة — تُحسب مجدولة */
     else if(s==='مُركّب') c.ok++;
     else if(s==='متعذّر') c.bad++;
   });
-  c.plan=c.sch+c.run+c.ok+c.bad;
+  c.plan=c.sch+c.run+c.ok+c.bad;   /* c.run صفر دائمًا منذ V7.9 — يبقى لتوافق سجلات قديمة */
   c.none=Math.max(0,N-c.plan);
   c.svDone=0; c.svFit=0; c.svBad=0; c.svHalf=0;
   Object.keys(recs).forEach(function(k){
@@ -5421,7 +5420,7 @@ function dxXlsx(sel){
     if(w) ws['!cols']=w.map(function(x){return {wch:x};});
     X.utils.book_append_sheet(wb,ws,name); }
   if(sel.indexOf('over')>-1) add('نظرة عامة',[['الحالة','العدد'],
-    ['مُركّب',c.ok],['قيد التركيب',c.run],['مجدول',c.sch],['متعذّر',c.bad],['لم يُجدول',c.none],
+    ['مُركّب',c.ok],['مجدول',c.sch],['متعذّر',c.bad],['لم يُجدول',c.none],
     ['نسبة التركيب من المشروع','٪'+pct(c.ok,c.total)],
     ['تم المسح',c.svDone],['متبقٍ للمسح',Math.max(0,c.total-c.svDone)],
     ['نسبة المسح','٪'+pct(c.svDone,c.total)]],[28,14]);
@@ -5442,7 +5441,7 @@ function dxXlsx(sel){
       tyR.push([g.z,ty,t.t,t.ok,t.t-t.ok,(mn||'—'),(mn?Math.round((t.t-t.ok)*mn/6)/10:'—')]); }); });
     add('الأنواع وزمن التركيب',tyR,[10,18,10,10,10,16,14]); }
   if(sel.indexOf('inst')>-1) add('التركيب والجدولة',[['البند','العدد'],
-    ['إجمالي المواقع',c.total],['دخل الجدولة',c.plan],['مجدول',c.sch],['قيد التركيب',c.run],
+    ['إجمالي المواقع',c.total],['دخل الجدولة',c.plan],['مجدول',c.sch],
     ['مُركّب',c.ok],['متعذّر',c.bad],['لم يُجدول بعد',c.none],
     ['٪ مُركّب من المجدول','٪'+pct(c.ok,c.plan)],['٪ مُركّب من الإجمالي','٪'+pct(c.ok,c.total)]],[26,14]);
   if(sel.indexOf('daily')>-1){ var r1=[['اليوم','عمليات التركيب']];
@@ -5571,7 +5570,7 @@ function dxJson(){
   }).filter(Boolean);
   var c=counts();
   var out={ schema:'nusuk-survey/1', generated_at:new Date().toISOString(),
-    totals:{ sites:c.total, surveyed:c.svDone, installed:c.ok, in_progress:c.run,
+    totals:{ sites:c.total, surveyed:c.svDone, installed:c.ok,
       scheduled:c.sch, blocked:c.bad, unscheduled:c.none, proposals:proposals.length,
       ready_to_schedule:(function(){ try{ return pipeChecks().ready.length; }catch(e){ return null; } })(),
       awaiting_qa:(function(){ try{ return qaData().pend.length; }catch(e){ return null; } })() },
@@ -6443,10 +6442,10 @@ function render(){
 
   h+='<h2>نظرة عامة</h2><div class="dChRow">';
   h+='<div class="dChBox">'+svgDonut([
-      {v:c.ok,c:'#3AD6A0'},{v:c.run,c:'#E8C34B'},{v:c.sch,c:'#4BC9F5'},{v:c.bad,c:'#E05252'},{v:c.none,c:'rgba(128,128,128,.35)'}
+      {v:c.ok,c:'#3AD6A0'},{v:c.sch,c:'#4BC9F5'},{v:c.bad,c:'#E05252'},{v:c.none,c:'rgba(128,128,128,.35)'}
     ], c.total, '٪'+AR(pct(c.ok,c.total)), 'مُركّب من المشروع')
     +svgLegend([
-      {n:'مُركّب',v:c.ok,c:'#3AD6A0'},{n:'قيد التركيب',v:c.run,c:'#E8C34B'},{n:'مجدول',v:c.sch,c:'#4BC9F5'},
+      {n:'مُركّب',v:c.ok,c:'#3AD6A0'},{n:'مجدول',v:c.sch,c:'#4BC9F5'},
       {n:'متعذّر',v:c.bad,c:'#E05252'},{n:'لم يُجدول',v:c.none,c:'#9AA1AB'}
     ])+'</div>';
   h+='<div class="dChBox">'+svgDonut([
@@ -6462,7 +6461,7 @@ function render(){
   h+=card(c.total,'إجمالي المواقع','var(--gold,#C9A24B)');
   h+=card(c.plan,'دخل الجدولة','#8FD3E8');
   h+=card(c.sch,'مجدول','#4BC9F5');
-  h+=card(c.run,'قيد التركيب','#E8C34B');
+
   h+=card(c.ok,'مُركّب','#3AD6A0');
   h+=card(c.bad,'متعذّر','#E05252');
   h+=card(c.none,'لم يُجدول بعد','var(--muted,#9AA1AB)');
@@ -6538,7 +6537,7 @@ function render(){
       if(SK.bad.length>10) h+='<div class="dTs">…وباقي '+AR(SK.bad.length-10)+' — كاملة في تصدير الإكسل.</div>';
     }
     if(SK.stale.length){
-      h+='<h2 style="font-size:.95em;margin-top:14px">راكد — مجدول أو قيد التركيب بلا أي حركة</h2>';
+      h+='<h2 style="font-size:.95em;margin-top:14px">راكد — مجدول بلا أي حركة</h2>';
       h+='<table class="dT"><thead><tr><th>الموقع</th><th>المشعر</th><th>الحالة</th><th>بلا حركة منذ (يوم)</th></tr></thead><tbody>';
       SK.stale.slice(0,10).forEach(function(x){
         h+='<tr><td>'+esc2(x.n)+'</td><td>'+zN(x.z)+'</td><td>'+esc2(x.st)+'</td><td style="color:#E8873A;font-weight:700">'+AR(x.d)+'</td></tr>';
@@ -7708,7 +7707,7 @@ $i('dashFab').onclick=function(){ window.NSKDASH.open(); };
       h+='<div class="mnG">'+esc3(k)+' ('+arS(grp[k].length)+')</div>';
       grp[k].forEach(function(x){
         h+='<div class="mnR" data-id="'+x.id+'">شاخص <b>'+esc3(x.sg||'—')+'</b> · '+esc3(x.n)
-          +(x.st==='قيد التركيب'?' <span class="mnS">قيد التركيب</span>':'')
+    
           +((x.la!=null&&x.lo!=null)?'<button type="button" class="mnNav" data-la="'+x.la+'" data-lo="'+x.lo+'">🧭</button>':'')
           +'</div>';
       });
