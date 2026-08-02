@@ -956,7 +956,7 @@ window.addEventListener('error', function(e){
 <div id="app">
   <header>
     <div class="t">
-      <div class="eyebrow">قارئات نُسُك ١٤٤٨هـ <span style="color:var(--muted);letter-spacing:0;font-weight:600">· نسخة V3.9</span></div>
+      <div class="eyebrow">قارئات نُسُك ١٤٤٨هـ <span style="color:var(--muted);letter-spacing:0;font-weight:600">· نسخة V4.0</span></div>
       <h1 id="ttl">المسح الميداني</h1>
     </div>
     <button class="pill" id="modeBtn" type="button">المسح</button>
@@ -2292,6 +2292,21 @@ window.openInstall = function(id){
     '</div></label>'+
     field('عدد الأطقم المركّبة','kits_done','number',0,0)+
     field('ملاحظة','ins_note','textarea',0,0,'أي شيء يحتاج المكتب معرفته')+
+    (function(){
+      var ro=nskRole(); if(ro!=='admin' && ro!=='engineer') return '';
+      var L=[]; try{ var t=window.NSKCORE.get('settings','teams')||{}; L=(t.list||[]).slice(); }catch(e){}
+      try{ var A=window.NSKCORE.all('inss')||{};
+        Object.keys(A).forEach(function(k){ var n=String((A[k]||{}).team||'').trim();
+          if(n && L.indexOf(n)<0) L.push(n); }); }catch(e){}
+      var cur=String(rec.team||'').trim();
+      if(cur && L.indexOf(cur)<0) L.push(cur);
+      return '<label class="f"><span>الفني / الفريق المسؤول'+
+        '<em>الإسناد من هنا لنقطة واحدة — ولتوزيع دفعة كاملة استخدم «إسناد نقاط مفردة» في لوحة المتابعة</em></span>'+
+        '<select class="in" id="insTeam">'+
+        '<option value="">— بدون إسناد —</option>'+
+        L.map(function(n){ return '<option'+(n===cur?' selected':'')+'>'+esc(n)+'</option>'; }).join('')+
+        '</select></label>';
+    })()+
     '</fieldset>'+
     '<fieldset><legend>صور التركيب</legend><div class="pg" id="pg">'+
     ['قبل التركيب','بعد التركيب','لوحة رقم الموقع'].map(function(p,i){
@@ -2322,6 +2337,9 @@ window.openInstall = function(id){
   $('#isave').onclick=async()=>{
     const f=$('#f'); rec.v=rec.v||{};
     f.querySelectorAll('[name]').forEach(el=>{ if(el.value) rec.v[el.name]=el.value; });
+    const _tm=document.getElementById('insTeam');
+    if(_tm){ const _tv=String(_tm.value||'').trim();
+      if(_tv) rec.team=_tv; else delete rec.team; }
     if(rec.status==='لم يبدأ'){ toast('حدّد الحالة أولًا',1); return; }
     if(rec.status==='تم التركيب' && !rec.photos[1]){
       toast('صورة ما بعد التركيب إلزامية',1); return; }
@@ -2691,7 +2709,7 @@ function openNewForm(la,lo,ac,near,editId){
     field('رقم المربع','square','text',0,1,'من الشاخص المثبت في الموقع')+
     field('رقم الشاخص','sign','text',0,1,'الصيغة الموحّدة: أرقام/أرقام — مثال 57/2 أو 1-3-5/62')+
     '<label class="f"><span>شركة تقديم الخدمة'+
-    '<em>إلزامية للمخيمات — الاختيار من القائمة الموحّدة فقط، وغير الموجودة تُطلب من المهندس من داخل القائمة</em></span>'+
+    '<em>إلزامية للمخيمات — الاختيار من القائمة الموحّدة فقط، وغير الموجودة تُطلب من المهندس من داخل القائمة. اتركها فارغة إن اخترت السبب «عدم وجود تخصيص»</em></span>'+
     '<button type="button" class="in" id="coBtn" style="text-align:start;color:var(--muted);cursor:pointer">— اختر الشركة من القائمة —</button>'+
     '<input type="hidden" name="company"/><input type="hidden" name="company_req"/></label>'+
     field('عدد الخيام أو الغرف','tents','number',0,0)+
@@ -2699,7 +2717,7 @@ function openNewForm(la,lo,ac,near,editId){
     '<fieldset><legend>لماذا ليس في السجل؟</legend>'+
     field('السبب','reason','select',
       ['مخيم جديد لم يكن موجودًا','مخيم انقسم إلى أكثر من واحد',
-       'تغيّر ترقيم الشاخص','الشاخص مفقود أو غير واضح','سبب آخر'],0)+
+       'عدم وجود تخصيص','تغيّر ترقيم الشاخص','الشاخص مفقود أو غير واضح','سبب آخر'],0)+
     field('شرح مختصر','why','textarea',0,0,'اختياري — اكتبه فقط لو فيه تفصيلة تساعد المكتب')+
     '</fieldset>'+
     '<fieldset><legend>الصور</legend>'+
@@ -2792,8 +2810,8 @@ async function saveNew(){
     toast('راجع رقم الشاخص — أرقام وحروف لاتينية وشرطات فقط',1); return; }
   if(!SIGN_LEGACY.test(v.square)){
     toast('رقم المربع بصيغة أرقام أو أرقام-أرقام — مثال 7 أو 7-14',1); return; }
-  if(v.stype==='مخيم' && !v.company && !v.company_req){
-    toast('اختر شركة الخدمة من القائمة الموحّدة — أو أرسل طلب إضافة للمهندس من داخل القائمة',1); return; }
+  if(v.stype==='مخيم' && v.reason!=='عدم وجود تخصيص' && !v.company && !v.company_req){
+    toast('اختر شركة الخدمة من القائمة الموحّدة — أو أرسل طلب إضافة للمهندس من داخل القائمة، أو اختر السبب «عدم وجود تخصيص»',1); return; }
   if(v.company && coExists(v.company)!=='ok'){
     toast('اسم الشركة يجب أن يكون من القائمة الموحّدة فقط',1); return; }
   if(!current.photos[0]){ toast('صورة الشاخص إلزامية للاعتماد',1); return; }
@@ -4574,7 +4592,15 @@ function dxXlsx(sel){
       nm3.map(function(n){ var t=AD3.teams[n]||{t:0,ok:0,act:0,ver:0}; return [n,t.act,t.ok,t.ver||0]; })),[24,12,10,10]);
     var rws=[['المشعر','المربع','النقاط','الفريق']];
     AD3.sq.forEach(function(g){ var ks=Object.keys(g.tset); rws.push([g.z,g.sq,g.n,(ks.length===1?(ks[0]||'—'):'متعدد')]); });
-    add('توزيع المربعات',rws,[10,10,10,22]); }
+    add('توزيع المربعات',rws,[10,10,10,22]);
+    var C9=window.NSKCORE, db9=C9.db(), rc9=C9.all('recs'), in9=C9.all('inss');
+    var pr9=[['الشاخص','المشعر','المربع','الحالة','الفني المسند','تاريخ الجدولة']];
+    db9.d.forEach(function(r){ var id=r[0], iv=in9[id]; if(!iv) return;
+      var st=iv.status||''; if(!(st==='مجدول'||st==='قيد التركيب')) return;
+      var fx=((rc9[id]||{}).fix)||{};
+      pr9.push([String(fx.sign||r[9]||r[1]||id), zN(C9.szOf(r)||''), String(fx.square||r[8]||''),
+        st, _tnorm(iv.team)||'بلا فريق', iv.sched||'']); });
+    add('إسناد النقاط',pr9,[16,10,10,14,20,14]); }
   if(sel.indexOf('qa')>-1){ var C4=window.NSKCORE, dbx4=C4.db(), rc4=C4.all('recs'), in4=C4.all('inss');
     var qr=[['الموقع','المشعر','المربع','الشاخص','الفريق','السيريال','حالة التدقيق','اعتمده','تاريخ الاعتماد']];
     dbx4.d.forEach(function(r){ var id=r[0], iv=in4[id]; if(!iv||iv.status!=='مُركّب') return;
@@ -5013,6 +5039,43 @@ function assignSquare(z,sq,team){
   try{ if(window.NSKSYNC) NSKSYNC.log('إسناد مربع '+sq+' ('+z+') إلى '+(team||'بدون فريق')+' — '+n+' نقطة'); }catch(e){}
   return n;
 }
+function apState(){
+  var D=window.NSKDASH||(window.NSKDASH={});
+  if(!D._ap) D._ap={t:'',f:'',un:false,sel:{}};
+  return D._ap;
+}
+function apRows(){
+  var C=window.NSKCORE, dbx=C.db(), recs=C.all('recs'), inss=C.all('inss');
+  var S=apState(), f=_tnorm(S.f).toLowerCase(), out=[];
+  dbx.d.forEach(function(r){
+    var id=r[0], ins=inss[id]; if(!ins) return;
+    var st=ins.status||''; if(!(st==='مجدول'||st==='قيد التركيب')) return;
+    var tm=_tnorm(ins.team);
+    if(S.un && tm) return;
+    var fx=((recs[id]||{}).fix)||{};
+    var z=zN(C.szOf(r)||''), sq=String(fx.square||r[8]||''), sg=String(fx.sign||r[9]||'');
+    if(f && (sg+' '+sq+' '+z+' '+tm+' '+(r[1]||id)).toLowerCase().indexOf(f)<0) return;
+    out.push({id:id, z:z, sq:sq, sg:sg||String(r[1]||id), tm:tm, st:st});
+  });
+  out.sort(function(a,b){
+    return String(a.z+'|'+a.sq).localeCompare(String(b.z+'|'+b.sq),'ar')
+        || String(a.sg).localeCompare(String(b.sg),'ar'); });
+  return out;
+}
+function assignPoints(ids, team){
+  var C=window.NSKCORE, inss=C.all('inss'), n=0;
+  (ids||[]).forEach(function(id){
+    var ins=inss[id]; if(!ins) return;
+    var st=ins.status||''; if(!(st==='مجدول'||st==='قيد التركيب')) return;
+    var rec=Object.assign({}, ins);
+    if(team) rec.team=team; else delete rec.team;
+    C.set('inss',id,rec); n++;
+    try{ window.storage.set('ins:'+id, JSON.stringify(rec), false); }catch(e){}
+    try{ if(window.NSKSYNC) NSKSYNC.push('inss',id,rec); }catch(e){}
+  });
+  try{ if(window.NSKSYNC) NSKSYNC.log('إسناد '+n+' نقطة مفردة إلى '+(team||'بدون فريق')); }catch(e){}
+  return n;
+}
 function teamSchedText(name){
   var C=window.NSKCORE, dbx=C.db(), recs=C.all('recs'), inss=C.all('inss');
   var G={}, ord=[], tot=0;
@@ -5381,6 +5444,38 @@ function render(){
         h+='</tbody></table>';
         h+='<p class="dTs">النقاط التي تُجدول لاحقًا في نفس المربع: أعد اختيار الفريق لتلحق بها.</p>';
       } else h+='<div class="dEmpty">لا توجد نقاط مجدولة بعد — أول ما تبدأ الجدولة سيظهر التوزيع هنا.</div>';
+
+      /* V4.0: إسناد نقاط مفردة لفني */
+      var S=apState(), RW=apRows(), SN=0;
+      Object.keys(S.sel).forEach(function(k){ if(S.sel[k]) SN++; });
+      h+='<h2 style="font-size:.95em;margin-top:16px">إسناد نقاط مفردة — اختر الفني ثم علّم النقاط</h2>';
+      h+='<div class="pTyStrip">';
+      h+='<label>الفني <select id="apT">'
+        +'<option value="">— اختر —</option>'
+        +names.map(function(n){ return '<option'+(S.t===n?' selected':'')+'>'+esc2(n)+'</option>'; }).join('')
+        +'</select></label>';
+      h+='<label><input id="apF" placeholder="بحث: شاخص / مربع / مشعر" value="'+escA(S.f)+'" style="width:170px;text-align:start"></label>';
+      h+='<label><input type="checkbox" id="apUn"'+(S.un?' checked':'')+'> بلا فريق فقط</label>';
+      h+='</div>';
+      h+='<div class="apBar"><span>الظاهر: <b>'+AR(RW.length)+'</b></span>'
+        +'<span>المحدد: <b id="apN">'+AR(SN)+'</b></span>'
+        +'<button type="button" class="dBtn" id="apAll">تحديد كل الظاهر</button>'
+        +'<button type="button" class="dBtn" id="apClr">مسح التحديد</button></div>';
+      if(!RW.length) h+='<div class="dEmpty">لا توجد نقاط مطابقة — جرّب توسيع البحث أو ألغِ «بلا فريق فقط».</div>';
+      else {
+        h+='<div class="apL">';
+        RW.slice(0,80).forEach(function(x){
+          h+='<label class="apR"><input type="checkbox" class="apChk" data-id="'+escA(x.id)+'"'
+            +(S.sel[x.id]?' checked':'')+'>'
+            +'<b>'+esc2(x.sg)+'</b>'
+            +'<span>'+esc2(x.z)+' · مربع '+esc2(x.sq)+'</span>'
+            +'<i>'+(x.tm?esc2(x.tm):'بلا فريق')+'</i></label>';
+        });
+        h+='</div>';
+        if(RW.length>80) h+='<p class="dTs">يُعرض أول '+AR(80)+' نقطة — ضيّق البحث للوصول للباقي. «تحديد كل الظاهر» يشمل النتائج كلها ('+AR(RW.length)+').</p>';
+        h+='<div class="apBar"><button type="button" class="dBtn p" id="apAssign">إسناد المحدد</button>'
+          +'<button type="button" class="dBtn" id="apDrop">إزالة الإسناد عن المحدد</button></div>';
+      }
     }
   })();
 
@@ -5593,6 +5688,40 @@ function render(){
   Array.prototype.forEach.call(document.querySelectorAll('#nskDash .tmShare'),function(b){ b.onclick=function(){
     shareTeam(b.getAttribute('data-t'));
   }; });
+  (function(){
+    var S=apState();
+    var t=$i('apT'); if(t) t.onchange=function(){ S.t=t.value||''; };
+    var f=$i('apF'); if(f) f.onchange=function(){ S.f=f.value||''; S.sel={}; render(); };
+    var u=$i('apUn'); if(u) u.onchange=function(){ S.un=!!u.checked; render(); };
+    Array.prototype.forEach.call(document.querySelectorAll('#nskDash .apChk'),function(c){
+      c.onchange=function(){
+        var id=c.getAttribute('data-id');
+        if(c.checked) S.sel[id]=1; else delete S.sel[id];
+        var n=0; Object.keys(S.sel).forEach(function(k){ if(S.sel[k]) n++; });
+        var el=$i('apN'); if(el) el.textContent=AR(n);
+      }; });
+    var aA=$i('apAll'); if(aA) aA.onclick=function(){
+      apRows().forEach(function(x){ S.sel[x.id]=1; }); render(); };
+    var aC=$i('apClr'); if(aC) aC.onclick=function(){ S.sel={}; render(); };
+    function ids(){ return Object.keys(S.sel).filter(function(k){ return S.sel[k]; }); }
+    var aG=$i('apAssign'); if(aG) aG.onclick=function(){
+      var L=ids();
+      if(!L.length){ try{ toast('علّم نقطة واحدة على الأقل',1); }catch(e){} return; }
+      if(!S.t){ try{ toast('اختر الفني أولًا',1); }catch(e){} return; }
+      var n=assignPoints(L, S.t);
+      S.sel={};
+      try{ toast('أُسندت '+AR(n)+' نقطة إلى '+S.t); }catch(e){}
+      render();
+    };
+    var aD=$i('apDrop'); if(aD) aD.onclick=function(){
+      var L=ids();
+      if(!L.length){ try{ toast('علّم نقطة واحدة على الأقل',1); }catch(e){} return; }
+      var n=assignPoints(L, '');
+      S.sel={};
+      try{ toast('أُزيل الإسناد عن '+AR(n)+' نقطة'); }catch(e){}
+      render();
+    };
+  })();
   Array.prototype.forEach.call(document.querySelectorAll('#nskDash .tmSel'),function(s){ s.onchange=function(){
     var v=s.value; if(v==='*') return;
     var n=assignSquare(s.getAttribute('data-z'), s.getAttribute('data-sq'), v);
@@ -6012,6 +6141,15 @@ html[data-theme="light"] #nskDash .pRgDl{background:#fff;border-color:rgba(60,60
 #nskDash .pTyStrip input:focus,#nskDash .pRgDl:focus{outline:none;border-color:var(--gold,#C9A24B);box-shadow:0 0 0 2px rgba(201,162,75,.25)}
 #nskDash .tmDel{background:transparent;border:0;color:#E05252;font-weight:800;cursor:pointer;font:inherit;padding:0 2px}
 #nskDash select.tmSel{max-width:150px}
+#nskDash .apBar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:8px 0;font-size:12px;color:var(--muted,#9AA1AB)}
+#nskDash .apL{max-height:300px;overflow:auto;border:1px solid rgba(150,150,150,.28);border-radius:10px;padding:4px}
+#nskDash .apR{display:flex;align-items:center;gap:8px;padding:7px 8px;border-radius:8px;cursor:pointer;font-size:12.5px}
+#nskDash .apR:nth-child(odd){background:rgba(150,150,150,.08)}
+#nskDash .apR b{min-width:74px}
+#nskDash .apR span{color:var(--muted,#9AA1AB);flex:1}
+#nskDash .apR i{font-style:normal;color:#4BC9F5;font-size:11.5px}
+#nskDash #apF{background:rgba(255,255,255,.07);border:1.5px solid rgba(150,150,150,.6);border-radius:8px;color:inherit;padding:6px 8px;font:inherit}
+html[data-theme="light"] #nskDash #apF{background:#fff;border-color:rgba(60,60,60,.5)}
 #nskMine{position:fixed;left:12px;bottom:calc(128px + env(safe-area-inset-bottom,0px));z-index:9340;display:none;
   background:var(--ink,#14161A);color:var(--gold2,#E9CE83);border:1px solid rgba(233,206,131,.55);border-radius:999px;
   padding:9px 14px;font:inherit;font-weight:800;box-shadow:0 3px 12px rgba(0,0,0,.4);cursor:pointer}
