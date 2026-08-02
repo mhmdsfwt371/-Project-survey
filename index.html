@@ -1025,7 +1025,7 @@ window.addEventListener('error', function(e){
 <div id="app">
   <header>
     <div class="t">
-      <div class="eyebrow">متابعة المشروع ١٤٤٨هـ <span style="color:var(--muted);letter-spacing:0;font-weight:600">· نسخة V6.2</span></div>
+      <div class="eyebrow">متابعة المشروع ١٤٤٨هـ <span style="color:var(--muted);letter-spacing:0;font-weight:600">· نسخة V6.3</span></div>
       <h1 id="ttl">المسح الميداني</h1>
     </div>
     <button class="pill" id="modeBtn" type="button">المسح</button>
@@ -3600,8 +3600,11 @@ window.nskSchema = function(){
     app_version:ver,
     generated_at:new Date().toISOString(),
     generated_from:'التطبيق مباشرة — الثوابت الحية للنسخة المشغّلة',
-    full_docs:'https://github.com/mhmdsfwt371/-Project-survey/blob/main/docs/system.md',
-    full_schema:'https://raw.githubusercontent.com/mhmdsfwt371/-Project-survey/main/docs/api-schema.json',
+    full_docs:(function(){ try{ var h=location.hostname.split('.')[0],
+      r=location.pathname.split('/').filter(Boolean)[0]||'';
+      return 'https://github.com/'+h+'/'+r+'/blob/main/docs/system.md'; }catch(e){ return 'docs/system.md'; } })(),
+    full_schema:(function(){ try{ return location.origin
+      +location.pathname.replace(/[^/]*$/,'')+'docs/api-schema.json'; }catch(e){ return 'docs/api-schema.json'; } })(),
     site_registry:{
       totals:{ sites:DB.d.length, camps:(DB.g||[]).length,
                paths_and_others:(DB.p||[]).length, queue:(DB.q||[]).length },

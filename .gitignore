@@ -1,0 +1,3 @@
+backups/bundle.json
+backups/latest/*.json
+!backups/latest/_meta.json

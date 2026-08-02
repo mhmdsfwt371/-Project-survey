@@ -11,7 +11,7 @@ mkdirSync(out, { recursive: true });
 
 const iso = (k, v) => (v && typeof v.toDate === 'function') ? v.toDate().toISOString() : v;
 const cols = await db.listCollections();
-let total = 0; const report = [];
+let total = 0; const report = []; const bundle = {};
 
 for (const col of cols) {
   if (col.id === 'photos') {
@@ -23,11 +23,17 @@ for (const col of cols) {
   const snap = await col.get();
   const docs = {};
   snap.forEach(d => { docs[d.id] = d.data(); });
-  writeFileSync(`${out}/${col.id}.json`, JSON.stringify(docs, iso, 1));
+  bundle[col.id] = docs;
   total += snap.size;
   report.push(`${col.id}: ${snap.size}`);
 }
 
+/* البيانات الخام لا تُكتب أبدًا كنص صريح في مستودع عام.
+   تُجمَّع في حزمة واحدة يشفّرها سير العمل بمفتاح من الأسرار. */
+writeFileSync(`${out}/../bundle.json`, JSON.stringify(bundle, iso, 1));
+
+/* الملخّص وحده هو ما يُنشر صراحةً — أعداد بلا أي بيانات شخصية */
 writeFileSync(`${out}/_meta.json`, JSON.stringify(
-  { at: new Date().toISOString(), collections: report, totalDocs: total }, null, 1));
+  { at: new Date().toISOString(), collections: report, totalDocs: total,
+    note: 'البيانات الخام في backup.enc — مشفّرة. هذا الملف أعداد فقط.' }, null, 1));
 console.log('backup ok —', report.join(' | '), '| total', total);

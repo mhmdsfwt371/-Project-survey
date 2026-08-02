@@ -23,11 +23,37 @@ jobs:
         env:
           FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
         run: node scripts/backup.mjs
+
+      # المستودع عام — لا تُكتب بيانات خام أبدًا كنص صريح.
+      # الحزمة تُشفَّر بمفتاح من الأسرار، وبلا مفتاح تُحذف ولا تُنشر.
+      - name: Encrypt bundle
+        env:
+          BACKUP_KEY: ${{ secrets.BACKUP_KEY }}
+        run: |
+          if [ -z "$BACKUP_KEY" ]; then
+            echo "::warning::BACKUP_KEY غير مضبوط — لن تُنشر البيانات الخام، سيُنشر الملخّص فقط"
+            rm -f backups/bundle.json
+          else
+            openssl enc -aes-256-cbc -pbkdf2 -iter 250000 -salt \
+              -in backups/bundle.json -out backups/latest/backup.enc -pass env:BACKUP_KEY
+            rm -f backups/bundle.json
+            echo "encrypted ok — $(du -h backups/latest/backup.enc | cut -f1)"
+          fi
+
+      - name: Guard — no plaintext data may be committed
+        run: |
+          LEAK=$(find backups/latest -name '*.json' ! -name '_meta.json' | head -5)
+          if [ -n "$LEAK" ]; then
+            echo "::error::وُجد ملف بيانات صريح: $LEAK — أُلغيت العملية"
+            exit 1
+          fi
+          echo "clean ✓"
+
       - name: Commit backup
         run: |
-          git config user.name 'nusuk-backup-bot'
+          git config user.name 'project-backup-bot'
           git config user.email 'actions@github.com'
-          git add backups/latest
+          git add -A backups/latest
           if git diff --cached --quiet; then
             echo 'no changes'
           else
