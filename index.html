@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,viewport-fit=cover"/>
-<title>قارئات نُسُك — المسح الميداني ١٤٤٨هـ</title>
+<title>متابعة المشروع — المسح الميداني ١٤٤٨هـ</title>
 <link rel="preconnect" href="https://a.basemaps.cartocdn.com"/>
 <link rel="preconnect" href="https://b.basemaps.cartocdn.com"/>
 <link rel="preconnect" href="https://firestore.googleapis.com" crossorigin/>
@@ -15,7 +15,7 @@
 <meta name="mobile-web-app-capable" content="yes"/>
 <meta name="apple-mobile-web-app-capable" content="yes"/>
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
-<meta name="apple-mobile-web-app-title" content="قارئات نُسُك"/>
+<meta name="apple-mobile-web-app-title" content="متابعة المشروع"/>
 <link rel="apple-touch-icon" href="icon-192.png"/>
 <script>
 window.addEventListener('beforeinstallprompt',function(e){ e.preventDefault(); window.__nskBip=e;
@@ -1025,7 +1025,7 @@ window.addEventListener('error', function(e){
 <div id="app">
   <header>
     <div class="t">
-      <div class="eyebrow">قارئات نُسُك ١٤٤٨هـ <span style="color:var(--muted);letter-spacing:0;font-weight:600">· نسخة V6.1</span></div>
+      <div class="eyebrow">متابعة المشروع ١٤٤٨هـ <span style="color:var(--muted);letter-spacing:0;font-weight:600">· نسخة V6.2</span></div>
       <h1 id="ttl">المسح الميداني</h1>
     </div>
     <button class="pill" id="modeBtn" type="button">المسح</button>
@@ -2505,7 +2505,7 @@ function siteMsg(id, why, note){
   const sg=String(fx.sign||(r&&r[9])||''), sq=String(fx.square||(r&&r[8])||'');
   const z=r?szOf(r):'', co=(fx.company||(r&&(r[27]||r[10]))||'');
   const P0=r?posOf(r):null;
-  const L=['📣 بلاغ ميداني — قارئات نُسُك'];
+  const L=['📣 بلاغ ميداني — متابعة المشروع'];
   L.push('الموقع: '+(sg||(r&&r[1])||id)+(sq?' · مربع '+sq:'')+(z?' · '+z:''));
   L.push('المعرّف: '+id);
   if(co) L.push('الشركة: '+co);
@@ -3407,7 +3407,7 @@ $('#expPdf').onclick=()=>{
       info+'</table><div class="ph">'+ph+'</div></section>';
   };
   w.document.write('<!doctype html><html lang="ar" dir="rtl"><head><meta charset="utf-8"/>'+
-    '<title>ملفات المواقع — قارئات نُسُك ١٤٤٨هـ</title><style>'+
+    '<title>ملفات المواقع — متابعة المشروع ١٤٤٨هـ</title><style>'+
     '@page{size:A4;margin:14mm}'+
     'body{font-family:"Noto Kufi Arabic","Tajawal","Segoe UI",Tahoma,sans-serif;color:#123;margin:0}'+
     'section{page-break-after:always;padding-bottom:8mm}'+
@@ -3704,13 +3704,13 @@ window.nskGuide = function(role){
     return C2.join('');
   }
   var B=[];
-  B.push('<h1>متابعة مشروع قارئات نُسُك ١٤٤٨هـ</h1>');
+  B.push('<h1>متابعة المشروع ١٤٤٨هـ</h1>');
   B.push('<p class="sub">'+esc(TITLE)+'</p>');
   B.push('<p class="sub">النسخة '+esc(ver)+' · مُستخرج بتاريخ '+esc(dt)+'</p>');
   if(ROLE) B.push('<div class="role">'+ROLE+'</div>');
 
   B.push('<h2>١ · ما هو النظام باختصار</h2>');
-  B.push('<p>نظام واحد يتابع تركيب قارئات نُسُك في المشاعر المقدسة، من لحظة وقوف المشرف أمام المخيم حتى اعتماد المهندس لسيريال الجهاز. يعمل على الموبايل كتطبيق، ويعمل بلا إنترنت ثم يزامن نفسه تلقائيًا أول ما تعود الشبكة.</p>');
+  B.push('<p>نظام واحد يتابع تركيب متابعة المشروع في المشاعر المقدسة، من لحظة وقوف المشرف أمام المخيم حتى اعتماد المهندس لسيريال الجهاز. يعمل على الموبايل كتطبيق، ويعمل بلا إنترنت ثم يزامن نفسه تلقائيًا أول ما تعود الشبكة.</p>');
   B.push(tbl(['العدد','الفئة','الملاحظة'],[
     [nG,'مخيمات','منى وعرفات ومزدلفة'],
     [nP,'ممرات ومحطات وكاميرات وبوابات','الجمرات وقطار المشاعر ومسجد نمرة'],
@@ -3855,7 +3855,7 @@ window.nskGuide = function(role){
   }
 function _nskWrap(B){
   return '<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word">'
-    +'<head><meta charset="utf-8"><title>دليل متابعة مشروع قارئات نُسُك ١٤٤٨هـ</title>'
+    +'<head><meta charset="utf-8"><title>دليل متابعة المشروع ١٤٤٨هـ</title>'
     +'<style>'
     +'body{font-family:"Segoe UI","Arial",sans-serif;direction:rtl;text-align:right;color:#1A1A1A;line-height:1.8;font-size:11pt}'
     +'h1{color:#A87F2E;font-size:22pt;margin:0 0 4pt;text-align:center}'
@@ -3876,7 +3876,7 @@ window.doGuide = function(role){
     var html=window.nskGuide(role);
     var d=new Date(), p2=function(n){ return String(n).padStart(2,'0'); };
     var tag={eng:'المهندس', sup:'الفني-والمشرف', min:'الوزارة'}[role]||'الكامل';
-    var name='دليل-متابعة-قارئات-نُسُك-'+tag+'-'+d.getFullYear()+p2(d.getMonth()+1)+p2(d.getDate())+'.doc';
+    var name='دليل-متابعة-المشروع-'+tag+'-'+d.getFullYear()+p2(d.getMonth()+1)+p2(d.getDate())+'.doc';
     var a=document.createElement('a');
     a.href=URL.createObjectURL(new Blob(['\ufeff'+html],{type:'application/msword'}));
     a.download=name; document.body.appendChild(a); a.click(); a.remove();
@@ -5561,7 +5561,7 @@ function coSched(){
 }
 function coMsg(g){
   var L=['السادة / '+g.co,'تحية طيبة،',''];
-  L.push('نفيدكم بجدولة تركيب قارئات نُسُك ١٤٤٨هـ في مواقعكم:');
+  L.push('نفيدكم بجدولة تركيب متابعة المشروع ١٤٤٨هـ في مواقعكم:');
   var P=g.pts.slice().sort(function(a,b){ return String(a.d||'z').localeCompare(String(b.d||'z')); });
   P.slice(0,40).forEach(function(x){
     L.push('• '+x.z+(x.sq?' · مربع '+x.sq:'')+' · شاخص '+x.sg+(x.d?' — الموعد '+x.d:''));
@@ -5571,7 +5571,7 @@ function coMsg(g){
   L.push('الإجمالي: '+P.length+' موقع'+(g.first?' · أقرب موعد '+g.first:''));
   L.push('نرجو تسهيل دخول الفريق للمواقع وتوفير مصدر الكهرباء في الموعد المحدد.');
   L.push('');
-  L.push('— '+((user&&(user.name||user.email))||'إدارة المشروع')+' · إدارة مشروع قارئات نُسُك');
+  L.push('— '+((user&&(user.name||user.email))||'إدارة المشروع')+' · إدارة مشروع متابعة المشروع');
   return L.join('\n');
 }
 function coNotify(co, mode){
@@ -5945,7 +5945,7 @@ function applyTab(){
 function render(){
   const c=counts();
   let h='';
-  h+='<div class="dHead"><h1>لوحة متابعة مشروع نُسُك ١٤٤٨</h1>';
+  h+='<div class="dHead"><h1>لوحة متابعة المشروع ١٤٤٨</h1>';
   h+='<button class="dBtn" id="dTheme" type="button" title="فاتح / داكن">🌓</button>';
   h+='<button class="dBtn" id="bellBtn" type="button" title="ما يخصّك">🔔</button>';
   h+='<button class="dBtn" id="dAcct" type="button">الحساب</button>';
@@ -5972,7 +5972,7 @@ function render(){
       +' &nbsp;·&nbsp; مقترحات بانتظار الاعتماد: <b>'+AR(pp.n)+'</b>'
       +((pp.n&&pp.old!=null)?' (أقدمها منذ '+AR(pp.old)+' يوم)':'')+'</p>';
     var _pt=new Date();
-    h+='<p class="dPrn">تقرير رسمي مُستخرج من نظام متابعة قارئات نُسُك ١٤٤٨ — بتاريخ '
+    h+='<p class="dPrn">تقرير رسمي مُستخرج من نظام متابعة متابعة المشروع ١٤٤٨ — بتاريخ '
       +arS(('0'+_pt.getDate()).slice(-2)+'/'+('0'+(_pt.getMonth()+1)).slice(-2)+'/'+_pt.getFullYear()
       +' الساعة '+('0'+_pt.getHours()).slice(-2)+':'+('0'+_pt.getMinutes()).slice(-2))+'</p>';
   })();
@@ -7162,12 +7162,12 @@ $i('dashFab').onclick=function(){ window.NSKDASH.open(); };
       'افتح الرابط في متصفح <b>سفاري</b> (لو أنت فيه بالفعل كمّل مباشرة — التثبيت لا يعمل من داخل واتساب أو كروم).',
       'اضغط زر <b>المشاركة</b> <span class="iosG">&#x2BAD;</span> — المربع الذي يخرج منه سهم لأعلى في شريط سفاري.',
       'انزل في القائمة واختر <b>«إضافة إلى الشاشة الرئيسية»</b>.',
-      'اضغط <b>«إضافة»</b> — ستجد أيقونة «قارئات نُسُك» على شاشتك، وتفتح بشاشة كاملة بلا أي شريط.'
+      'اضغط <b>«إضافة»</b> — ستجد أيقونة «متابعة المشروع» على شاشتك، وتفتح بشاشة كاملة بلا أي شريط.'
     ]:[
       'افتح الرابط في متصفح <b>كروم</b> نفسه — لو فاتح من داخل واتساب أو أي تطبيق: اضغط قائمة النقاط <b>⋮</b> بالأعلى ثم اختر <b>«فتح في Chrome»</b>.',
       'من كروم: اضغط قائمة النقاط <b>⋮</b> أعلى الشاشة.',
       'اختر <b>«تثبيت التطبيق»</b> (وقد تظهر باسم «إضافة إلى الشاشة الرئيسية»).',
-      'اضغط <b>«تثبيت»</b> — ستجد أيقونة «قارئات نُسُك» على شاشتك، وتفتح بشاشة كاملة بلا أي شريط ولا رابط.'
+      'اضغط <b>«تثبيت»</b> — ستجد أيقونة «متابعة المشروع» على شاشتك، وتفتح بشاشة كاملة بلا أي شريط ولا رابط.'
     ];
     var c=ov.querySelector('.iosC');
     c.innerHTML='<button type="button" class="nskX" id="nskIosX" aria-label="إغلاق">×</button>'
@@ -7214,7 +7214,7 @@ $i('dashFab').onclick=function(){ window.NSKDASH.open(); };
   setTimeout(autoNudge, IOS?3000:2200);
   window.addEventListener('appinstalled', function(){
     var b=document.getElementById('nskInst'); if(b) b.remove();
-    try{ toast('تم التثبيت ✓ افتحه من أيقونة «قارئات نُسُك»'); }catch(e){}
+    try{ toast('تم التثبيت ✓ افتحه من أيقونة «متابعة المشروع»'); }catch(e){}
   });
 })();
 /* V2.8: جدولي — قائمة نقاط المشرف المُسندة */
