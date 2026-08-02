@@ -956,7 +956,7 @@ window.addEventListener('error', function(e){
 <div id="app">
   <header>
     <div class="t">
-      <div class="eyebrow">قارئات نُسُك ١٤٤٨هـ <span style="color:var(--muted);letter-spacing:0;font-weight:600">· نسخة V4.1</span></div>
+      <div class="eyebrow">قارئات نُسُك ١٤٤٨هـ <span style="color:var(--muted);letter-spacing:0;font-weight:600">· نسخة V4.2</span></div>
       <h1 id="ttl">المسح الميداني</h1>
     </div>
     <button class="pill" id="modeBtn" type="button">المسح</button>
@@ -1464,7 +1464,7 @@ window.setZ=function(z){ zSel=(zSel===z?'':z); cSel=''; drawList(); drawMap(); }
 window.setC=function(c){ cSel=(cSel===c?'':c); drawList(); drawMap(); };
 function ptypeOf(r){
   const fx=(((recs[r[0]]||{}).fix)||{}).ptype||'';
-  const v=fx||r[23]||'';
+  const v=fx||r[26]||'';
   if(v.indexOf('داخل')>=0) return 'داخل';
   if(v.indexOf('خارج')>=0) return 'خارج';
   return '';
@@ -1523,7 +1523,7 @@ function drawMap(){
         catFull(r).i+' '+catFull(r).l+'</span><br/>'+
       kv('الشاخص', r[9])+
       kv('المربع', r[8])+
-      kv('الشركة', r[10])+
+      kv('الشركة', r[27]||r[10])+
       '<span class="pk">التصنيف:</span> '+ptHtml(r)+'<br/>'+
       kv('المنطقة', r[21])+
       '<span class="pk">الحالة:</span> <b style="color:'+colOf(r[0])+'">'+
@@ -1630,7 +1630,8 @@ function drawList(){
     && (!statusFilter || st(r[0])===statusFilter)
     && (!q || r[0].toLowerCase().includes(q) || (r[1]+' '+nameOf(r)).toLowerCase().includes(q)
            || (r[9]||'').toLowerCase().includes(q)
-           || (r[10]||'').toLowerCase().includes(q)))
+           || (r[10]||'').toLowerCase().includes(q)
+           || (r[27]||'').toLowerCase().includes(q)))
     .sort((a,b)=> myPos ? dist(a)-dist(b) : a[0].localeCompare(b[0]));
   window._lastItems = items;
   const c = {new:0,draft:0,done:0,blocked:0};
@@ -1698,7 +1699,7 @@ function drawList(){
     ptBadge(r)+
     '<span class="mt">'+catLine(r)+(appMode==='install'
         ? slbl(st(r[0]))+((inss[r[0]]||{}).sched?' · موعد '+esc(inss[r[0]].sched):'')
-        : DB.w[r[4]]+' · '+SL[st(r[0])]+(r[10]?' · '+esc(r[10]):''))+'</span></span>'+
+        : DB.w[r[4]]+' · '+SL[st(r[0])]+((r[27]||r[10])?' · '+esc(r[27]||r[10]):''))+'</span></span>'+
     '<span class="gm" title="اعرضه على الخريطة" onclick="goMap(\''+r[0]+'\',event)">📍</span>'+
     (myPos?'<span class="dist">'+(dist(r)<1000?Math.round(dist(r))+' م'
        :(dist(r)/1000).toFixed(1)+' كم')+'</span>':'')+
@@ -3252,7 +3253,7 @@ function listExportRows(){
     const rec=recs[r[0]]||{}; const P0=posOf(r); const c=catFull(r);
     const p=ptypeOf(r);
     return [r[0], nameOf(r), c.l, szOf(r), r[21]||'', r[8]||'', r[9]||'',
-      ((rec.fix||{}).company)||r[10]||'', p?('حجاج '+p):'',
+      ((rec.fix||{}).company)||r[27]||r[10]||'', p?('حجاج '+p):'',
       SL[st(r[0])], rec.by||'', rec.date||'',
       P0[0].toFixed(6)+', '+P0[1].toFixed(6), rec.loc?'نعم':''];
   });
@@ -4064,7 +4065,7 @@ const evF={from:'',to:'',q:'',co:'',reg:'',user:''};
 function escA(s){ return esc2(String(s==null?'':s)).replace(/"/g,'&quot;'); }
 function evIx(){
   const C=window.NSKCORE, ix={};
-  try{ C.db().d.forEach(function(r){ ix[r[0]]={name:String(r[1]||''),sign:String(r[9]||''),square:String(r[8]||''),co:String(r[10]||''),reg:(C.szOf?String(C.szOf(r)||''):'')}; }); }catch(e){}
+  try{ C.db().d.forEach(function(r){ ix[r[0]]={name:String(r[1]||''),sign:String(r[9]||''),square:String(r[8]||''),co:String(r[27]||r[10]||''),reg:(C.szOf?String(C.szOf(r)||''):'')}; }); }catch(e){}
   try{ const rc=C.all('recs'); Object.keys(rc).forEach(function(id){ const r=rc[id]||{};
     const co=(r.company==='أخرى — غير مدرجة')?(r.company_other||'أخرى'):(r.company||'');
     if(co){ if(!ix[id]) ix[id]={name:'',sign:'',square:'',co:'',reg:''}; ix[id].co=co; } }); }catch(e){}
