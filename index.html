@@ -1087,7 +1087,7 @@ window.addEventListener('error', function(e){
 <div id="app">
   <header>
     <div class="t">
-      <div class="eyebrow">متابعة المشروع ١٤٤٨هـ <span style="color:var(--muted);letter-spacing:0;font-weight:600">· نسخة V7.2</span></div>
+      <div class="eyebrow">متابعة المشروع ١٤٤٨هـ <span style="color:var(--muted);letter-spacing:0;font-weight:600">· نسخة V7.3</span></div>
       <h1 id="ttl">المسح الميداني</h1>
     </div>
     <button class="pill" id="modeBtn" type="button">المسح</button>
@@ -3792,8 +3792,8 @@ window.nskGuide = function(role){
   if(c){
     B.push('<h2>٢ · الوضع الحالي لحظة استخراج هذا الملف</h2>');
     B.push(tbl(['البند','العدد','النسبة'],[
-      ['تم المسح', c.svDone, '٪'+pct(c.svDone,c.total)],
-      ['مُركّب', c.ok, '٪'+pct(c.ok,c.total)],
+      ['تم المسح', c.svDone, '٪'+_pct(c.svDone,c.total)],
+      ['مُركّب', c.ok, '٪'+_pct(c.ok,c.total)],
       ['قيد التركيب', c.run, ''],
       ['مجدول', c.sch, ''],
       ['متعذّر', c.bad, ''],
@@ -3953,6 +3953,9 @@ function _isAdminRole(){
   }catch(e){ return false; }
 }
 /* PDF: نافذة طباعة — المتصفح يشكّل العربية ويتيح «حفظ كـ PDF» */
+/* pct معرّفة داخل وحدة — نسخة محلية مكافئة تضمن عدم الانهيار */
+function _pct(a,b){ b=Number(b)||0; if(!b) return '0';
+  return String(Math.round((Number(a)||0)/b*100)); }
 function _dvEsc(t){ return String(t==null?'':t)
   .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
 /* يحصر أنماط الدليل داخل #docBody فلا تسرّب على التطبيق */
@@ -6016,6 +6019,7 @@ window.setLock = async function(on, msg, pin){
   try{ if(window.NSKDASH) NSKDASH.refresh(); }catch(e){}
 };
 try{ window.paint = paint; }catch(e){}
+try{ window.pct = pct; }catch(e){}
 try{ window.counts = counts; }catch(e){}
 window.wipeVerify = async function(){
   var C=window.NSKCORE, left=[];

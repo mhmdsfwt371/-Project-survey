@@ -95,11 +95,19 @@ try {
   };
 
   const defs = new Map();
-  for (const d of src.matchAll(/\bfunction\s+([A-Za-z_]\w{2,})\s*\(/g)) {
-    if (isMin(d.index)) continue;
-    const i = blk(d.index); if (i === null) continue;
-    if (!defs.has(d[1])) defs.set(d[1], new Set());
-    defs.get(d[1]).add(i);
+  const DEF_RX = [
+    /\bfunction\s+([A-Za-z_]\w{2,})\s*\(/g,                       /* function name() */
+    /\b(?:const|let|var)\s+([A-Za-z_]\w{2,})\s*=\s*(?:async\s*)?\(/g, /* const name = (…) => */
+    /\b(?:const|let|var)\s+([A-Za-z_]\w{2,})\s*=\s*(?:async\s*)?function\b/g,
+    /\b(?:const|let|var)\s+([A-Za-z_]\w{2,})\s*=\s*[A-Za-z_$]\w*\s*=>/g   /* const name = x => */
+  ];
+  for (const rx of DEF_RX) {
+    for (const d of src.matchAll(rx)) {
+      if (isMin(d.index)) continue;
+      const i = blk(d.index); if (i === null) continue;
+      if (!defs.has(d[1])) defs.set(d[1], new Set());
+      defs.get(d[1]).add(i);
+    }
   }
   const leaks = [];
   for (const [name, where] of defs) {
