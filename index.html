@@ -930,7 +930,17 @@ textarea.in{min-height:74px;resize:vertical}
 #docOv .dv-bar button{background:transparent;border:1.5px solid rgba(150,150,150,.5);border-radius:9px;
   color:inherit;font:inherit;font-size:12px;padding:8px 13px;cursor:pointer;flex:0 0 auto}
 #docOv .dv-bar button.p{background:var(--gold,#C9A24B);border-color:var(--gold,#C9A24B);color:#0A0B0D;font-weight:700}
-#docOv iframe{flex:1 1 auto;width:100%;border:0;background:#fff}
+#docOv #docScroll{flex:1 1 auto;overflow:auto;background:#fff;-webkit-overflow-scrolling:touch}
+#docOv #docBody{background:#fff;color:#1A1A1A;padding:16px;direction:rtl;
+  font-family:-apple-system,'Segoe UI',Tahoma,sans-serif;line-height:1.9}
+/* عند الطباعة: الدليل وحده يظهر */
+@media print{
+  html.dv-on body>*:not(#docOv){display:none!important}
+  html.dv-on #docOv{position:static!important;height:auto!important}
+  html.dv-on #docOv .dv-bar{display:none!important}
+  html.dv-on #docOv #docScroll{overflow:visible!important}
+  @page{size:A4;margin:16mm 14mm}
+}
 #lockOv .lk-p{margin-top:22px;display:flex;gap:7px;justify-content:center;flex-wrap:wrap}
 #lockOv .lk-p input{background:rgba(255,255,255,.07);border:1.5px solid rgba(150,150,150,.45);
   border-radius:9px;color:#F1EDE0;padding:10px 13px;font:inherit;font-size:14px;
@@ -1077,7 +1087,7 @@ window.addEventListener('error', function(e){
 <div id="app">
   <header>
     <div class="t">
-      <div class="eyebrow">متابعة المشروع ١٤٤٨هـ <span style="color:var(--muted);letter-spacing:0;font-weight:600">· نسخة V7.1</span></div>
+      <div class="eyebrow">متابعة المشروع ١٤٤٨هـ <span style="color:var(--muted);letter-spacing:0;font-weight:600">· نسخة V7.2</span></div>
       <h1 id="ttl">المسح الميداني</h1>
     </div>
     <button class="pill" id="modeBtn" type="button">المسح</button>
@@ -3945,45 +3955,68 @@ function _isAdminRole(){
 /* PDF: نافذة طباعة — المتصفح يشكّل العربية ويتيح «حفظ كـ PDF» */
 function _dvEsc(t){ return String(t==null?'':t)
   .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+/* يحصر أنماط الدليل داخل #docBody فلا تسرّب على التطبيق */
+function _dvScope(css){
+  return String(css||'').replace(/(^|\})\s*([^{}@]+)\{/g, function(_,pre,sel){
+    var s2=sel.split(',').map(function(x){
+      x=x.trim(); if(!x) return x;
+      if(/^body$/i.test(x)) return '#docBody';
+      if(/^html$/i.test(x)) return '#docBody';
+      return '#docBody '+x;
+    }).join(',');
+    return pre+' '+s2+'{';
+  });
+}
+/* يستخرج الأنماط والمحتوى من مستند الدليل الكامل */
+function _dvParts(html){
+  var css='', m=String(html||'').match(/<style[^>]*>([\s\S]*?)<\/style>/i);
+  if(m) css=m[1];
+  var body=String(html||'').match(/<body[^>]*>([\s\S]*?)<\/body>/i);
+  var inner = body ? body[1] : String(html||'').replace(/<\/?(?:html|head|body|meta|title|style)[^>]*>/gi,'');
+  return { css:css, html:inner };
+}
 window.doGuidePdf = function(role){
+  var step='بدء';
   try{
-    var html=window.nskGuide(role);
+    step='توليد الدليل';
+    var full=window.nskGuide(role);
     var tag={eng:'المهندس', sup:'الفني والمشرف', min:'الوزارة'}[role]||'الكامل';
-    var css='<style>@page{size:A4;margin:18mm 16mm}'
-      +'@media print{a{text-decoration:none;color:inherit}'
-      +'h1,h2,h3{break-after:avoid;page-break-after:avoid}'
-      +'table,tr,td,th{break-inside:avoid;page-break-inside:avoid}'
-      +'div.role,div.note{break-inside:avoid}}'
-      +'body{-webkit-print-color-adjust:exact;print-color-adjust:exact;margin:0;padding:16px}</style>';
-    html=html.replace('</head>', css+'</head>');
-    /* يُعرض داخل التطبيق — لا نافذة جديدة تضيع منها طريق الرجوع */
-    var ov=document.getElementById('docOv'); if(ov) ov.remove();
+    step='تحليل المحتوى';
+    var P=_dvParts(full);
+    step='بناء العارض';
+    var ov=document.getElementById('docOv'); if(ov && ov.parentNode) ov.parentNode.removeChild(ov);
     ov=document.createElement('div'); ov.id='docOv';
-    ov.innerHTML='<div class="dv-bar">'
-      +'<button type="button" id="dvX" aria-label="رجوع">✕ رجوع</button>'
-      +'<b>دليل '+_dvEsc(tag)+'</b>'
-      +'<button type="button" id="dvP" class="p">🖨 حفظ PDF</button>'
-      +'</div><iframe id="dvF" title="دليل '+_dvEsc(tag)+'"></iframe>';
+    var bar=document.createElement('div'); bar.className='dv-bar';
+    var bx=document.createElement('button'); bx.type='button'; bx.id='dvX'; bx.textContent='✕ رجوع';
+    var tt=document.createElement('b'); tt.textContent='دليل '+tag;
+    var bp=document.createElement('button'); bp.type='button'; bp.id='dvP'; bp.className='p'; bp.textContent='🖨 حفظ PDF';
+    bar.appendChild(bx); bar.appendChild(tt); bar.appendChild(bp);
+    var sc=document.createElement('div'); sc.id='docScroll';
+    var st=document.createElement('style'); st.textContent=_dvScope(P.css);
+    var bd=document.createElement('div'); bd.id='docBody'; bd.innerHTML=P.html;
+    sc.appendChild(st); sc.appendChild(bd);
+    ov.appendChild(bar); ov.appendChild(sc);
+    step='إضافة للصفحة';
     document.body.appendChild(ov);
-    var f=document.getElementById('dvF');
-    f.srcdoc=html;
-    document.getElementById('dvX').onclick=function(){ ov.remove(); };
-    document.getElementById('dvP').onclick=function(){
-      try{ f.contentWindow.focus(); f.contentWindow.print(); }
-      catch(e){ try{ window.print(); }catch(e2){ toast('تعذّرت الطباعة',1); } }
+    document.documentElement.classList.add('dv-on');
+    step='ربط الأزرار';
+    var close=function(){
+      try{ document.documentElement.classList.remove('dv-on'); }catch(e){}
+      var o=document.getElementById('docOv'); if(o && o.parentNode) o.parentNode.removeChild(o);
     };
-    /* زر الرجوع في الجهاز يغلق العارض بدل مغادرة التطبيق */
+    bx.onclick=function(){ close(); try{ if(history.state && history.state.docOv) history.back(); }catch(e){} };
+    bp.onclick=function(){ try{ window.print(); }catch(e){ toast('تعذّرت الطباعة',1); } };
     try{
       history.pushState({docOv:1},'');
-      var onPop=function(){ var o=document.getElementById('docOv'); if(o) o.remove();
-        window.removeEventListener('popstate',onPop); };
+      var onPop=function(){ close(); window.removeEventListener('popstate',onPop); };
       window.addEventListener('popstate', onPop);
-      document.getElementById('dvX').addEventListener('click', function(){
-        try{ history.back(); }catch(e){} });
     }catch(e){}
     try{ if(window.NSKSYNC) NSKSYNC.log('فتح دليل '+tag+' (PDF)'); }catch(e){}
-  }catch(e){ toast('تعذّر فتح الدليل',1); }
+  }catch(e){
+    try{ toast('تعذّر فتح الدليل عند: '+step+' — '+((e&&e.message)||e),1); }catch(e2){}
+  }
 };
+
 window.doGuide = function(role){ return window.doGuidePdf(role); };
 window._doGuideDocLegacy = function(role){
   try{
