@@ -956,7 +956,7 @@ window.addEventListener('error', function(e){
 <div id="app">
   <header>
     <div class="t">
-      <div class="eyebrow">قارئات نُسُك ١٤٤٨هـ <span style="color:var(--muted);letter-spacing:0;font-weight:600">· نسخة V3.8</span></div>
+      <div class="eyebrow">قارئات نُسُك ١٤٤٨هـ <span style="color:var(--muted);letter-spacing:0;font-weight:600">· نسخة V3.9</span></div>
       <h1 id="ttl">المسح الميداني</h1>
     </div>
     <button class="pill" id="modeBtn" type="button">المسح</button>
@@ -5768,9 +5768,42 @@ $i('dashFab').onclick=function(){ window.NSKDASH.open(); };
     c.querySelector('#nskIosX').onclick=function(){ ov.style.display='none'; };
     ov.style.display='flex';
   }
+  function snoozed(){ try{ var s=+(localStorage.getItem('nsk.inst.snooze')||0); return s && Date.now()<s; }catch(e){ return false; } }
+  function snooze(days){ try{ localStorage.setItem('nsk.inst.snooze', String(Date.now()+days*864e5)); }catch(e){} }
+  function autoNudge(){
+    if(standalone() || snoozed()) return;
+    if(document.getElementById('nskNudge')) return;
+    if(!window.__nskBip && !IOS) return;
+    var a=document.activeElement;
+    if(a && /^(INPUT|SELECT|TEXTAREA)$/.test(a.tagName||'')){ setTimeout(autoNudge, 6000); return; }
+    var ov=document.createElement('div'); ov.id='nskNudge';
+    ov.innerHTML='<div class="iosC">'+
+      '<h3>ثبّت التطبيق على جهازك</h3>'+
+      '<p class="ndT">يفتح بشاشة كاملة بلا شريط عنوان، ويعمل بدون إنترنت في الميدان، ويصله التحديث تلقائيًا.</p>'+
+      '<div class="ndB">'+
+        '<button type="button" id="ndGo" class="ndPri">⬇ تثبيت الآن</button>'+
+        '<button type="button" id="ndNo" class="ndSec">لاحقًا</button>'+
+      '</div></div>';
+    document.body.appendChild(ov);
+    ov.querySelector('#ndNo').onclick=function(){ snooze(7); ov.remove(); };
+    ov.querySelector('#ndGo').onclick=function(){
+      var e=window.__nskBip;
+      ov.remove();
+      if(e && e.prompt){
+        e.prompt();
+        if(e.userChoice) e.userChoice.then(function(r){
+          if(r && r.outcome!=='accepted') snooze(3);
+          var bb=document.getElementById('nskInst'); if(r && r.outcome==='accepted' && bb) bb.remove();
+        });
+        window.__nskBip=null;
+      } else instGuide(IOS?'ios':'and');
+    };
+    ov.style.display='flex';
+  }
   if(window.__nskBip) mk();
-  document.addEventListener('nsk-bip', mk);
+  document.addEventListener('nsk-bip', function(){ mk(); setTimeout(autoNudge, 1200); });
   mk();
+  setTimeout(autoNudge, IOS?3000:2200);
   window.addEventListener('appinstalled', function(){
     var b=document.getElementById('nskInst'); if(b) b.remove();
     try{ toast('تم التثبيت ✓ افتحه من أيقونة «قارئات نُسُك»'); }catch(e){}
@@ -6009,8 +6042,15 @@ body.dxPrint #nskDash .dSec{content-visibility:visible}
 #known .ipV{font-family:ui-monospace,Menlo,Consolas,monospace;letter-spacing:.3px;direction:ltr;unicode-bidi:isolate}
 #nskInst{background:linear-gradient(135deg,#E9CE83,#C9A24B);color:#0A0B0D;border:0;border-radius:999px;
   padding:8px 14px;font-weight:800;font:inherit;font-size:.9em;cursor:pointer;box-shadow:0 2px 10px rgba(0,0,0,.3)}
-#nskIosOv{position:fixed;inset:0;z-index:99998;display:none;align-items:center;justify-content:center;
+#nskIosOv,#nskNudge{position:fixed;inset:0;z-index:99998;display:none;align-items:center;justify-content:center;
   background:rgba(0,0,0,.66);padding:20px}
+#nskNudge{display:flex}
+#nskNudge .ndT{font-size:.9em;line-height:1.7;color:var(--grey,#9AA1AB);margin:0 0 14px}
+#nskNudge .ndB{display:flex;gap:10px;flex-wrap:wrap}
+#nskNudge .ndPri{flex:1;min-width:150px;background:linear-gradient(135deg,#E9CE83,#C9A24B);color:#0A0B0D;
+  border:0;border-radius:12px;padding:12px 16px;font:inherit;font-weight:800;font-size:1.02em;cursor:pointer}
+#nskNudge .ndSec{background:transparent;color:inherit;border:1px solid rgba(150,150,150,.5);
+  border-radius:12px;padding:12px 16px;font:inherit;cursor:pointer}
 #nskIosOv .iosC,#nskMineOv .iosC{position:relative;max-width:420px;width:100%;background:var(--ink,#14161A);
   color:var(--cream,#F1EDE0);border:1px solid rgba(233,206,131,.35);border-radius:18px;padding:20px 18px 14px}
 #nskIosOv h3,#nskMineOv h3{margin:0 0 10px;color:var(--gold,#C9A24B);padding-inline-end:44px}
