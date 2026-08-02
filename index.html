@@ -965,7 +965,7 @@ window.addEventListener('error', function(e){
 <div id="app">
   <header>
     <div class="t">
-      <div class="eyebrow">قارئات نُسُك ١٤٤٨هـ <span style="color:var(--muted);letter-spacing:0;font-weight:600">· نسخة V4.5</span></div>
+      <div class="eyebrow">قارئات نُسُك ١٤٤٨هـ <span style="color:var(--muted);letter-spacing:0;font-weight:600">· نسخة V4.6</span></div>
       <h1 id="ttl">المسح الميداني</h1>
     </div>
     <button class="pill" id="modeBtn" type="button">المسح</button>
@@ -5569,11 +5569,19 @@ function render(){
       h+='<section class="dSec" data-sec="stock">';
       h+='<h2>عُهدة الأجهزة — القارئات مع الفرق والمخزن</h2>';
       h+='<div class="dGrid">';
+      var stNo=!K.tot;                         /* الإجمالي لم يُدخل بعد */
+      var stOver=(!stNo && K.store<0);          /* مصروف أكثر من الإجمالي */
       h+=card(K.tot||'—','إجمالي القارئات','#E9CE83');
-      h+=card(K.store,'في المخزن','#4BC9F5');
+      h+=card(stNo?'—':(stOver?'!':K.store),'في المخزن', stOver?'#E05252':'#4BC9F5');
       h+=card(K.issued-K.used,'مع الفرق (لم تُركّب)','#C77DFF');
       h+=card(K.used,'رُكّبت فعليًا','#3AD6A0');
       h+='</div>';
+      if(stNo && K.issued)
+        h+='<p class="dTs" style="color:#E8873A">المخزن لا يُحسب قبل إدخال إجمالي القارئات — '
+          +'مصروف للفرق حاليًا '+AR(K.issued)+' قارئ. اكتب الإجمالي بالأسفل ليظهر المتبقي.</p>';
+      else if(stOver)
+        h+='<p class="dTs" style="color:#E05252">المصروف للفرق ('+AR(K.issued)+') أكبر من إجمالي القارئات ('
+          +AR(K.tot)+') بفارق '+AR(Math.abs(K.store))+' — راجع الإجمالي أو أرقام الصرف.</p>';
       if(canS) h+='<div class="pTyStrip" style="margin-top:10px"><label>إجمالي القارئات المتاحة للمشروع '
         +'<input id="stTot" type="number" min="0" value="'+(K.tot||'')+'"></label></div>';
       if(K.rows.length){
