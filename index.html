@@ -965,7 +965,7 @@ window.addEventListener('error', function(e){
 <div id="app">
   <header>
     <div class="t">
-      <div class="eyebrow">قارئات نُسُك ١٤٤٨هـ <span style="color:var(--muted);letter-spacing:0;font-weight:600">· نسخة V4.7</span></div>
+      <div class="eyebrow">قارئات نُسُك ١٤٤٨هـ <span style="color:var(--muted);letter-spacing:0;font-weight:600">· نسخة V4.8</span></div>
       <h1 id="ttl">المسح الميداني</h1>
     </div>
     <button class="pill" id="modeBtn" type="button">المسح</button>
@@ -1999,6 +1999,7 @@ window.openForm = function(id){
     '</form>'+
     '<div class="bar">'+
     '<button class="btn s" type="button" id="back">رجوع</button>'+
+    '<button class="btn s tellBtn" type="button" onclick="nskTell(\''+current.r[0]+'\')">📣 بلّغ</button>'+
     '<button class="btn p" type="button" id="save">حفظ الموقع</button>'+
     '</div>';
 
@@ -2359,6 +2360,7 @@ window.openInstall = function(id){
     '</form>'+
     '<div class="bar">'+
     '<button class="btn s" type="button" id="iback">رجوع</button>'+
+    '<button class="btn s tellBtn" type="button" onclick="nskTell(\''+id+'\')">📣 بلّغ</button>'+
     '<button class="btn p" type="button" id="isave">حفظ التحديث</button>'+
     '</div>';
 
@@ -2405,6 +2407,75 @@ window.openInstall = function(id){
     setTimeout(()=>show('vList'),700);
   };
   show('vForm'); document.getElementById('vForm').scrollTop=0;
+};
+
+/* ===== V4.8: بلّغ المكتب — رسالة منظّمة فيها هوية النقطة ورابط خريطة ===== */
+const TELL_WHY=['تحدٍ يمنع التركيب','أحتاج قرار من المكتب','نقص عهدة أو قطع',
+                'سؤال عن السيريال','الموقع مختلف عن السجل','أخرى'];
+function siteMsg(id, why, note){
+  const r=DB.d.find(x=>x[0]===id);
+  const rec=recs[id]||{}, ins=inss[id]||{}, fx=rec.fix||{};
+  const sg=String(fx.sign||(r&&r[9])||''), sq=String(fx.square||(r&&r[8])||'');
+  const z=r?szOf(r):'', co=(fx.company||(r&&(r[27]||r[10]))||'');
+  const P0=r?posOf(r):null;
+  const L=['📣 بلاغ ميداني — قارئات نُسُك'];
+  L.push('الموقع: '+(sg||(r&&r[1])||id)+(sq?' · مربع '+sq:'')+(z?' · '+z:''));
+  L.push('المعرّف: '+id);
+  if(co) L.push('الشركة: '+co);
+  if(ins.status && ins.status!=='لم يبدأ') L.push('حالة التركيب: '+ins.status);
+  if(ins.team) L.push('الفني المسند: '+ins.team);
+  if(why) L.push('السبب: '+why);
+  const nt=String(note||'').trim(); if(nt) L.push('التفاصيل: '+nt);
+  if(P0) L.push('📍 https://www.google.com/maps/search/?api=1&query='+P0[0].toFixed(6)+','+P0[1].toFixed(6));
+  L.push('— '+(nskBy()||me||'—')+' · '+new Date().toISOString().slice(0,16).replace('T',' '));
+  return L.join('\n');
+}
+window.nskTell = function(id){
+  const r=DB.d.find(x=>x[0]===id); if(!r) return;
+  let ov=document.getElementById('tellOv');
+  if(ov) ov.remove();
+  let CT=[]; try{ CT=((window.NSKCORE.get('settings','contacts')||{}).list)||[]; }catch(e){}
+  ov=document.createElement('div'); ov.id='tellOv';
+  ov.innerHTML='<div class="tl-box">'
+    +'<button type="button" class="nskX" id="tellX" aria-label="إغلاق">×</button>'
+    +'<h3>بلّغ المكتب</h3>'
+    +'<p class="tl-h">تُرسل رسالة فيها رقم الشاخص والمربع والمشعر ورابط الخريطة — المكتب يعرف الموقع فورًا.</p>'
+    +'<div class="tl-w">'+TELL_WHY.map(function(w,i){
+        return '<button type="button" class="tl-c'+(i===0?' on':'')+'" data-w="'+esc(w)+'">'+esc(w)+'</button>'; }).join('')+'</div>'
+    +'<textarea id="tellNt" placeholder="تفاصيل مختصرة (اختياري)"></textarea>'
+    +'<div class="tl-a">'
+    +(CT.length? CT.map(function(c){
+        return '<button type="button" class="btn p tl-p" data-p="'+esc(String(c.p||''))+'">📱 واتساب — '+esc(c.n||'المكتب')+'</button>'; }).join('')
+      :'<p class="tl-h" style="color:var(--amber,#E8C34B)">لم يُضف رقم للمكتب بعد — استخدم «إرسال لجروب الفريق» أو اطلب من المهندس إضافة رقمه من لوحة المتابعة.</p>')
+    +'<button type="button" class="btn s" id="tellShare">💬 إرسال لجروب الفريق</button>'
+    +'<button type="button" class="btn s" id="tellCopy">📋 نسخ النص</button>'
+    +'</div></div>';
+  document.body.appendChild(ov);
+  let why=TELL_WHY[0];
+  ov.addEventListener('click', function(e){ if(e.target===ov) ov.remove(); });
+  ov.querySelector('#tellX').onclick=function(){ ov.remove(); };
+  ov.querySelectorAll('.tl-c').forEach(function(b){ b.onclick=function(){
+    ov.querySelectorAll('.tl-c').forEach(function(x){ x.classList.remove('on'); });
+    b.classList.add('on'); why=b.getAttribute('data-w'); }; });
+  function txt(){ return siteMsg(id, why, (document.getElementById('tellNt')||{}).value||''); }
+  function done(){ try{ if(window.NSKSYNC) NSKSYNC.log('بلاغ ميداني — '+id+' — '+why); }catch(e){} ov.remove(); }
+  ov.querySelectorAll('.tl-p').forEach(function(b){ b.onclick=function(){
+    const p=String(b.getAttribute('data-p')||'').replace(/[^\d]/g,'');
+    if(!p){ toast('رقم غير صالح',1); return; }
+    try{ window.open('https://wa.me/'+p+'?text='+encodeURIComponent(txt()),'_blank'); }catch(e){}
+    done(); }; });
+  ov.querySelector('#tellShare').onclick=function(){
+    const t=txt();
+    if(navigator.share){ navigator.share({text:t}).then(done).catch(function(){}); return; }
+    try{ const ta=document.createElement('textarea'); ta.value=t; ta.style.position='fixed'; ta.style.opacity='0';
+      document.body.appendChild(ta); ta.select(); document.execCommand('copy'); ta.remove();
+      toast('اتنسخ النص — الصقه في الجروب'); }catch(e){}
+    done(); };
+  ov.querySelector('#tellCopy').onclick=function(){
+    try{ const ta=document.createElement('textarea'); ta.value=txt(); ta.style.position='fixed'; ta.style.opacity='0';
+      document.body.appendChild(ta); ta.select(); document.execCommand('copy'); ta.remove();
+      toast('اتنسخ ✓'); }catch(e){}
+    done(); };
 };
 
 /* ---------------- propose a missing site ---------------- */
@@ -5034,6 +5105,16 @@ function qaReturn(id, note){
   try{ if(window.NSKSYNC) NSKSYNC.log('إرجاع تركيب '+id+' لفريقه'+(nt?' — '+nt:'')); }catch(e){}
   return true;
 }
+function ctcObj(){ try{ return window.NSKCORE.get('settings','contacts')||{}; }catch(e){ return {}; } }
+function saveCtc(mut){
+  try{
+    var C=window.NSKCORE, c=Object.assign({}, C.get('settings','contacts')||{});
+    c.list=(c.list||[]).slice();
+    try{ mut(c); }catch(e){}
+    C.set('settings','contacts',c);
+    try{ if(window.NSKSYNC) NSKSYNC.push('settings','contacts',c); }catch(e){}
+  }catch(e){}
+}
 function teamsObj(){ try{ return window.NSKCORE.get('settings','teams')||{}; }catch(e){ return {}; } }
 function saveTeams(mut){
   try{
@@ -5580,6 +5661,16 @@ function render(){
       h+='<label><input id="tmNew" placeholder="اسم قائد الفريق" style="width:130px;text-align:start"> <button type="button" id="tmAdd" class="dBtn">إضافة</button></label>';
       h+='</div>';
       h+='<p class="dTs">اجعل اسم الفريق مطابقًا لاسم حساب قائده في التطبيق — ليظهر له زر «جدولي» تلقائيًا.</p>';
+      var CT=((ctcObj().list)||[]);
+      h+='<h2 style="font-size:.95em;margin-top:14px">أرقام المكتب — تظهر للفني في زر «📣 بلّغ» داخل النقطة</h2>';
+      h+='<div class="pTyStrip">';
+      CT.forEach(function(c,i){ h+='<label>'+esc2(c.n||'—')+' <span class="pMut">'+esc2(c.p||'')+'</span> '
+        +'<button type="button" class="tmDel ctcDel" data-i="'+i+'">×</button></label>'; });
+      h+='<label><input id="ctcN" placeholder="الاسم" style="width:96px;text-align:start"> '
+        +'<input id="ctcP" placeholder="9665xxxxxxxx" inputmode="tel" style="width:130px;text-align:start"> '
+        +'<button type="button" id="ctcAdd" class="dBtn">إضافة</button></label>';
+      h+='</div>';
+      h+='<p class="dTs">الرقم بصيغة دولية بلا + ولا أصفار — مثال: 9665xxxxxxxx. كل بلاغ يُسجَّل في سجل الأحداث حتى لو لم يُفتح واتساب.</p>';
     }
     h+='<table class="dT"><thead><tr><th>الفريق</th><th>مُسند نشط</th><th>ركّب</th><th>مُدقّق</th><th></th></tr></thead><tbody>';
     if(!names.length) h+='<tr><td colspan="5" class="dTs">أضف أسماء الفرق أولًا ثم وزّع المربعات عليها.</td></tr>';
@@ -5856,6 +5947,18 @@ function render(){
       saveGoal(function(g){ if(v>0) g.types[ty]=v; else delete g.types[ty]; });
       render();
     }; });
+  var cAdd=$i('ctcAdd'); if(cAdd) cAdd.onclick=function(){
+    var n=_tnorm(($i('ctcN')||{}).value), p=String(($i('ctcP')||{}).value||'').replace(/[^\d]/g,'');
+    if(!n || p.length<9){ try{ toast('اكتب الاسم والرقم بالصيغة الدولية',1); }catch(e){} return; }
+    saveCtc(function(c){ c.list.push({n:n,p:p}); });
+    try{ if(window.NSKSYNC) NSKSYNC.log('إضافة رقم مكتب: '+n); }catch(e){}
+    render();
+  };
+  Array.prototype.forEach.call(document.querySelectorAll('#nskDash .ctcDel'),function(b){ b.onclick=function(){
+    var i=parseInt(b.getAttribute('data-i'),10);
+    saveCtc(function(c){ if(i>=0 && i<c.list.length) c.list.splice(i,1); });
+    render();
+  }; });
   var tAdd=$i('tmAdd'); if(tAdd) tAdd.onclick=function(){
     var el=$i('tmNew'), v=_tnorm(el&&el.value); if(!v) return;
     saveTeams(function(t){ if(t.list.indexOf(v)<0) t.list.push(v); });
@@ -6322,6 +6425,22 @@ html[data-theme="light"] #nskDash .pRgDl{background:#fff;border-color:rgba(60,60
 #nskDash .pTyStrip input:focus,#nskDash .pRgDl:focus{outline:none;border-color:var(--gold,#C9A24B);box-shadow:0 0 0 2px rgba(201,162,75,.25)}
 #nskDash .tmDel{background:transparent;border:0;color:#E05252;font-weight:800;cursor:pointer;font:inherit;padding:0 2px}
 #nskDash select.tmSel{max-width:150px}
+#tellOv{position:fixed;inset:0;z-index:9700;background:rgba(0,0,0,.6);display:flex;
+  align-items:flex-end;justify-content:center;direction:rtl}
+#tellOv .tl-box{background:var(--panel,#141619);border:1px solid var(--line,#3a4a42);
+  border-radius:16px 16px 0 0;width:100%;max-width:560px;max-height:88vh;overflow:auto;
+  padding:16px 15px 18px;box-sizing:border-box;position:relative}
+#tellOv h3{margin:0 0 6px;font-size:15px;color:var(--gold,#C9A24B)}
+#tellOv .tl-h{font-size:11.5px;color:var(--muted,#9AA1AB);line-height:1.8;margin:0 0 12px}
+#tellOv .tl-w{display:flex;flex-wrap:wrap;gap:7px;margin-bottom:12px}
+#tellOv .tl-c{background:transparent;border:1px solid rgba(150,150,150,.5);border-radius:999px;
+  padding:7px 12px;font:inherit;font-size:12px;color:inherit;cursor:pointer}
+#tellOv .tl-c.on{background:var(--gold,#C9A24B);border-color:var(--gold,#C9A24B);color:#0A0B0D;font-weight:700}
+#tellOv textarea{width:100%;box-sizing:border-box;min-height:64px;background:rgba(255,255,255,.06);
+  border:1.5px solid rgba(150,150,150,.5);border-radius:10px;color:inherit;padding:9px;font:inherit;font-size:13px}
+html[data-theme="light"] #tellOv textarea{background:#fff}
+#tellOv .tl-a{display:flex;flex-direction:column;gap:8px;margin-top:12px}
+.bar .tellBtn{flex:0 0 auto}
 #nskDash .apBar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:8px 0;font-size:12px;color:var(--muted,#9AA1AB)}
 #nskDash .apL{max-height:300px;overflow:auto;border:1px solid rgba(150,150,150,.28);border-radius:10px;padding:4px}
 #nskDash .apR{display:flex;align-items:center;gap:8px;padding:7px 8px;border-radius:8px;cursor:pointer;font-size:12.5px}
