@@ -965,7 +965,7 @@ window.addEventListener('error', function(e){
 <div id="app">
   <header>
     <div class="t">
-      <div class="eyebrow">قارئات نُسُك ١٤٤٨هـ <span style="color:var(--muted);letter-spacing:0;font-weight:600">· نسخة V5.1</span></div>
+      <div class="eyebrow">قارئات نُسُك ١٤٤٨هـ <span style="color:var(--muted);letter-spacing:0;font-weight:600">· نسخة V5.2</span></div>
       <h1 id="ttl">المسح الميداني</h1>
     </div>
     <button class="pill" id="modeBtn" type="button">المسح</button>
@@ -1063,7 +1063,10 @@ window.addEventListener('error', function(e){
             ⬇ نسخة احتياطية كاملة</button>
           <button class="btn s" id="mgBtn" type="button">⬆ دمج نسخة زميل / استعادة</button>
           <button class="btn s" id="schBtn" type="button" style="margin-top:10px">🧩 ملف الواجهات JSON — للمطوّرين والتكامل</button>
-          <button class="btn s" id="docBtn" type="button" style="margin-top:10px">📄 دليل النظام Word — شرح مبسّط للإدارة والوزارة</button>
+          <div style="font-size:11px;color:var(--muted);line-height:1.8;margin-top:12px">📄 دليل النظام Word — نسخة لكل دور:</div>
+          <button class="btn s" id="docEng" type="button" style="margin-top:7px">دليل المهندس — إدارة المشروع</button>
+          <button class="btn s" id="docSup" type="button" style="margin-top:7px">دليل الفني والمشرف — العمل الميداني</button>
+          <button class="btn s" id="docMin" type="button" style="margin-top:7px">دليل الوزارة — المتابعة</button>
           <input id="mergeFile" type="file" accept=".json,application/json" hidden/>
           <div style="font-size:11px;color:var(--muted);line-height:1.8;margin-top:9px">
             النسخة تشمل كل المسوحات والتركيبات والمواقع المقترحة بصورها.
@@ -3525,7 +3528,8 @@ window.nskSchema = function(){
   };
 };
 /* دليل مبسّط بصيغة يفتحها Word — يُبنى محليًا فيعمل بلا إنترنت */
-window.nskGuide = function(){
+window.nskGuide = function(role){
+  var wrap=_nskWrap;
   var V=''; try{ V=(document.querySelector('.eyebrow')||{}).textContent||''; }catch(e){}
   var m=String(V).match(/V[\d.]+/), ver=m?m[0]:'';
   var C=window.NSKCORE, dbx=C.db();
@@ -3539,9 +3543,12 @@ window.nskGuide = function(){
       +'</table>';
   }
   var d=new Date(), dt=d.getFullYear()+'-'+('0'+(d.getMonth()+1)).slice(-2)+'-'+('0'+d.getDate()).slice(-2);
+  var TITLE={eng:'دليل المهندس — إدارة المشروع',
+             sup:'دليل الفني والمشرف — العمل الميداني',
+             min:'دليل المتابعة — الجهة الوزارية'}[role]||'دليل مبسّط لفهم النظام';
   var B=[];
   B.push('<h1>نظام قارئات نُسُك ١٤٤٨هـ</h1>');
-  B.push('<p class="sub">دليل مبسّط لفهم النظام — من أول زيارة الموقع حتى اعتماد السيريال</p>');
+  B.push('<p class="sub">'+esc(TITLE)+'</p>');
   B.push('<p class="sub">النسخة '+esc(ver)+' · مُستخرج بتاريخ '+esc(dt)+'</p>');
 
   B.push('<h2>١ · ما هو النظام باختصار</h2>');
@@ -3562,6 +3569,52 @@ window.nskGuide = function(){
       ['لم يُجدول بعد', c.none, '']]));
   }
 
+  if(role==='sup'){
+    B.push('<h2>٣ · عملك اليومي — خطوة بخطوة</h2>');
+    B.push('<p><b>١ · افتح الموقع من الخريطة.</b> النقاط ملوّنة بحالتها، وزر ◎ يرجّعك لموقعك في أي وقت.</p>');
+    B.push('<p><b>٢ · راجع «بيانات مسجّلة».</b> الشركة والشاخص والمربع والسعة والشبكة مكتوبة من ملفات المشروع — اقرأها فقط، واضغط «تعديل» لو وجدت غيرها في الموقع.</p>');
+    B.push('<p><b>٣ · سجّل القياسات والتحديات</b> ثم التقط الصور. الصور الإلزامية لا يقبل الحفظ بدونها.</p>');
+    B.push('<p><b>٤ · حدّد الصلاحية:</b> مناسب أم مناسب بتعديل أم غير مناسب — واذكر السبب.</p>');
+    B.push('<p><b>٥ · في التركيب</b> حدّث الحالة: بدأ التركيب، أو تم التركيب (صورة ما بعد التركيب إلزامية)، أو متعذّر.</p>');
+    B.push('<p><b>٦ · لو واجهت مانعًا</b> اضغط «📣 بلّغ» واختر السبب — تصل رسالة للمكتب فيها رقم الشاخص والمربع ورابط موقعك على الخريطة، فلا يسألك أحد «أنهي مخيم».</p>');
+    B.push('<p><b>٧ · «جدولي»</b> يعرض النقاط المُسندة إليك، ولكل نقطة رابط ملاحة يوصلك إليها.</p>');
+    B.push('<p><b>٨ · لو وجدت موقعًا غير مسجّل</b> اضغط «موقع غير مسجّل». النظام يفحص ١٤٠ مترًا حولك ويعرض المسجّل القريب أولًا — راجعه قبل أن تنشئ جديدًا.</p>');
+    B.push('<h2>٤ · أشياء تريحك</h2><ul>');
+    ['لا تحتاج إنترنت — كل ما تسجّله محفوظ على جهازك ويرفع نفسه تلقائيًا أول ما تعود الشبكة، ولا تضغط أي زر مزامنة.',
+     'لا يُمسح شيء من جهازك قبل أن يؤكّد الخادم استلامه.',
+     'اسم الشركة تختاره من القائمة فقط. لو لم تجدها اطلب إضافتها من داخل القائمة نفسها ويعتمدها المهندس.',
+     'رقم الشاخص بصيغة أرقام/أرقام — التطبيق يرفض غيرها حتى لا تختلط الأرقام لاحقًا.',
+     'جرس 🔔 في اللوحة يعرض ما يخصّك أنت فقط: ما أُسند إليك وما أُرجع من تدقيقك.'
+    ].forEach(function(x){ B.push('<li>'+esc(x)+'</li>'); });
+    B.push('</ul>');
+    B.push('<h2>٥ · أسئلة سريعة</h2>');
+    B.push('<p><b>نسيت أحفظ وخرجت من النموذج؟</b> ما كتبته يبقى في المسوّدة، افتح الموقع مرة أخرى وستجده.</p>');
+    B.push('<p><b>الموقع الحقيقي مختلف عن المسجّل؟</b> صحّحه من «تعديل» بجوار البند، والتصحيح يظهر للمكتب فورًا.</p>');
+    B.push('<p><b>دقة الموقع ضعيفة؟</b> التطبيق ينبّهك بالرقم ويفتح الخريطة على موقعك لتصحّح النقطة بنفسك.</p>');
+    return wrap(B);
+  }
+  if(role==='min'){
+    B.push('<h2>٣ · ماذا تعرض لكم الشاشة</h2>');
+    B.push('<p>حساب المتابعة يفتح على شاشة واحدة للقراءة فقط، بلا تفاصيل تشغيلية:</p>');
+    B.push(tbl(['البند','ماذا يعني'],[
+      ['نظرة عامة','توزيع النقاط على الحالات: مُركّب · قيد التركيب · مجدول · متعذّر · لم يُجدول'],
+      ['الوتيرة والهدف','المتبقي والمطلوب يوميًا وتاريخ الاكتمال المتوقع مقارنًا بالموعد المستهدف'],
+      ['التركيب والجدولة','ما دخل الخطة وما نُفّذ منها ونسبة الإنجاز'],
+      ['المعدل اليومي','عمليات التركيب المنفَّذة كل يوم خلال آخر أسبوعين'],
+      ['حسب المشعر','منى وعرفات ومزدلفة: العدد والمجدول والمُركّب ونسبة الإنجاز'],
+      ['حسب الشركة','أداء كل شركة خدمة: مواقعها والمُركّب والمتعذّر ونسبتها']]));
+    B.push('<h2>٤ · مصدر الأرقام وموثوقيتها</h2><ul>');
+    ['الأرقام لحظية ترفعها الأجهزة من الميدان مباشرة — ليست إدخالًا مكتبيًا لاحقًا.',
+     'كل تركيب يتطلب صورة ما بعد التركيب قبل قبوله في النظام.',
+     'كل جهاز يُعتمد بسيريال يطابقه المهندس مع سجل الأجهزة، وأي تكرار يُرفض.',
+     'كل عملية مسجّلة باسم منفّذها ووقتها في سجل لا يُعدَّل ولا يُحذف.',
+     'نسخة احتياطية يومية محفوظة بتاريخها تتيح الرجوع لحالة أي يوم.'
+    ].forEach(function(x){ B.push('<li>'+esc(x)+'</li>'); });
+    B.push('</ul>');
+    B.push('<h2>٥ · التقارير المتاحة لكم</h2>');
+    B.push('<p>من زر «تصدير» أعلى الشاشة يمكن استخراج تقرير PDF بالرسوم جاهزًا للطباعة والرفع، أو ملف إكسل بالقيم التفصيلية، أو ملف JSON للتكامل مع أنظمة أخرى. ويمكن اختيار الأقسام المطلوبة قبل التصدير.</p>');
+    return wrap(B);
+  }
   B.push('<h2>٣ · من يستخدمه ومن يرى ماذا</h2>');
   B.push(tbl(['الدور','من هو','ماذا يرى ويفعل'],[
     ['مشرف','فني ميداني على الموبايل','يمسح المواقع ويحدّث التركيب ويقترح مواقع غير مسجّلة ويرى أداءه وجدوله'],
@@ -3607,6 +3660,9 @@ window.nskGuide = function(){
   B.push('<p><b>من يستطيع حذف البيانات؟</b> الأدمن وحده وبعد كتابة عبارة تأكيد حرفية، وتبقى الحسابات وقائمة الشركات وسجل الأحداث محفوظة.</p>');
   B.push('<p><b>كيف نتأكد أن الجهاز المركّب هو الصحيح؟</b> السيريال يُدخل عند التدقيق ويُطابق مع سجل الأجهزة، وأي تكرار أو سيريال غير معروف يُنبَّه عليه قبل الاعتماد.</p>');
 
+  return wrap(B);
+  }
+function _nskWrap(B){
   return '<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word">'
     +'<head><meta charset="utf-8"><title>دليل نظام قارئات نُسُك</title>'
     +'<style>'
@@ -3619,12 +3675,13 @@ window.nskGuide = function(){
     +'td{border:0.5pt solid #D8D2C4;padding:5pt;text-align:right;font-size:10pt;color:#3A3A3A}'
     +'ul{margin:4pt 24pt 10pt 0}li{margin-bottom:4pt}'
     +'</style></head><body>'+B.join('')+'</body></html>';
-};
-window.doGuide = function(){
+}
+window.doGuide = function(role){
   try{
-    var html=window.nskGuide();
+    var html=window.nskGuide(role);
     var d=new Date(), p2=function(n){ return String(n).padStart(2,'0'); };
-    var name='دليل-نظام-نُسُك-'+d.getFullYear()+p2(d.getMonth()+1)+p2(d.getDate())+'.doc';
+    var tag={eng:'المهندس', sup:'الفني-والمشرف', min:'الوزارة'}[role]||'الكامل';
+    var name='دليل-نُسُك-'+tag+'-'+d.getFullYear()+p2(d.getMonth()+1)+p2(d.getDate())+'.doc';
     var a=document.createElement('a');
     a.href=URL.createObjectURL(new Blob(['\ufeff'+html],{type:'application/msword'}));
     a.download=name; document.body.appendChild(a); a.click(); a.remove();
@@ -3704,7 +3761,9 @@ window.mergeBackupText = async function(txt){
 };
 $('#bkBtn').onclick = ()=>window.doBackup();
 $('#schBtn').onclick = ()=>window.doSchema();
-$('#docBtn').onclick = ()=>window.doGuide();
+$('#docEng').onclick = ()=>window.doGuide('eng');
+$('#docSup').onclick = ()=>window.doGuide('sup');
+$('#docMin').onclick = ()=>window.doGuide('min');
 $('#mgBtn').onclick = ()=>{ const f=$('#mergeFile'); if(f&&f.click) f.click(); };
 $('#mergeFile').onchange = async ev=>{
   const f=ev.target.files && ev.target.files[0]; if(!f) return;
@@ -4507,6 +4566,7 @@ function start(){
       s.forEach(function(d){ const x=d.data();
         events.push({ t:(x.t&&x.t.toDate)?x.t.toDate():null, by:x.by||'', role:x.role||'', txt:x.txt||'' }); });
       if(window.NSKDASH) window.NSKDASH.refresh();
+      try{ paintBell(); }catch(e){}
     },
     function(e){ console.warn('events',e); });
   if(user.role==='viewer'){ dashAllowed=true; window.NSKDASH.open(); }
@@ -5663,6 +5723,7 @@ function render(){
   let h='';
   h+='<div class="dHead"><h1>لوحة متابعة مشروع نُسُك ١٤٤٨</h1>';
   h+='<button class="dBtn" id="dTheme" type="button" title="فاتح / داكن">🌓</button>';
+  h+='<button class="dBtn" id="bellBtn" type="button" title="ما يخصّك">🔔</button>';
   h+='<button class="dBtn" id="dAcct" type="button">الحساب</button>';
   h+='<button class="dBtn" id="dRef" type="button">تحديث</button>';
   h+='<button class="dBtn" id="dExp" type="button">⬇ تصدير</button>';
@@ -6057,6 +6118,7 @@ function render(){
       }
     })();
 
+    h+='</section>';                       /* إغلاق عُهدة الأجهزة — كان ناقصًا فتداخلت الأقسام */
     /* V5.0: إشعار الشركات بمواعيد التركيب */
     (function(){
       var canN=!!(user && (user.role==='admin'||user.role==='engineer'));
@@ -6209,6 +6271,8 @@ function render(){
     };
   });
   applyTab();
+  var bb=$i('bellBtn'); if(bb) bb.onclick=function(){ window.nskBell(); };
+  try{ paintBell(); }catch(e){}
   $i('dMap').onclick=function(){ window.NSKDASH.close(); };
   $i('dRef').onclick=function(){ render(); };
   var xb=$i('dChalX'); if(xb) xb.onclick=exportChal;
@@ -6451,6 +6515,75 @@ function render(){
   };
   $i('dAcct').onclick=function(){ const a=$i('fbAcct'); if(a) a.style.display='flex'; };
   $i('dTheme').onclick=function(){ const t=document.getElementById('thBtn'); if(t) t.click(); };
+}/* ===== V5.2: إشعارات ذكية — يظهر للمستخدم ما يخصّه فقط ===== */
+function seenAt(){ try{ return +(localStorage.getItem('nsk.seen')||0); }catch(e){ return 0; } }
+function markSeen(){ try{ localStorage.setItem('nsk.seen', String(Date.now())); }catch(e){} }
+/* هل هذا الحدث يخصّ هذا المستخدم؟ يُرجع {ok, hot} — hot = يستحق تنبيهًا فوريًا */
+function evRelevant(ev, u){
+  var role=(u&&u.role)||'', me=String((u&&(u.name||u.email))||'').trim();
+  var txt=String((ev&&ev.txt)||''), by=String((ev&&ev.by)||'').trim();
+  if(role==='viewer') return {ok:false, hot:false};       /* الوزارة: بلا ضجيج إطلاقًا */
+  if(by && by===me)   return {ok:false, hot:false};       /* لا يُنبَّه أحد على فعل نفسه */
+  var isProp   = /موقع مقترح|مقترح جديد|طلب إضافة شركة/.test(txt);
+  var isBlock  = /متعذّر/.test(txt);
+  var isReport = /بلاغ ميداني/.test(txt);
+  var isQaBack = /إرجاع تركيب/.test(txt);
+  var isAssign = /إسناد/.test(txt);
+  var isQaOk   = /اعتماد تركيب/.test(txt);
+  var isWipe   = /إعادة ضبط شاملة/.test(txt);
+  if(role==='supervisor'){
+    /* الفني: ما يخصّه هو — إسناد باسمه، أو إرجاع تدقيق، أو مسح شامل */
+    var mine = me && txt.indexOf(me)>-1;
+    if(isWipe) return {ok:true, hot:true};
+    if(isQaBack && mine) return {ok:true, hot:true};
+    if(isAssign && mine) return {ok:true, hot:true};
+    if(isQaOk && mine)   return {ok:true, hot:false};
+    return {ok:false, hot:false};
+  }
+  /* المهندس والأدمن: ما يحتاج قرارًا أو تدخّلًا */
+  if(isReport || isBlock || isWipe) return {ok:true, hot:true};
+  if(isProp) return {ok:true, hot:false};
+  if(isQaOk) return {ok:true, hot:false};
+  return {ok:false, hot:false};
+}
+window.nskBell = function(){
+  var u=window.NSK_USER||user||{};
+  var L=events.filter(function(e){ return evRelevant(e,u).ok; }).slice(0,60);
+  var ov=document.getElementById('bellOv'); if(ov) ov.remove();
+  ov=document.createElement('div'); ov.id='bellOv';
+  ov.innerHTML='<div class="bl-box">'
+    +'<button type="button" class="nskX" id="blX" aria-label="إغلاق">×</button>'
+    +'<h3>ما يخصّك</h3>'
+    +'<p class="bl-h">'+(u.role==='supervisor'
+        ? 'يظهر هنا ما أُسند إليك وما أُرجع من تدقيقك — لا يظهر نشاط الآخرين.'
+        : 'البلاغات الميدانية والمتعذّر والمقترحات والاعتمادات — أفعالك أنت لا تظهر.')+'</p>'
+    +(L.length? '<div class="bl-l">'+L.map(function(e){
+        var hot=evRelevant(e,u).hot;
+        return '<div class="bl-r'+(hot?' hot':'')+'">'
+          +'<b>'+esc2(e.txt||'')+'</b>'
+          +'<span>'+esc2(e.by||'—')+' · '+(e.t?arS(fmtT(e.t)):'—')+'</span></div>';
+      }).join('')+'</div>'
+      : '<div class="dEmpty">لا جديد يخصّك 👌</div>')
+    +'</div>';
+  document.body.appendChild(ov);
+  ov.addEventListener('click', function(e){ if(e.target===ov) ov.remove(); });
+  ov.querySelector('#blX').onclick=function(){ ov.remove(); };
+  markSeen(); paintBell();
+};
+function paintBell(){
+  var b=document.getElementById('bellBtn'); if(!b) return;
+  var u=window.NSK_USER||user||{};
+  if(((u.role||'')==='viewer')){ b.style.display='none'; return; }
+  var s=seenAt(), n=0, hot=false;
+  events.forEach(function(e){
+    var t=e.t?e.t.getTime():0; if(t<=s) return;
+    var r=evRelevant(e,u); if(!r.ok) return;
+    n++; if(r.hot) hot=true;
+  });
+  b.style.display='';
+  b.textContent = n? ('🔔 '+AR(n)) : '🔔';
+  b.classList.toggle('has', n>0);
+  b.classList.toggle('hot', hot);
 }
 window.NSKDASH={
   open:function(){ render(); const d=$i('nskDash'); d.style.display='block';
@@ -6777,6 +6910,21 @@ html[data-theme="light"] #nskDash .pRgDl{background:#fff;border-color:rgba(60,60
 #nskDash .pTyStrip input:focus,#nskDash .pRgDl:focus{outline:none;border-color:var(--gold,#C9A24B);box-shadow:0 0 0 2px rgba(201,162,75,.25)}
 #nskDash .tmDel{background:transparent;border:0;color:#E05252;font-weight:800;cursor:pointer;font:inherit;padding:0 2px}
 #nskDash select.tmSel{max-width:150px}
+#nskDash .dBtn#bellBtn.has{border-color:#4BC9F5;color:#4BC9F5}
+#nskDash .dBtn#bellBtn.hot{border-color:#E8873A;color:#E8873A;font-weight:800}
+#bellOv{position:fixed;inset:0;z-index:9750;background:rgba(0,0,0,.6);display:flex;
+  align-items:flex-end;justify-content:center;direction:rtl}
+#bellOv .bl-box{background:var(--panel,#141619);border:1px solid var(--line,#3a4a42);
+  border-radius:16px 16px 0 0;width:100%;max-width:560px;max-height:82vh;overflow:auto;
+  padding:16px 15px 18px;box-sizing:border-box;position:relative}
+#bellOv h3{margin:0 0 6px;font-size:15px;color:var(--gold,#C9A24B)}
+#bellOv .bl-h{font-size:11.5px;color:var(--muted,#9AA1AB);line-height:1.8;margin:0 0 12px}
+#bellOv .bl-l{display:flex;flex-direction:column;gap:2px}
+#bellOv .bl-r{padding:9px 10px;border-radius:9px;font-size:12.5px;line-height:1.7}
+#bellOv .bl-r:nth-child(odd){background:rgba(150,150,150,.08)}
+#bellOv .bl-r.hot{border-inline-start:3px solid #E8873A}
+#bellOv .bl-r b{display:block;font-weight:600}
+#bellOv .bl-r span{color:var(--muted,#9AA1AB);font-size:11px}
 #tellOv{position:fixed;inset:0;z-index:9700;background:rgba(0,0,0,.6);display:flex;
   align-items:flex-end;justify-content:center;direction:rtl}
 #tellOv .tl-box{background:var(--panel,#141619);border:1px solid var(--line,#3a4a42);
