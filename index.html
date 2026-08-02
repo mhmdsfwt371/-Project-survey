@@ -956,7 +956,7 @@ window.addEventListener('error', function(e){
 <div id="app">
   <header>
     <div class="t">
-      <div class="eyebrow">قارئات نُسُك ١٤٤٨هـ <span style="color:var(--muted);letter-spacing:0;font-weight:600">· نسخة V4.3</span></div>
+      <div class="eyebrow">قارئات نُسُك ١٤٤٨هـ <span style="color:var(--muted);letter-spacing:0;font-weight:600">· نسخة V4.4</span></div>
       <h1 id="ttl">المسح الميداني</h1>
     </div>
     <button class="pill" id="modeBtn" type="button">المسح</button>
@@ -3928,7 +3928,7 @@ function bindAccountPanel(p){
 </script>
 <script type="module">
 /* NSK-P23: مزامنة لحظية + سجل أحداث ٥٠٠ + لوحة متابعة الوزارة */
-import { collection, doc, setDoc, deleteDoc, getDocs, addDoc, onSnapshot, query, orderBy, limit, serverTimestamp }
+import { collection, doc, setDoc, deleteDoc, getDocs, getDocsFromServer, writeBatch, addDoc, onSnapshot, query, orderBy, limit, serverTimestamp }
   from "https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js";
 
 const db = window.NSKFB && window.NSKFB.db;
@@ -4906,16 +4906,22 @@ function saveTeams(mut){
 async function wipeCloud(withSettings, onProg){
   if(!db) throw new Error('no-db');
   var KP={recs:'rec:', inss:'ins:', props:'new:'};
-  var kinds=['recs','inss','props','photos'];
+  var kinds=['recs','inss','props'];
   if(withSettings) kinds.push('settings');
   var n=0;
+  function tick(){ if(onProg){ try{ onProg(n); }catch(e){} } }
+  async function batchDel(refs){
+    for(var bi=0; bi<refs.length; bi+=400){
+      var b=writeBatch(db), part=refs.slice(bi,bi+400);
+      part.forEach(function(rf){ b.delete(rf); });
+      await b.commit();
+      n+=part.length; tick();
+    }
+  }
   for(var qi=0; qi<kinds.length; qi++){
     var kind=kinds[qi];
-    var snap=await getDocs(collection(db,kind));
-    for(var di=0; di<snap.docs.length; di++){
-      try{ await deleteDoc(snap.docs[di].ref); }catch(e){}
-      n++; if(onProg && n%5===0){ try{ onProg(n); }catch(e){} }
-    }
+    var snap=await getDocsFromServer(collection(db,kind));
+    await batchDel(snap.docs.map(function(d){ return d.ref; }));
     if(KP[kind]){
       var m=window.NSKCORE.all(kind)||{}, ids=Object.keys(m);
       for(var ii=0; ii<ids.length; ii++){
@@ -4923,6 +4929,16 @@ async function wipeCloud(withSettings, onProg){
         try{ window.NSKCORE.rm(kind, ids[ii]); }catch(e){}
       }
     }
+  }
+  /* الصور تُحذف صفحات صغيرة (١٥ صورة) حتى لا يُنزَّل الكولكشن الضخم دفعة واحدة */
+  var lastFirst='', guard=0;
+  while(guard++ < 1500){
+    var ps=await getDocsFromServer(query(collection(db,'photos'), limit(15)));
+    if(!ps.docs.length) break;
+    var first=ps.docs[0].id;
+    if(first===lastFirst) throw new Error('photos-stalled');
+    lastFirst=first;
+    await batchDel(ps.docs.map(function(d){ return d.ref; }));
   }
   if(withSettings){
     try{ var s=window.NSKCORE.all('settings')||{};
