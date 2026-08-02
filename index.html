@@ -956,7 +956,7 @@ window.addEventListener('error', function(e){
 <div id="app">
   <header>
     <div class="t">
-      <div class="eyebrow">قارئات نُسُك ١٤٤٨هـ <span style="color:var(--muted);letter-spacing:0;font-weight:600">· نسخة V4.2</span></div>
+      <div class="eyebrow">قارئات نُسُك ١٤٤٨هـ <span style="color:var(--muted);letter-spacing:0;font-weight:600">· نسخة V4.3</span></div>
       <h1 id="ttl">المسح الميداني</h1>
     </div>
     <button class="pill" id="modeBtn" type="button">المسح</button>
@@ -3093,14 +3093,16 @@ $('#expXls').onclick=()=>{
   ws3['!cols']=[{wch:42},{wch:12},{wch:13},{wch:11},{wch:11},{wch:14},{wch:13},{wch:12}];
   XLSX.utils.book_append_sheet(wb,ws3,'حسب الشركة');
 
+  const il=Object.values(inss).sort(function(a,b){
+    return String(b.date||'').localeCompare(String(a.date||'')); });
   if(il.length){
     const ih=[['معرّف الموقع','حالة التركيب','تاريخ الجدولة','تاريخ الإتمام',
-               'آخر تحديث','بواسطة','أطقم مركّبة','ملاحظة','عدد الصور'],
+               'آخر تحديث','بواسطة','الفني المسند','أطقم مركّبة','ملاحظة','عدد الصور'],
       ...il.map(x=>[x.id,x.status,x.sched||'',x.done_date||'',x.date||'',x.by||'',
-                    (x.v||{}).kits_done||'',(x.v||{}).ins_note||'',
+                    x.team||'',(x.v||{}).kits_done||'',(x.v||{}).ins_note||'',
                     Object.keys(x.photos||{}).length])];
     const ws4=XLSX.utils.aoa_to_sheet(ih);
-    ws4['!cols']=[{wch:20},{wch:14},{wch:14},{wch:14},{wch:18},{wch:16},{wch:12},{wch:40},{wch:10}];
+    ws4['!cols']=[{wch:20},{wch:14},{wch:14},{wch:14},{wch:18},{wch:16},{wch:16},{wch:12},{wch:40},{wch:10}];
     XLSX.utils.book_append_sheet(wb,ws4,'التركيب');
   }
 
