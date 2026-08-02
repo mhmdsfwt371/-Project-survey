@@ -70,6 +70,42 @@ try {
   else ok.push(`كل الأقسام (${secs.length}) لها تبويب ✓`);
 } catch {}
 
+/* ── حارس النطاقات: يمنع تكرار خطأ isOwner (V7.0) ────────────────
+   كل <script> نطاق مستقل. دالة معرّفة في كتلة ومُستدعاة في أخرى
+   بلا window. تنفجر وقت التشغيل فقط — لا يمسكها node --check.     */
+{
+  const src = readFileSync('index.html', 'utf8');
+  const re = /<script\b([^>]*)>([\s\S]*?)<\/script>/g;
+  const blocks = []; let m;
+  while ((m = re.exec(src))) blocks.push({ a: m.index, b: re.lastIndex, code: m[2] });
+  const isLib = c => c.length > 50000 && c.length / (c.split('\n').length) > 400;
+  const lib = new Set(blocks.map((x, i) => (isLib(x.code) ? i : -1)).filter(i => i >= 0));
+  const blk = p => { for (let i = 0; i < blocks.length; i++) if (p >= blocks[i].a && p < blocks[i].b) return i; return null; };
+
+  const defs = new Map();
+  for (const d of src.matchAll(/\bfunction\s+([A-Za-z_]\w{3,})\s*\(/g)) {
+    const i = blk(d.index); if (i === null || lib.has(i)) continue;
+    if (!defs.has(d[1])) defs.set(d[1], new Set());
+    defs.get(d[1]).add(i);
+  }
+  const leaks = [];
+  for (const [name, where] of defs) {
+    if (where.size > 1) continue;
+    const home = [...where][0];
+    const rx = new RegExp('(?<![\\w.$])' + name + '\\s*\\(', 'g');
+    for (const u of src.matchAll(rx)) {
+      const i = blk(u.index); if (i === null || lib.has(i) || i === home) continue;
+      const pre = src.slice(Math.max(0, u.index - 9), u.index);
+      if (pre.includes('window.') || pre.includes('function ')) continue;
+      leaks.push(`${name}() معرّفة في كتلة ${home} ومُستدعاة في ${i}`);
+      break;
+    }
+  }
+  if (leaks.length) {
+    for (const l of leaks) fail.push(`مرجع عابر للنطاق — ${l} — صدّرها بـ window.`);
+  } else ok.push('لا مراجع عابرة بين كتل السكربت ✓');
+}
+
 ok.forEach(x => console.log('✓', x));
 if (fail.length) { fail.forEach(x => console.error('✗', x)); process.exit(1); }
 console.log('\nالتوثيق متطابق مع التطبيق ✅');

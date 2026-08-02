@@ -68,7 +68,7 @@ window.doUpdate = async function(){
   setTimeout(function(){ location.replace(location.pathname+'?v='+Date.now()); }, 350);
 };
 window.addEventListener('load', function(){
-  try{ paintLock(); }catch(e){}
+  try{ if(window.paintLock) window.paintLock(); }catch(e){}
   setTimeout(function(){ window.nskCheckUpd(true); }, 2500);
 });
 document.addEventListener('visibilitychange', function(){
@@ -922,6 +922,15 @@ textarea.in{min-height:74px;resize:vertical}
 #lockOv h2{color:#C9A24B;font-size:19px;margin:0 0 12px}
 #lockOv p{color:#C8CDD4;font-size:13.5px;line-height:2;margin:0 0 10px}
 #lockOv span{color:#7A828C;font-size:11.5px}
+#docOv{position:fixed;inset:0;z-index:9800;background:var(--bg,#0A0B0D);display:flex;flex-direction:column}
+#docOv .dv-bar{display:flex;align-items:center;justify-content:space-between;gap:10px;
+  padding:calc(9px + env(safe-area-inset-top,0px)) 12px 9px;background:var(--panel,#141619);
+  border-bottom:1px solid var(--line,#2c3a34);flex:0 0 auto}
+#docOv .dv-bar b{font-size:13px;color:var(--gold,#C9A24B);flex:1 1 auto;text-align:center}
+#docOv .dv-bar button{background:transparent;border:1.5px solid rgba(150,150,150,.5);border-radius:9px;
+  color:inherit;font:inherit;font-size:12px;padding:8px 13px;cursor:pointer;flex:0 0 auto}
+#docOv .dv-bar button.p{background:var(--gold,#C9A24B);border-color:var(--gold,#C9A24B);color:#0A0B0D;font-weight:700}
+#docOv iframe{flex:1 1 auto;width:100%;border:0;background:#fff}
 #lockOv .lk-p{margin-top:22px;display:flex;gap:7px;justify-content:center;flex-wrap:wrap}
 #lockOv .lk-p input{background:rgba(255,255,255,.07);border:1.5px solid rgba(150,150,150,.45);
   border-radius:9px;color:#F1EDE0;padding:10px 13px;font:inherit;font-size:14px;
@@ -929,6 +938,9 @@ textarea.in{min-height:74px;resize:vertical}
 #lockOv .lk-p button{background:#C9A24B;border:0;border-radius:9px;color:#0A0B0D;
   font:inherit;font-weight:700;padding:10px 20px;cursor:pointer}
 #lockOv .lk-p em{width:100%;font-style:normal;color:#E05252;font-size:11.5px;min-height:16px}
+#lockOv .lk-h{margin-top:20px;color:#5E656E;font-size:10.5px;line-height:1.9}
+#lockOv .lk-h code{background:rgba(255,255,255,.07);padding:1px 6px;border-radius:4px;
+  font-family:ui-monospace,monospace;font-size:10px;color:#9AA1AB}
 #nskDash .lkBox{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;
   border:1px solid rgba(150,150,150,.3);border-radius:10px;padding:11px 13px;margin:10px 0 6px}
 #nskDash .lkBox.on{border-color:rgba(224,82,82,.55);background:rgba(224,82,82,.07)}
@@ -1065,7 +1077,7 @@ window.addEventListener('error', function(e){
 <div id="app">
   <header>
     <div class="t">
-      <div class="eyebrow">متابعة المشروع ١٤٤٨هـ <span style="color:var(--muted);letter-spacing:0;font-weight:600">· نسخة V6.9</span></div>
+      <div class="eyebrow">متابعة المشروع ١٤٤٨هـ <span style="color:var(--muted);letter-spacing:0;font-weight:600">· نسخة V7.0</span></div>
       <h1 id="ttl">المسح الميداني</h1>
     </div>
     <button class="pill" id="modeBtn" type="button">المسح</button>
@@ -3935,26 +3947,41 @@ window.doGuidePdf = function(role){
   try{
     var html=window.nskGuide(role);
     var tag={eng:'المهندس', sup:'الفني والمشرف', min:'الوزارة'}[role]||'الكامل';
-    /* أنماط طباعة: هوامش ومنع قطع العناوين */
     var css='<style>@page{size:A4;margin:18mm 16mm}'
       +'@media print{a{text-decoration:none;color:inherit}'
       +'h1,h2,h3{break-after:avoid;page-break-after:avoid}'
       +'table,tr,td,th{break-inside:avoid;page-break-inside:avoid}'
       +'div.role,div.note{break-inside:avoid}}'
-      +'body{-webkit-print-color-adjust:exact;print-color-adjust:exact}</style>';
+      +'body{-webkit-print-color-adjust:exact;print-color-adjust:exact;margin:0;padding:16px}</style>';
     html=html.replace('</head>', css+'</head>');
-    var w=window.open('', '_blank');
-    if(!w){ toast('اسمح بالنوافذ المنبثقة لتصدير PDF',1); return; }
-    w.document.open(); w.document.write(html); w.document.close();
-    w.document.title='دليل '+tag;
-    var go=function(){ try{ w.focus(); w.print(); }catch(e){} };
-    if(w.document.readyState==='complete') setTimeout(go,350);
-    else w.onload=function(){ setTimeout(go,350); };
-    toast('اختر «حفظ كـ PDF» من نافذة الطباعة');
-    try{ if(window.NSKSYNC) NSKSYNC.log('تنزيل دليل '+tag+' (PDF)'); }catch(e){}
-  }catch(e){ toast('تعذّر فتح نافذة الطباعة',1); }
+    /* يُعرض داخل التطبيق — لا نافذة جديدة تضيع منها طريق الرجوع */
+    var ov=document.getElementById('docOv'); if(ov) ov.remove();
+    ov=document.createElement('div'); ov.id='docOv';
+    ov.innerHTML='<div class="dv-bar">'
+      +'<button type="button" id="dvX" aria-label="رجوع">✕ رجوع</button>'
+      +'<b>دليل '+esc2(tag)+'</b>'
+      +'<button type="button" id="dvP" class="p">🖨 حفظ PDF</button>'
+      +'</div><iframe id="dvF" title="دليل '+esc2(tag)+'"></iframe>';
+    document.body.appendChild(ov);
+    var f=document.getElementById('dvF');
+    f.srcdoc=html;
+    document.getElementById('dvX').onclick=function(){ ov.remove(); };
+    document.getElementById('dvP').onclick=function(){
+      try{ f.contentWindow.focus(); f.contentWindow.print(); }
+      catch(e){ try{ window.print(); }catch(e2){ toast('تعذّرت الطباعة',1); } }
+    };
+    /* زر الرجوع في الجهاز يغلق العارض بدل مغادرة التطبيق */
+    try{
+      history.pushState({docOv:1},'');
+      var onPop=function(){ var o=document.getElementById('docOv'); if(o) o.remove();
+        window.removeEventListener('popstate',onPop); };
+      window.addEventListener('popstate', onPop);
+      document.getElementById('dvX').addEventListener('click', function(){
+        try{ history.back(); }catch(e){} });
+    }catch(e){}
+    try{ if(window.NSKSYNC) NSKSYNC.log('فتح دليل '+tag+' (PDF)'); }catch(e){}
+  }catch(e){ toast('تعذّر فتح الدليل',1); }
 };
-/* الأزرار الرئيسية: PDF للجميع بلا استثناء — و Word من صفّه المخصّص للإدارة */
 window.doGuide = function(role){ return window.doGuidePdf(role); };
 window._doGuideDocLegacy = function(role){
   try{
@@ -4413,6 +4440,9 @@ onAuthStateChanged(auth, u=>{
 
 /* ===== V6.7: قفل مركزي — يوقف التطبيق للجميع إلا المالك ===== */
 const LOCK_KEY='nsk.lock';
+/* نسخة محلية — esc2 معرّفة في كتلة أخرى ولا تُرى من هنا */
+function _lkEsc(t){ return String(t==null?'':t)
+  .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
 const PIN_KEY='nsk.lockpin';           /* بصمة الرمز على هذا الجهاز وحده */
 async function _lkHash(t){
   try{
@@ -4448,6 +4478,14 @@ function isLocked(){
   var L=lockRead(); if(!(L && L.on)) return false;
   return !pinOK();
 }
+/* كل كتلة سكربت نطاق مستقل — لا بد من التصدير ليراها الباقي */
+window.isOwner   = isOwner;
+window.pinOK     = pinOK;
+window.isLocked  = isLocked;
+window.paintLock = paintLock;
+window.lockRead  = lockRead;
+window.lockWrite = lockWrite;
+window.lkHash    = _lkHash;
 /* محاولة إدخال الرمز من شاشة القفل */
 window.tryPin = async function(v){
   var L=lockRead(); if(!L || !L.pinHash) return false;
@@ -4466,12 +4504,14 @@ function paintLock(){
   ov.innerHTML='<div class="lk-b">'
     +'<div class="lk-i">🔒</div>'
     +'<h2>التطبيق مغلق مؤقتًا</h2>'
-    +'<p>'+esc2(String((L&&L.msg)||'أُوقف الوصول من إدارة المشروع. لا تُفقد أي بيانات — يعود العمل عند إعادة الفتح.'))+'</p>'
-    +(L&&L.at?'<span>منذ '+esc2(String(L.at).slice(0,16).replace('T',' '))+'</span>':'')
+    +'<p>'+_lkEsc(String((L&&L.msg)||'أُوقف الوصول من إدارة المشروع. لا تُفقد أي بيانات — يعود العمل عند إعادة الفتح.'))+'</p>'
+    +(L&&L.at?'<span>منذ '+_lkEsc(String(L.at).slice(0,16).replace('T',' '))+'</span>':'')
     +(L&&L.pinHash?'<div class="lk-p">'
       +'<input id="lkPin" type="password" inputmode="numeric" placeholder="رمز المالك" autocomplete="off">'
       +'<button type="button" id="lkGo">دخول</button>'
-      +'<em id="lkErr"></em></div>':'')
+      +'<em id="lkErr"></em></div>'
+      +'<div class="lk-h">نسيت الرمز؟ يُعاد الفتح من وحدة تحكم Firebase: '
+      +'احذف مستند <code>settings/lock</code> — ويعود التطبيق فورًا لكل الأجهزة.</div>':'')
     +'</div>';
   document.body.appendChild(ov);
   var gi=document.getElementById('lkGo');
@@ -4801,7 +4841,9 @@ function _lockFromSettings(){
   try{
     var C=window.NSKCORE; if(!C) return;
     var L=(C.all('settings')||{})['lock'];
-    if(L && typeof L.on!=='undefined'){ lockWrite({on:!!L.on, msg:L.msg||'', at:L.at||''}); paintLock(); }
+    if(L && typeof L.on!=='undefined'){
+      window.lockWrite({on:!!L.on, msg:L.msg||'', at:L.at||'', pinHash:L.pinHash||''});
+      window.paintLock(); }
   }catch(e){}
 }
 async function applySnap(kind, snap){
@@ -5918,12 +5960,13 @@ async function wipeCloud(withSettings, onProg){
 /* يتحقق فعليًا أن كل شيء صار صفرًا — ذاكرةً وتخزينًا */
 /* تبديل القفل — للمالك وحده */
 window.setLock = async function(on, msg, pin){
-  if(!isOwner() && !pinOK()){ toast('هذا الإجراء للمالك فقط',1); return; }
+  if(!(window.isOwner&&window.isOwner()) && !(window.pinOK&&window.pinOK())){
+    toast('هذا الإجراء للمالك فقط',1); return; }
   var rec={on:!!on, msg:String(msg||''), at:new Date().toISOString(), by:(window.NSK_USER||{}).email||''};
   if(on){
     var p=String(pin||'').trim();
     if(p.length<4){ toast('اختر رمزًا من ٤ أرقام على الأقل',1); return; }
-    rec.pinHash=await _lkHash(p);
+    rec.pinHash=await window.lkHash(p);
     try{ localStorage.setItem(PIN_KEY, rec.pinHash); }catch(e){}   /* جهازك يمرّ فورًا */
   } else {
     try{ localStorage.removeItem(PIN_KEY); }catch(e){}
@@ -5933,7 +5976,7 @@ window.setLock = async function(on, msg, pin){
     if(window.NSKSYNC) NSKSYNC.push('settings','lock',rec);
     if(window.NSKSYNC) NSKSYNC.log(on?'إغلاق التطبيق لكل المستخدمين':'إعادة فتح التطبيق');
   }catch(e){}
-  lockWrite(rec); paintLock();
+  window.lockWrite(rec); window.paintLock();
   toast(on?'أُغلق التطبيق للجميع عداك ✓':'أُعيد فتح التطبيق ✓');
   try{ if(window.NSKDASH) NSKDASH.refresh(); }catch(e){}
 };
@@ -6750,8 +6793,8 @@ function render(){
     h+=card(S.noco,'مواقع بلا إحداثيات','#E8873A');
     h+=card(S.pend,'تغييرات لم تُزامن بعد','#4BC9F5');
     h+='</div>';
-    if(isOwner()){
-      var LK=lockRead();
+    if(window.isOwner && window.isOwner()){
+      var LK=window.lockRead();
       h+='<div class="lkBox'+(LK.on?' on':'')+'">'
         +'<div><b>'+(LK.on?'🔒 التطبيق مغلق للجميع':'🔓 التطبيق مفتوح')+'</b>'
         +'<span>'+(LK.on
@@ -7011,7 +7054,7 @@ function render(){
   }; });
   var _sy=$i('syRetry'); if(_sy) _sy.onclick=function(){ window.retrySync(); };
   var _lk=$i('lkBtn'); if(_lk) _lk.onclick=function(){
-    var L=lockRead();
+    var L=window.lockRead();
     if(L.on){ window.setLock(false,''); return; }
     var pin=prompt('اختر رمز المالك (٤ أرقام فأكثر).\n\nمن يعرف هذا الرمز وحده يمرّ — حتى لو كان معه حسابك.\nاحفظه: ستحتاجه على أي جهاز جديد.','');
     if(pin===null) return;
