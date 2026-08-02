@@ -67,7 +67,10 @@ window.doUpdate = async function(){
   }catch(e){}
   setTimeout(function(){ location.replace(location.pathname+'?v='+Date.now()); }, 350);
 };
-window.addEventListener('load', function(){ setTimeout(function(){ window.nskCheckUpd(true); }, 2500); });
+window.addEventListener('load', function(){
+  try{ paintLock(); }catch(e){}
+  setTimeout(function(){ window.nskCheckUpd(true); }, 2500);
+});
 document.addEventListener('visibilitychange', function(){
   if(!document.hidden) setTimeout(function(){ window.nskCheckUpd(true); }, 800);
 });
@@ -912,6 +915,22 @@ textarea.in{min-height:74px;resize:vertical}
 #mgrTbl .mgDr{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;
   background:rgba(232,135,58,.09);border:1px solid rgba(232,135,58,.35);border-radius:10px;
   padding:9px 12px;margin-bottom:10px;font-size:11.5px;line-height:1.7;color:var(--muted,#9AA1AB)}
+#lockOv{position:fixed;inset:0;z-index:99999;background:#0A0B0D;display:flex;
+  align-items:center;justify-content:center;padding:26px;direction:rtl;text-align:center}
+#lockOv .lk-b{max-width:400px}
+#lockOv .lk-i{font-size:52px;margin-bottom:14px}
+#lockOv h2{color:#C9A24B;font-size:19px;margin:0 0 12px}
+#lockOv p{color:#C8CDD4;font-size:13.5px;line-height:2;margin:0 0 10px}
+#lockOv span{color:#7A828C;font-size:11.5px}
+#nskDash .lkBox{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;
+  border:1px solid rgba(150,150,150,.3);border-radius:10px;padding:11px 13px;margin:10px 0 6px}
+#nskDash .lkBox.on{border-color:rgba(224,82,82,.55);background:rgba(224,82,82,.07)}
+#nskDash .lkBox b{display:block;font-size:12.5px;margin-bottom:3px}
+#nskDash .lkBox span{color:var(--muted,#9AA1AB);font-size:11px;line-height:1.7}
+#nskDash .lkBox button{background:transparent;border:1px solid rgba(150,150,150,.5);border-radius:8px;
+  color:inherit;font:inherit;font-size:11.5px;padding:7px 14px;cursor:pointer;flex:0 0 auto}
+#nskDash .lkBox.on button{border-color:rgba(58,214,160,.6);color:#3AD6A0}
+#nskDash .lkBox:not(.on) button{border-color:rgba(224,82,82,.6);color:#E05252}
 #nskDash .syBox{border:1px solid rgba(75,201,245,.35);border-radius:10px;overflow:hidden;margin:10px 0 6px}
 #nskDash .syHd{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;
   background:rgba(75,201,245,.10);padding:9px 12px;font-size:12px}
@@ -1039,7 +1058,7 @@ window.addEventListener('error', function(e){
 <div id="app">
   <header>
     <div class="t">
-      <div class="eyebrow">متابعة المشروع ١٤٤٨هـ <span style="color:var(--muted);letter-spacing:0;font-weight:600">· نسخة V6.6</span></div>
+      <div class="eyebrow">متابعة المشروع ١٤٤٨هـ <span style="color:var(--muted);letter-spacing:0;font-weight:600">· نسخة V6.7</span></div>
       <h1 id="ttl">المسح الميداني</h1>
     </div>
     <button class="pill" id="modeBtn" type="button">المسح</button>
@@ -4310,7 +4329,7 @@ async function healBoss(user, p){
 }
 
 onAuthStateChanged(auth, u=>{
-  if(u){ afterUser(u); }
+  if(u){ afterUser(u); setTimeout(paintLock, 400); }
   else{
     say('');
     try{ localStorage.removeItem('nsk.user'); }catch(e){}
@@ -4318,6 +4337,37 @@ onAuthStateChanged(auth, u=>{
   }
 });
 
+/* ===== V6.7: قفل مركزي — يوقف التطبيق للجميع إلا المالك ===== */
+const LOCK_KEY='nsk.lock';
+function lockRead(){
+  try{ return JSON.parse(localStorage.getItem(LOCK_KEY)||'null') || {on:false}; }
+  catch(e){ return {on:false}; }
+}
+function lockWrite(o){ try{ localStorage.setItem(LOCK_KEY, JSON.stringify(o||{on:false})); }catch(e){} }
+/* المالك وحده يمرّ — حتى لو القفل مفعّل */
+function isOwner(){
+  try{
+    var e=String(((window.NSK_USER||{}).email)||'').toLowerCase();
+    if(!e){ var s=JSON.parse(localStorage.getItem('nsk.user')||'null'); e=String((s&&s.email)||'').toLowerCase(); }
+    return e===BOSS_EMAIL;
+  }catch(e){ return false; }
+}
+function isLocked(){ var L=lockRead(); return !!(L && L.on) && !isOwner(); }
+/* شاشة القفل — لا تُغلق ولا تُتجاوز */
+function paintLock(){
+  var ov=document.getElementById('lockOv');
+  if(!isLocked()){ if(ov) ov.remove(); return; }
+  var L=lockRead();
+  if(ov) return;
+  ov=document.createElement('div'); ov.id='lockOv';
+  ov.innerHTML='<div class="lk-b">'
+    +'<div class="lk-i">🔒</div>'
+    +'<h2>التطبيق مغلق مؤقتًا</h2>'
+    +'<p>'+esc2(String((L&&L.msg)||'أُوقف الوصول من إدارة المشروع. لا تُفقد أي بيانات — يعود العمل عند إعادة الفتح.'))+'</p>'
+    +(L&&L.at?'<span>منذ '+esc2(String(L.at).slice(0,16).replace('T',' '))+'</span>':'')
+    +'</div>';
+  document.body.appendChild(ov);
+}
 const RM_KEY='nsk.rm';
 function rmLoad(){ try{ return JSON.parse(localStorage.getItem(RM_KEY)||'null'); }catch(e){ return null; } }
 function rmSave(em,pw){ try{ localStorage.setItem(RM_KEY,
@@ -4630,6 +4680,14 @@ function _markSynced(kind, id, ok, err){
     try{ if(window.NSKDASH && NSKDASH.refresh) NSKDASH.refresh(); }catch(e){}
   }catch(e){}
 }
+/* أي تغيير في settings/lock ينعكس فورًا على كل الأجهزة المتصلة */
+function _lockFromSettings(){
+  try{
+    var C=window.NSKCORE; if(!C) return;
+    var L=(C.all('settings')||{})['lock'];
+    if(L && typeof L.on!=='undefined'){ lockWrite({on:!!L.on, msg:L.msg||'', at:L.at||''}); paintLock(); }
+  }catch(e){}
+}
 async function applySnap(kind, snap){
   const C = window.NSKCORE; if(!C) return;
   let changed=0;
@@ -4664,6 +4722,7 @@ async function applySnap(kind, snap){
       if(dirtyToast){ dirtyToast=false; try{ toast('مزامنة: وصلت تحديثات جديدة'); }catch(e){} }
     },450);
   } else if(snap.metadata && !snap.metadata.fromCache){ lastSync=new Date(); chipIdle(); }
+  if(kind==='settings'){ try{ _lockFromSettings(); }catch(e){} }
 }
 
 const PHBUF={};
@@ -5741,6 +5800,19 @@ async function wipeCloud(withSettings, onProg){
   return n;
 }
 /* يتحقق فعليًا أن كل شيء صار صفرًا — ذاكرةً وتخزينًا */
+/* تبديل القفل — للمالك وحده */
+window.setLock = async function(on, msg){
+  if(!isOwner()){ toast('هذا الإجراء للمالك فقط',1); return; }
+  var rec={on:!!on, msg:String(msg||''), at:new Date().toISOString(), by:(window.NSK_USER||{}).email||''};
+  try{
+    if(window.NSKCORE) window.NSKCORE.set('settings','lock',rec);
+    if(window.NSKSYNC) NSKSYNC.push('settings','lock',rec);
+    if(window.NSKSYNC) NSKSYNC.log(on?'إغلاق التطبيق لكل المستخدمين':'إعادة فتح التطبيق');
+  }catch(e){}
+  lockWrite(rec); paintLock();
+  toast(on?'أُغلق التطبيق للجميع عداك ✓':'أُعيد فتح التطبيق ✓');
+  try{ if(window.NSKDASH) NSKDASH.refresh(); }catch(e){}
+};
 window.wipeVerify = async function(){
   var C=window.NSKCORE, left=[];
   var KP={recs:'rec:', inss:'ins:', props:'new:'};
@@ -6554,6 +6626,16 @@ function render(){
     h+=card(S.noco,'مواقع بلا إحداثيات','#E8873A');
     h+=card(S.pend,'تغييرات لم تُزامن بعد','#4BC9F5');
     h+='</div>';
+    if(isOwner()){
+      var LK=lockRead();
+      h+='<div class="lkBox'+(LK.on?' on':'')+'">'
+        +'<div><b>'+(LK.on?'🔒 التطبيق مغلق للجميع':'🔓 التطبيق مفتوح')+'</b>'
+        +'<span>'+(LK.on
+          ? 'لا أحد يستطيع استخدامه عداك. البيانات سليمة ولا شيء يُفقد.'
+          : 'يمكنك إيقاف الوصول لكل المستخدمين فورًا — وأنت وحدك تظل تعمل.')+'</span></div>'
+        +'<button type="button" id="lkBtn">'+(LK.on?'إعادة الفتح':'إغلاق التطبيق')+'</button>'
+        +'</div>';
+    }
     (function(){
       var UL=[]; try{ UL=window.unsyncedList()||[]; }catch(e){}
       if(!UL.length){
@@ -6804,6 +6886,14 @@ function render(){
     if(qaReturn(R.getAttribute('data-id'), ni?ni.value:'')){ try{ toast('أُرجع للفريق ↩'); }catch(e){} render(); }
   }; });
   var _sy=$i('syRetry'); if(_sy) _sy.onclick=function(){ window.retrySync(); };
+  var _lk=$i('lkBtn'); if(_lk) _lk.onclick=function(){
+    var L=lockRead();
+    if(L.on){ window.setLock(false,''); return; }
+    var m=prompt('رسالة تظهر للمستخدمين (اتركها فارغة للرسالة الافتراضية):','');
+    if(m===null) return;
+    if(!confirm('إغلاق التطبيق لكل المستخدمين؟\n\nلن يستطيع أحد استخدامه عداك حتى تعيد فتحه. لا تُفقد أي بيانات.')) return;
+    window.setLock(true, m);
+  };
   Array.prototype.forEach.call(document.querySelectorAll('#nskDash .qaGo'),function(el){ el.onclick=function(){
     var id=el.getAttribute('data-id');
     try{ var d=$i('nskDash'); if(d) d.style.display='none'; }catch(e){}
