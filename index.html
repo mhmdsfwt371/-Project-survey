@@ -1065,7 +1065,7 @@ window.addEventListener('error', function(e){
 <div id="app">
   <header>
     <div class="t">
-      <div class="eyebrow">متابعة المشروع ١٤٤٨هـ <span style="color:var(--muted);letter-spacing:0;font-weight:600">· نسخة V6.8</span></div>
+      <div class="eyebrow">متابعة المشروع ١٤٤٨هـ <span style="color:var(--muted);letter-spacing:0;font-weight:600">· نسخة V6.9</span></div>
       <h1 id="ttl">المسح الميداني</h1>
     </div>
     <button class="pill" id="modeBtn" type="button">المسح</button>
@@ -1166,10 +1166,18 @@ window.addEventListener('error', function(e){
           <button class="btn s" id="updBtn" type="button" style="margin-top:10px">🔄 فحص التحديثات الآن</button>
           <button class="btn s" id="schBtn" type="button" style="margin-top:10px">🧩 ملف الواجهات JSON — للمطوّرين والتكامل</button>
           <div id="docWrap">
-          <div style="font-size:11px;color:var(--muted);line-height:1.8;margin-top:12px">📄 دليل النظام Word:</div>
+          <div style="font-size:11px;color:var(--muted);line-height:1.8;margin-top:12px">📄 أدلة النظام — PDF:</div>
           <button class="btn s" id="docSup" type="button" style="margin-top:7px">دليل الفني والمشرف — العمل الميداني</button>
           <button class="btn s" id="docEng" type="button" style="margin-top:7px">دليل المهندس — إدارة المشروع</button>
           <button class="btn s" id="docMin" type="button" style="margin-top:7px">دليل الوزارة — المتابعة</button>
+          <div id="docWordRow" style="display:none;margin-top:10px;
+            border-top:1px solid rgba(150,150,150,.25);padding-top:10px">
+            <div style="font-size:10.5px;color:var(--muted);margin-bottom:7px">
+              نسخة Word للتحرير — للإدارة فقط</div>
+            <button class="btn s" id="gdWEng" type="button">⬇ Word — دليل المهندس</button>
+            <button class="btn s" id="gdWSup" type="button" style="margin-top:7px">⬇ Word — دليل الفني</button>
+            <button class="btn s" id="gdWMin" type="button" style="margin-top:7px">⬇ Word — دليل الوزارة</button>
+          </div>
           </div>
           <input id="mergeFile" type="file" accept=".json,application/json" hidden/>
           <div style="font-size:11px;color:var(--muted);line-height:1.8;margin-top:9px">
@@ -3914,7 +3922,41 @@ function _nskWrap(B){
     +'ul{margin:4pt 24pt 10pt 0}li{margin-bottom:4pt}'
     +'</style></head><body>'+B.join('')+'</body></html>';
 }
-window.doGuide = function(role){
+/* هل المستخدم إداري؟ Word له وحده */
+function _isAdminRole(){
+  try{
+    var u=window.NSK_USER||JSON.parse(localStorage.getItem('nsk.user')||'null')||{};
+    var r=String(u.role||'');
+    return r==='admin' || r==='engineer';
+  }catch(e){ return false; }
+}
+/* PDF: نافذة طباعة — المتصفح يشكّل العربية ويتيح «حفظ كـ PDF» */
+window.doGuidePdf = function(role){
+  try{
+    var html=window.nskGuide(role);
+    var tag={eng:'المهندس', sup:'الفني والمشرف', min:'الوزارة'}[role]||'الكامل';
+    /* أنماط طباعة: هوامش ومنع قطع العناوين */
+    var css='<style>@page{size:A4;margin:18mm 16mm}'
+      +'@media print{a{text-decoration:none;color:inherit}'
+      +'h1,h2,h3{break-after:avoid;page-break-after:avoid}'
+      +'table,tr,td,th{break-inside:avoid;page-break-inside:avoid}'
+      +'div.role,div.note{break-inside:avoid}}'
+      +'body{-webkit-print-color-adjust:exact;print-color-adjust:exact}</style>';
+    html=html.replace('</head>', css+'</head>');
+    var w=window.open('', '_blank');
+    if(!w){ toast('اسمح بالنوافذ المنبثقة لتصدير PDF',1); return; }
+    w.document.open(); w.document.write(html); w.document.close();
+    w.document.title='دليل '+tag;
+    var go=function(){ try{ w.focus(); w.print(); }catch(e){} };
+    if(w.document.readyState==='complete') setTimeout(go,350);
+    else w.onload=function(){ setTimeout(go,350); };
+    toast('اختر «حفظ كـ PDF» من نافذة الطباعة');
+    try{ if(window.NSKSYNC) NSKSYNC.log('تنزيل دليل '+tag+' (PDF)'); }catch(e){}
+  }catch(e){ toast('تعذّر فتح نافذة الطباعة',1); }
+};
+/* الأزرار الرئيسية: PDF للجميع بلا استثناء — و Word من صفّه المخصّص للإدارة */
+window.doGuide = function(role){ return window.doGuidePdf(role); };
+window._doGuideDocLegacy = function(role){
   try{
     var html=window.nskGuide(role);
     var d=new Date(), p2=function(n){ return String(n).padStart(2,'0'); };
@@ -3925,7 +3967,22 @@ window.doGuide = function(role){
     a.download=name; document.body.appendChild(a); a.click(); a.remove();
     setTimeout(function(){ try{URL.revokeObjectURL(a.href);}catch(e){} },4000);
     toast('نزل دليل النظام — يفتح في Word ✓');
-    try{ if(window.NSKSYNC) NSKSYNC.log('تنزيل دليل النظام'); }catch(e){}
+    try{ if(window.NSKSYNC) NSKSYNC.log('تنزيل دليل النظام (Word)'); }catch(e){}
+  }catch(e){ toast('تعذّر إنشاء الملف',1); }
+};
+window.doGuideWord = function(role){
+  if(!_isAdminRole()){ toast('نسخة Word للإدارة فقط',1); return; }
+  try{
+    var html=window.nskGuide(role);
+    var d=new Date(), p2=function(n){ return String(n).padStart(2,'0'); };
+    var tag={eng:'المهندس', sup:'الفني-والمشرف', min:'الوزارة'}[role]||'الكامل';
+    var name='دليل-متابعة-المشروع-'+tag+'-'+d.getFullYear()+p2(d.getMonth()+1)+p2(d.getDate())+'.doc';
+    var a=document.createElement('a');
+    a.href=URL.createObjectURL(new Blob(['\ufeff'+html],{type:'application/msword'}));
+    a.download=name; document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(function(){ try{URL.revokeObjectURL(a.href);}catch(e){} },4000);
+    toast('نزلت نسخة Word للتحرير ✓');
+    try{ if(window.NSKSYNC) NSKSYNC.log('تنزيل دليل '+tag+' (Word)'); }catch(e){}
   }catch(e){ toast('تعذّر إنشاء الملف',1); }
 };
 window.doSchema = function(){
@@ -4000,7 +4057,17 @@ window.mergeBackupText = async function(txt){
 $('#bkBtn').onclick = ()=>window.doBackup();
 $('#updBtn').onclick = ()=>window.nskCheckUpd(false);
 $('#schBtn').onclick = ()=>window.doSchema();
+['Eng','Sup','Min'].forEach(function(k){
+  var b=$('#gdW'+k); if(b) b.onclick=function(){
+    window.doGuideWord({Eng:'eng',Sup:'sup',Min:'min'}[k]);
+  };
+});
 window.applyDocRole = function(){
+  /* صف Word لا يظهر إلا للإداري */
+  try{
+    var wr=document.getElementById('docWordRow');
+    if(wr) wr.style.display=_isAdminRole()?'':'none';
+  }catch(e){}
   var ro=nskRole();
   var vis = ro==='admin'||ro==='engineer' ? {docSup:1,docEng:1,docMin:1}
           : ro==='viewer'                 ? {docMin:1}
