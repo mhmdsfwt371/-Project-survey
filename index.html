@@ -909,6 +909,11 @@ textarea.in{min-height:74px;resize:vertical}
 #updBar button{background:#0A0B0D;color:#F1EDE0;border:0;border-radius:999px;
   padding:7px 16px;font:inherit;font-weight:800;cursor:pointer}
 #updBar button:disabled{opacity:.6}
+#mgrTbl .mgDr{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;
+  background:rgba(232,135,58,.09);border:1px solid rgba(232,135,58,.35);border-radius:10px;
+  padding:9px 12px;margin-bottom:10px;font-size:11.5px;line-height:1.7;color:var(--muted,#9AA1AB)}
+#mgrTbl .mgDr button{background:transparent;border:1px solid rgba(232,135,58,.6);border-radius:8px;
+  color:#E8873A;font:inherit;font-size:11.5px;padding:6px 12px;cursor:pointer;flex:0 0 auto}
 #belPill.has{border-color:#4BC9F5;color:#4BC9F5}
 #belPill.hot{border-color:#E8873A;color:#E8873A;font-weight:800}
 #nskGps{position:absolute;inset-block-end:14px;inset-inline-end:14px;z-index:830;
@@ -1018,7 +1023,7 @@ window.addEventListener('error', function(e){
 <div id="app">
   <header>
     <div class="t">
-      <div class="eyebrow">قارئات نُسُك ١٤٤٨هـ <span style="color:var(--muted);letter-spacing:0;font-weight:600">· نسخة V5.8</span></div>
+      <div class="eyebrow">قارئات نُسُك ١٤٤٨هـ <span style="color:var(--muted);letter-spacing:0;font-weight:600">· نسخة V5.9</span></div>
       <h1 id="ttl">المسح الميداني</h1>
     </div>
     <button class="pill" id="modeBtn" type="button">المسح</button>
@@ -1385,6 +1390,16 @@ const _INERT = {onclick:null,textContent:'',innerHTML:'',value:'',hidden:true,
   focus(){},closest(){return null},remove(){}};
 const $ = s=>document.querySelector(s)||Object.create(_INERT);
 const st = id => (recs[id]||{}).fstat || (PENDING.has(id) ? 'pending' : 'new');
+/* سجل «تمت زيارته فعلًا»: إما وُسم على الخريطة تمت الزيارة/تم التركيب،
+   أو حُفظ مكتملًا أو بحالة متعذّر الوصول — أما المسوّدة الناقصة فلا. */
+function isVisited(r){
+  if(!r) return false;
+  var s=r.status||'';
+  if(s==='proposed' || s==='pending') return true;      /* المقترحات مسار مستقل */
+  var f=r.fstat||'';
+  if(f==='done' || f==='blocked') return true;
+  return s==='done' || s==='blocked';
+}
 const nameOf = r => (((recs[r[0]]||{}).fix||{}).name) || r[1];
 const ist = id => (inss[id] && inss[id].status) || 'لم يبدأ';
 const colOf = id => SC[st(id)];
@@ -3040,6 +3055,8 @@ async function saveNew(){
   toast(editId ? 'تم حفظ التعديل — '+id : 'تم الإرسال — '+id+' بانتظار اعتماد المكتب');
   setTimeout(()=>show('vList'),900);
 }
+let MG_DR=false;                                        /* إظهار المسوّدات — إيقاف افتراضيًا */
+window.mgDrafts=function(){ MG_DR=!MG_DR; drawMgr(); };
 function drawMgr(){
   try{ drawPend(); }catch(e){}
   if(appMode==='install'){
@@ -3061,8 +3078,10 @@ function drawMgr(){
       : '<div class="empty">لم يصل أي تحديث تركيب بعد.</div>';
     return;
   }
-  const list=[...Object.values(recs),...Object.values(props)]
+  const ALLR=[...Object.values(recs),...Object.values(props)]
     .sort((a,b)=>(b.date||'').localeCompare(a.date||''));
+  const DR=ALLR.filter(r=>!isVisited(r));               /* مسوّدات ناقصة — مخفية افتراضيًا */
+  const list=MG_DR ? ALLR : ALLR.filter(isVisited);
   const done=Object.values(recs).filter(r=>r.status==='done').length;
   const fit=Object.values(recs).filter(r=>r.fit==='مناسب').length;
   const bad=Object.values(recs).filter(r=>r.fit==='غير مناسب').length;
@@ -3078,6 +3097,7 @@ function drawMgr(){
   $('#mCiv').textContent=civ.toLocaleString('ar-EG');
 
   const box=$('#mgrTbl');
+  window.__mgDR=DR.length;
   if(!list.length){
     box.innerHTML='<div class="empty">لم يصل أي مسح بعد.<br/>'+
       'افتح أي موقع من تبويب «المواقع»، املأ القياسات واحفظ — وسيظهر هنا فورًا.</div>';
@@ -3085,7 +3105,13 @@ function drawMgr(){
   }
   const fitCol=f=> f==='مناسب'?'#3AD6A0': f==='غير مناسب'?'#E05252':
                    f?'#E8C34B':'#9AA1AB';
-  box.innerHTML='<div class="scroll"><table class="mg"><thead><tr>'+
+  box.innerHTML=(DR.length
+      ? '<div class="mgDr"><span>'+(MG_DR
+          ? 'المسوّدات الناقصة ظاهرة الآن ضمن الجدول — '+DR.length.toLocaleString('ar-EG')+' سجلًا لم تكتمل زيارته.'
+          : 'مخفيّ: '+DR.length.toLocaleString('ar-EG')+' سجلًا فُتح ولم تكتمل زيارته — لا يظهر هنا حتى تُسجَّل الزيارة.')
+        +'</span><button type="button" id="mgDrBtn">'+(MG_DR?'إخفاء المسوّدات':'إظهار المسوّدات')+'</button></div>'
+      : '')
+    +'<div class="scroll"><table class="mg"><thead><tr>'+
     ['الموقع','المشعر','الشركة','الشاخص','الغرف','الطول','العرض','الارتفاع','الصلاحية',
      'التحديات','مدني','هوائي','قارئ','ساعات','الصور','المشرف','تاريخ المسح','آخر تعديل','مراجعة',
      'الحالة الميدانية','اكتمال السجل']
@@ -3120,6 +3146,7 @@ function drawMgr(){
         '<td><span class="tag" style="background:'+recCol(r)+'22;color:'+recCol(r)+'">'+
           rlbl(r)+'</span></td></tr>';
     }).join('')+'</tbody></table></div>';
+  var _db=$('#mgDrBtn'); if(_db) _db.onclick=function(){ window.mgDrafts(); };
 }
 
 function drawOut(){
