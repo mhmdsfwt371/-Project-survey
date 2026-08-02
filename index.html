@@ -967,7 +967,7 @@ window.addEventListener('error', function(e){
 <div id="app">
   <header>
     <div class="t">
-      <div class="eyebrow">قارئات نُسُك ١٤٤٨هـ <span style="color:var(--muted);letter-spacing:0;font-weight:600">· نسخة V5.3</span></div>
+      <div class="eyebrow">قارئات نُسُك ١٤٤٨هـ <span style="color:var(--muted);letter-spacing:0;font-weight:600">· نسخة V5.4</span></div>
       <h1 id="ttl">المسح الميداني</h1>
     </div>
     <button class="pill" id="modeBtn" type="button">المسح</button>
@@ -3549,13 +3549,36 @@ window.nskGuide = function(role){
       +'</table>';
   }
   var d=new Date(), dt=d.getFullYear()+'-'+('0'+(d.getMonth()+1)).slice(-2)+'-'+('0'+d.getDate()).slice(-2);
-  var TITLE={eng:'دليل المهندس — إدارة المشروع',
-             sup:'دليل الفني والمشرف — العمل الميداني',
-             min:'دليل المتابعة — الجهة الوزارية'}[role]||'دليل مبسّط لفهم النظام';
+  var TITLE={eng:'دليل الاستخدام الكامل — المهندس وإدارة المشروع',
+             sup:'دليل الاستخدام — الفني والمشرف',
+             min:'دليل الاستخدام — الجهة الوزارية'}[role]||'دليل الاستخدام';
+  var ROLE={
+    eng:'<b>دورك في النظام:</b> أنت العقل المدبّر. تقرر ما يدخل خطة التركيب، وتوزّع النقاط على الفنيين، وتعتمد ما يقترحونه، وتدقّق كل جهاز مركّب بسيرياله، وتضبط الأهداف وتتابع الوتيرة، وتخاطب الشركات بمواعيد التركيب. هذا الدليل يغطي النظام كله بما فيه فصلا الميدان والوزارة، لأنك تحتاج أن تفهم ما يراه كل طرف.',
+    sup:'<b>دورك في النظام:</b> أنت العين في الميدان. كل رقم يظهر في تقارير الإدارة والوزارة مصدره ما تسجّله أنت أمام الموقع. مهمتك: مسح المواقع بدقة، تصحيح ما اختلف عن السجل، تنفيذ التركيب وتوثيقه بالصور، والتبليغ فورًا عمّا يمنعك.',
+    min:'<b>دوركم في النظام:</b> جهة متابعة تقرأ ولا تعدّل. تعرض لكم الشاشة الصورة التنفيذية للمشروع بأرقام لحظية من الميدان، وتستخرجون منها تقاريركم مباشرة دون وسيط.'
+  }[role]||'';
+  function COMMON(){
+    var C2=[];
+    C2.push('<h2>أمور تخص الجميع</h2>');
+    C2.push('<h3>الجرس 🔔</h3>');
+    C2.push('<p>يعرض ما يخصّك أنت فقط، ولا يُنبَّه أحد على فعل نفسه. الفني يرى ما أُسند إليه وما أُرجع من تدقيقه، والمهندس يرى البلاغات والمتعذّر والمقترحات، والوزارة لا تُزعج إطلاقًا. ولا توجد تنبيهات منبثقة تقاطع العمل — العدّاد وحده هو الإشارة.</p>');
+    C2.push('<h3>النسخ الاحتياطي</h3>');
+    C2.push('<p>«نسخة احتياطية كاملة» تنزّل كل السجلات بصورها. «دمج نسخة زميل» يستقبل ملف زميل ويدمجه: الجديد يُضاف، وعند التعارض يكسب الأحدث مع الاحتفاظ بصور وسجلّ الطرفين. وللنظام نسخة تلقائية يومية على الخادم.</p>');
+    C2.push('<h3>حل المشكلات الشائعة</h3>');
+    C2.push(tbl(['المشكلة','الحل'],[
+      ['التحديث لم يصلني','أغلق التطبيق تمامًا وافتحه مرتين، وتحقق من رقم النسخة أعلى الشاشة'],
+      ['دقة الموقع ضعيفة','ينبّهك التطبيق بالرقم ويفتح الخريطة على موقعك لتصحّح النقطة'],
+      ['لا أجد الشركة في القائمة','اطلب إضافتها من داخل القائمة، ويعتمدها المهندس فتظهر للجميع'],
+      ['التطبيق يرفض حفظ التركيب','صورة ما بعد التركيب إلزامية لحالة «تم التركيب»'],
+      ['رقم الشاخص مرفوض','الصيغة أرقام/أرقام — مثل ٥٧/٢ أو ١-٣-٥/٦٢'],
+      ['فقدت الاتصال في الميدان','تابع عملك — كل شيء محفوظ ويرفع نفسه عند عودة الشبكة']]));
+    return C2.join('');
+  }
   var B=[];
   B.push('<h1>نظام قارئات نُسُك ١٤٤٨هـ</h1>');
   B.push('<p class="sub">'+esc(TITLE)+'</p>');
   B.push('<p class="sub">النسخة '+esc(ver)+' · مُستخرج بتاريخ '+esc(dt)+'</p>');
+  if(ROLE) B.push('<div class="role">'+ROLE+'</div>');
 
   B.push('<h2>١ · ما هو النظام باختصار</h2>');
   B.push('<p>نظام واحد يتابع تركيب قارئات نُسُك في المشاعر المقدسة، من لحظة وقوف المشرف أمام المخيم حتى اعتماد المهندس لسيريال الجهاز. يعمل على الموبايل كتطبيق، ويعمل بلا إنترنت ثم يزامن نفسه تلقائيًا أول ما تعود الشبكة.</p>');
@@ -3597,6 +3620,7 @@ window.nskGuide = function(role){
     B.push('<p><b>نسيت أحفظ وخرجت من النموذج؟</b> ما كتبته يبقى في المسوّدة، افتح الموقع مرة أخرى وستجده.</p>');
     B.push('<p><b>الموقع الحقيقي مختلف عن المسجّل؟</b> صحّحه من «تعديل» بجوار البند، والتصحيح يظهر للمكتب فورًا.</p>');
     B.push('<p><b>دقة الموقع ضعيفة؟</b> التطبيق ينبّهك بالرقم ويفتح الخريطة على موقعك لتصحّح النقطة بنفسك.</p>');
+    B.push(COMMON());
     return wrap(B);
   }
   if(role==='min'){
@@ -3619,6 +3643,7 @@ window.nskGuide = function(role){
     B.push('</ul>');
     B.push('<h2>٥ · التقارير المتاحة لكم</h2>');
     B.push('<p>من زر «تصدير» أعلى الشاشة يمكن استخراج تقرير PDF بالرسوم جاهزًا للطباعة والرفع، أو ملف إكسل بالقيم التفصيلية، أو ملف JSON للتكامل مع أنظمة أخرى. ويمكن اختيار الأقسام المطلوبة قبل التصدير.</p>');
+    B.push(COMMON());
     return wrap(B);
   }
   B.push('<h2>٣ · من يستخدمه ومن يرى ماذا</h2>');
@@ -3666,6 +3691,13 @@ window.nskGuide = function(role){
   B.push('<p><b>من يستطيع حذف البيانات؟</b> الأدمن وحده وبعد كتابة عبارة تأكيد حرفية، وتبقى الحسابات وقائمة الشركات وسجل الأحداث محفوظة.</p>');
   B.push('<p><b>كيف نتأكد أن الجهاز المركّب هو الصحيح؟</b> السيريال يُدخل عند التدقيق ويُطابق مع سجل الأجهزة، وأي تكرار أو سيريال غير معروف يُنبَّه عليه قبل الاعتماد.</p>');
 
+  /* المهندس يرى فصول الأدوار الأخرى أيضًا — ليفهم ما يراه كل طرف */
+  B.push('<h2>ملحق أ · ما يفعله الفني في الميدان</h2>');
+  B.push('<p>افتح الموقع من الخريطة، راجع «بيانات مسجّلة» وصحّح ما اختلف، سجّل القياسات والتحديات، التقط الصور الإلزامية، ثم حدّد الصلاحية. في التركيب: بدأ / تم (وصورة ما بعد التركيب إلزامية) / متعذّر. زر «📣 بلّغ» يرسل لك رسالة تحمل هوية النقطة ورابط خريطتها. و«جدولي» يعرض له ما أسندته إليه بروابط ملاحة.</p>');
+  B.push('<p>هذا يعني أن أي رقم في تقاريرك مصدره تسجيل ميداني موثّق بصورة — وأي نقص في المسح يظهر لك في «سلامة خط الإنتاج».</p>');
+  B.push('<h2>ملحق ب · ما تراه الجهة الوزارية</h2>');
+  B.push('<p>حساب المتابعة يفتح على تبويب واحد للقراءة فقط: النظرة العامة · الوتيرة والهدف · التركيب والجدولة · المعدل اليومي · حسب المشعر · حسب الشركة. لا يرى العُهدة ولا التدقيق ولا سجل الأحداث ولا إعادة الضبط. فما تضبطه من أهداف ومواعيد ينعكس مباشرة على ما يقرؤونه.</p>');
+  B.push(COMMON());
   return wrap(B);
   }
 function _nskWrap(B){
@@ -3679,6 +3711,8 @@ function _nskWrap(B){
     +'table{border-collapse:collapse;width:100%;margin:6pt 0 10pt;direction:rtl}'
     +'th{background:#F2EAD8;border:0.5pt solid #C9A24B;padding:5pt;text-align:right;font-size:10pt}'
     +'td{border:0.5pt solid #D8D2C4;padding:5pt;text-align:right;font-size:10pt;color:#3A3A3A}'
+    +'h3{color:#1A1A1A;font-size:11.5pt;margin:12pt 0 4pt}'
+    +'div.role{background:#FBF6E9;border-right:3pt solid #C9A24B;padding:8pt 10pt;margin:10pt 0 4pt;font-size:10.5pt}'
     +'ul{margin:4pt 24pt 10pt 0}li{margin-bottom:4pt}'
     +'</style></head><body>'+B.join('')+'</body></html>';
 }
@@ -3881,18 +3915,21 @@ body.nsk-sup #dCopy{display:none!important}
 #nskDash{position:fixed;inset:0;z-index:9990;display:none;overflow:auto;background:var(--ink,#0A0B0D);
   color:var(--cream,#F1EDE0);font-family:var(--ar,Tahoma,sans-serif)}
 #nskDash .dWrap{max-width:980px;margin:0 auto;padding:18px 16px 60px}
-#nskDash .dHead{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:6px}
+#nskDash .dHead{display:flex;align-items:center;gap:7px;flex-wrap:wrap;margin-bottom:4px}
+#nskDash .dHead h1{flex:1 1 100%;margin-bottom:2px}
+#nskDash .dSec{margin-bottom:4px}
 #nskDash h1{margin:0;font-size:20px;color:var(--gold,#C9A24B);flex:1;min-width:220px}
 #nskDash .dBtn{border:1px solid var(--line,#3a4a42);background:transparent;color:var(--cream,#F1EDE0);
   font:700 12.5px var(--ar,Tahoma,sans-serif);padding:8px 13px;border-radius:9px;cursor:pointer}
 #nskDash .dBtn.p{border-color:var(--gold,#C9A24B);color:var(--gold,#C9A24B)}
 #nskDash .dSub{color:var(--muted,#9AA1AB);font-size:12px;margin:0 0 14px}
-#nskDash h2{font-size:14.5px;color:var(--gold,#C9A24B);margin:22px 0 10px;border-top:1px solid var(--line,#2c3a34);padding-top:16px}
-#nskDash .dGrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(128px,1fr));gap:9px}
-#nskDash .dCard{background:var(--panel,#141619);border:1px solid var(--line,#2c3a34);border-radius:12px;
-  padding:12px 10px;text-align:center}
-#nskDash .dCard b{display:block;font-size:23px;margin-bottom:4px}
-#nskDash .dCard span{color:var(--muted,#9AA1AB);font-size:11.5px}
+#nskDash h2{font-size:14.5px;color:var(--gold,#C9A24B);margin:26px 0 12px;padding:0 11px 0 0;
+  border-top:0;border-inline-start:3px solid var(--gold,#C9A24B);line-height:1.5}
+#nskDash .dGrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(104px,1fr));gap:8px}
+#nskDash .dCard{background:var(--panel,#141619);border:1px solid var(--line,#2c3a34);border-radius:11px;
+  padding:10px 8px;text-align:center}
+#nskDash .dCard b{display:block;font-size:19px;margin-bottom:2px;line-height:1.3}
+#nskDash .dCard span{color:var(--muted,#9AA1AB);font-size:10.5px;line-height:1.45;display:block}
 #nskDash .dBarRow{margin:12px 2px 2px}
 #nskDash .dBarLbl{display:flex;justify-content:space-between;color:var(--muted,#9AA1AB);font-size:12px;margin-bottom:5px}
 #nskDash .dBarLbl b{color:var(--cream,#F1EDE0)}
@@ -5333,6 +5370,17 @@ function coParse(text){
   });
   return out;
 }
+/* القائمة الموحّدة للشركات كما تظهر في سجل المواقع — مصدر المنتقي */
+function coKnown(){
+  var out={}, C=window.NSKCORE, dbx=C.db();
+  (dbx.g||[]).forEach(function(r){
+    var n=coNorm(r[27]||r[10]||''); if(n) out[n]=1;
+  });
+  try{ (coAll()||[]).forEach(function(n){ n=coNorm(n); if(n) out[n]=1; }); }catch(e){}
+  var arr=Object.keys(out);
+  try{ arr.sort(new Intl.Collator('ar').compare); }catch(e){ arr.sort(); }
+  return arr;
+}
 /* النقاط المجدولة لكل شركة */
 function coSched(){
   var C=window.NSKCORE, dbx=C.db(), recs=C.all('recs'), inss=C.all('inss');
@@ -6166,9 +6214,34 @@ function render(){
       }
       if(canN){
         var CC=(coCtcObj().list)||[];
-        h+='<h2 style="font-size:.95em;margin-top:14px">أرقام الشركات'+(CC.length?' — '+AR(CC.length)+' محفوظ':'')+'</h2>';
-        h+='<div class="pTyStrip"><label>ملف الأرقام <input id="ccFile" type="file" accept=".xlsx,.xls,.csv,.txt"></label></div>';
-        h+='<p class="dTs">الأعمدة: اسم الشركة · الرقم · اسم المسؤول (اختياري). يقبل إكسل و CSV، ويحوّل 05xxxxxxxx إلى 9665xxxxxxxx تلقائيًا. اسم الشركة يجب أن يطابق الاسم الموحّد المستخدم في المشروع ليُربط بمواقعها.</p>';
+        var KNOWN=coKnown();
+        h+='<h2 style="font-size:.95em;margin-top:16px">أرقام الشركات'+(CC.length?' — '+AR(CC.length)+' محفوظ':'')+'</h2>';
+        /* إضافة يدوية باختيار الشركة من القائمة الموحّدة — يضمن تطابق الاسم */
+        h+='<div class="ccAdd">'
+          +'<select id="ccSel"><option value="">— اختر الشركة —</option>'
+          +KNOWN.map(function(n){ return '<option>'+esc2(n)+'</option>'; }).join('')+'</select>'
+          +'<input id="ccPh" inputmode="tel" placeholder="05xxxxxxxx أو 9665xxxxxxxx">'
+          +'<input id="ccNm" placeholder="اسم المسؤول (اختياري)">'
+          +'<button type="button" class="dBtn p" id="ccAdd">إضافة</button>'
+          +'</div>';
+        if(CC.length){
+          h+='<div class="ccList">';
+          CC.forEach(function(c,i){
+            var known=KNOWN.indexOf(coNorm(c.c))>-1;
+            h+='<div class="ccRow"><b>'+esc2(c.c)+'</b>'
+              +'<span dir="ltr">'+esc2(c.p||'')+'</span>'
+              +'<i>'+(c.n?esc2(c.n):'')+'</i>'
+              +(known?'<em class="okk">✔ مطابق</em>':'<em class="bad">اسم غير مطابق</em>')
+              +'<button type="button" class="ccDel" data-i="'+i+'">×</button></div>';
+          });
+          h+='</div>';
+          var bad=CC.filter(function(c){ return KNOWN.indexOf(coNorm(c.c))<0; }).length;
+          if(bad) h+='<p class="dTs" style="color:#E8873A">'+AR(bad)+' اسمًا لا يطابق القائمة الموحّدة فلن يُربط بمواقعه — احذفه وأعد إضافته باختيار الشركة من القائمة أعلاه.</p>';
+        } else {
+          h+='<div class="dEmpty">لم يُضف رقم بعد — اختر الشركة واكتب رقمها، أو استورد ملفًا.</div>';
+        }
+        h+='<div class="pTyStrip" style="margin-top:10px"><label>استيراد ملف <input id="ccFile" type="file" accept=".xlsx,.xls,.csv,.txt"></label></div>';
+        h+='<p class="dTs">الملف: عمود لاسم الشركة وآخر للرقم وثالث اختياري للمسؤول. يحوّل 05xxxxxxxx إلى 9665xxxxxxxx تلقائيًا. <b>الاسم يجب أن يطابق القائمة الموحّدة</b> — والإضافة اليدوية أعلاه تضمن ذلك لأنها تختار من نفس القائمة.</p>';
       }
       h+='</section>';
     })();
@@ -6473,13 +6546,36 @@ function render(){
   Array.prototype.forEach.call(document.querySelectorAll('#nskDash .coWa'),function(b){ b.onclick=function(){
     coNotify(b.getAttribute('data-c'), b.getAttribute('data-m'));
   }; });
+  var cAddB=$i('ccAdd'); if(cAddB) cAddB.onclick=function(){
+    var c=_tnorm(($i('ccSel')||{}).value);
+    var p=String(($i('ccPh')||{}).value||'').replace(/[^\d]/g,'');
+    var nm=_tnorm(($i('ccNm')||{}).value);
+    if(!c){ try{ toast('اختر الشركة من القائمة أولًا',1); }catch(e){} return; }
+    if(/^05\d{8}$/.test(p)) p='966'+p.slice(1);
+    if(p.length<9){ try{ toast('اكتب رقمًا صحيحًا — 05xxxxxxxx أو 9665xxxxxxxx',1); }catch(e){} return; }
+    var L=((coCtcObj().list)||[]).slice();
+    var ix=-1; L.forEach(function(x,i){ if(coNorm(x.c)===coNorm(c)) ix=i; });
+    if(ix>-1) L[ix]={c:c,p:p,n:nm}; else L.push({c:c,p:p,n:nm});
+    saveCoCtc(L,'manual');
+    try{ toast(ix>-1?('حُدّث رقم '+c):('أُضيف رقم '+c)); }catch(e){}
+    render();
+  };
+  Array.prototype.forEach.call(document.querySelectorAll('#nskDash .ccDel'),function(b){ b.onclick=function(){
+    var i=parseInt(b.getAttribute('data-i'),10);
+    var L=((coCtcObj().list)||[]).slice();
+    if(i>=0 && i<L.length){ var g=L[i].c; L.splice(i,1); saveCoCtc(L,'manual');
+      try{ if(window.NSKSYNC) NSKSYNC.log('حذف رقم شركة: '+g); }catch(e){} }
+    render();
+  }; });
   var ccF=$i('ccFile'); if(ccF) ccF.onchange=function(){
     var f=ccF.files&&ccF.files[0]; if(!f) return;
     function done(txt){
       var L=coParse(txt);
       if(!L.length){ try{ toast('لم يُقرأ أي رقم — تأكد من وجود عمود للاسم وآخر للرقم',1); }catch(e){} return; }
+      var K=coKnown(), okN=L.filter(function(x){ return K.indexOf(coNorm(x.c))>-1; }).length;
       saveCoCtc(L,'import');
-      try{ toast('استُوردت أرقام '+AR(L.length)+' شركة ✔'); }catch(e){}
+      try{ toast('استُوردت '+AR(L.length)+' — مطابق للقائمة '+AR(okN)
+        +(okN<L.length?(' · غير مطابق '+AR(L.length-okN)):''), okN<L.length?1:0); }catch(e){}
       render();
     }
     var rd=new FileReader();
@@ -6979,6 +7075,22 @@ html[data-theme="light"] #nskDash .pRgDl{background:#fff;border-color:rgba(60,60
 html[data-theme="light"] #tellOv textarea{background:#fff}
 #tellOv .tl-a{display:flex;flex-direction:column;gap:8px;margin-top:12px}
 .bar .tellBtn{flex:0 0 auto}
+#nskDash .ccAdd{display:flex;flex-wrap:wrap;gap:7px;align-items:center;margin:8px 0 10px}
+#nskDash .ccAdd select,#nskDash .ccAdd input{background:rgba(255,255,255,.07);
+  border:1.5px solid rgba(150,150,150,.6);border-radius:9px;color:inherit;padding:8px 9px;
+  font:inherit;font-size:12.5px;min-height:36px;flex:1 1 130px;max-width:100%}
+#nskDash .ccAdd select{flex:1 1 100%}
+html[data-theme="light"] #nskDash .ccAdd select,html[data-theme="light"] #nskDash .ccAdd input{background:#fff}
+#nskDash .ccList{border:1px solid rgba(150,150,150,.25);border-radius:10px;overflow:hidden}
+#nskDash .ccRow{display:flex;align-items:center;gap:8px;padding:9px 10px;font-size:12.5px;flex-wrap:wrap}
+#nskDash .ccRow:nth-child(odd){background:rgba(150,150,150,.07)}
+#nskDash .ccRow b{flex:1 1 120px}
+#nskDash .ccRow span{color:#4BC9F5;font-size:12px}
+#nskDash .ccRow i{font-style:normal;color:var(--muted,#9AA1AB);font-size:11px}
+#nskDash .ccRow em{font-style:normal;font-size:10.5px;padding:2px 7px;border-radius:999px}
+#nskDash .ccRow em.okk{color:#3AD6A0;border:1px solid rgba(58,214,160,.5)}
+#nskDash .ccRow em.bad{color:#E8873A;border:1px solid rgba(232,135,58,.5)}
+#nskDash .ccDel{background:transparent;border:0;color:#E05252;font-weight:800;cursor:pointer;font:inherit;font-size:16px;padding:0 4px}
 #nskDash .apBar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:8px 0;font-size:12px;color:var(--muted,#9AA1AB)}
 #nskDash .apL{max-height:300px;overflow:auto;border:1px solid rgba(150,150,150,.28);border-radius:10px;padding:4px}
 #nskDash .apR{display:flex;align-items:center;gap:8px;padding:7px 8px;border-radius:8px;cursor:pointer;font-size:12.5px}
@@ -7009,8 +7121,10 @@ html[data-theme="light"] #nskDash .qaC input{background:#fff;border-color:rgba(6
 html[data-theme="light"] #nskDash input#qaF{background:#fff;border-color:rgba(60,60,60,.5)}
 #nskMineOv .mnNav{float:left;background:transparent;border:1px solid rgba(150,150,150,.45);border-radius:8px;color:inherit;cursor:pointer;padding:2px 8px;font:inherit}
 #nskDash table.dT td .pMut{color:var(--grey,#9AA1AB)}
-#nskDash #dTabBar{display:flex;gap:7px;flex-wrap:wrap;margin:10px 0 6px}
-#nskDash .dtBtn{flex:1 1 auto;min-width:78px;background:transparent;border:1.5px solid rgba(150,150,150,.45);
+#nskDash #dTabBar{display:flex;gap:6px;flex-wrap:nowrap;overflow-x:auto;margin:12px 0 4px;
+  padding-bottom:3px;scrollbar-width:none}
+#nskDash #dTabBar::-webkit-scrollbar{display:none}
+#nskDash .dtBtn{flex:1 0 auto;min-width:74px;background:transparent;border:1.5px solid rgba(150,150,150,.45);
   border-radius:999px;padding:9px 14px;font:inherit;font-size:13px;font-weight:700;color:inherit;cursor:pointer}
 #nskDash .dtBtn.on{background:var(--gold,#C9A24B);border-color:var(--gold,#C9A24B);color:#0A0B0D}
 #nskDash #dTabDesc{margin-top:2px;font-size:11.5px}
