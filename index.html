@@ -965,7 +965,7 @@ window.addEventListener('error', function(e){
 <div id="app">
   <header>
     <div class="t">
-      <div class="eyebrow">قارئات نُسُك ١٤٤٨هـ <span style="color:var(--muted);letter-spacing:0;font-weight:600">· نسخة V5.0</span></div>
+      <div class="eyebrow">قارئات نُسُك ١٤٤٨هـ <span style="color:var(--muted);letter-spacing:0;font-weight:600">· نسخة V5.1</span></div>
       <h1 id="ttl">المسح الميداني</h1>
     </div>
     <button class="pill" id="modeBtn" type="button">المسح</button>
@@ -1063,6 +1063,7 @@ window.addEventListener('error', function(e){
             ⬇ نسخة احتياطية كاملة</button>
           <button class="btn s" id="mgBtn" type="button">⬆ دمج نسخة زميل / استعادة</button>
           <button class="btn s" id="schBtn" type="button" style="margin-top:10px">🧩 ملف الواجهات JSON — للمطوّرين والتكامل</button>
+          <button class="btn s" id="docBtn" type="button" style="margin-top:10px">📄 دليل النظام Word — شرح مبسّط للإدارة والوزارة</button>
           <input id="mergeFile" type="file" accept=".json,application/json" hidden/>
           <div style="font-size:11px;color:var(--muted);line-height:1.8;margin-top:9px">
             النسخة تشمل كل المسوحات والتركيبات والمواقع المقترحة بصورها.
@@ -3523,6 +3524,115 @@ window.nskSchema = function(){
     }
   };
 };
+/* دليل مبسّط بصيغة يفتحها Word — يُبنى محليًا فيعمل بلا إنترنت */
+window.nskGuide = function(){
+  var V=''; try{ V=(document.querySelector('.eyebrow')||{}).textContent||''; }catch(e){}
+  var m=String(V).match(/V[\d.]+/), ver=m?m[0]:'';
+  var C=window.NSKCORE, dbx=C.db();
+  var nG=(dbx.g||[]).length, nP=(dbx.p||[]).length, nT=dbx.d.length;
+  var c=null; try{ c=counts(); }catch(e){}
+  function esc(s){ return String(s==null?'':s).replace(/[&<>]/g,function(x){
+    return x==='&'?'&amp;':x==='<'?'&lt;':'&gt;'; }); }
+  function tbl(head, rows){
+    return '<table><tr>'+head.map(function(t){ return '<th>'+esc(t)+'</th>'; }).join('')+'</tr>'
+      +rows.map(function(r){ return '<tr>'+r.map(function(t){ return '<td>'+esc(t)+'</td>'; }).join('')+'</tr>'; }).join('')
+      +'</table>';
+  }
+  var d=new Date(), dt=d.getFullYear()+'-'+('0'+(d.getMonth()+1)).slice(-2)+'-'+('0'+d.getDate()).slice(-2);
+  var B=[];
+  B.push('<h1>نظام قارئات نُسُك ١٤٤٨هـ</h1>');
+  B.push('<p class="sub">دليل مبسّط لفهم النظام — من أول زيارة الموقع حتى اعتماد السيريال</p>');
+  B.push('<p class="sub">النسخة '+esc(ver)+' · مُستخرج بتاريخ '+esc(dt)+'</p>');
+
+  B.push('<h2>١ · ما هو النظام باختصار</h2>');
+  B.push('<p>نظام واحد يتابع تركيب قارئات نُسُك في المشاعر المقدسة، من لحظة وقوف المشرف أمام المخيم حتى اعتماد المهندس لسيريال الجهاز. يعمل على الموبايل كتطبيق، ويعمل بلا إنترنت ثم يزامن نفسه تلقائيًا أول ما تعود الشبكة.</p>');
+  B.push(tbl(['العدد','الفئة','الملاحظة'],[
+    [nG,'مخيمات','منى وعرفات ومزدلفة'],
+    [nP,'ممرات ومحطات وكاميرات وبوابات','الجمرات وقطار المشاعر ومسجد نمرة'],
+    [nT,'الإجمالي','الحرم خارج النطاق']]));
+
+  if(c){
+    B.push('<h2>٢ · الوضع الحالي لحظة استخراج هذا الملف</h2>');
+    B.push(tbl(['البند','العدد','النسبة'],[
+      ['تم المسح', c.svDone, '٪'+pct(c.svDone,c.total)],
+      ['مُركّب', c.ok, '٪'+pct(c.ok,c.total)],
+      ['قيد التركيب', c.run, ''],
+      ['مجدول', c.sch, ''],
+      ['متعذّر', c.bad, ''],
+      ['لم يُجدول بعد', c.none, '']]));
+  }
+
+  B.push('<h2>٣ · من يستخدمه ومن يرى ماذا</h2>');
+  B.push(tbl(['الدور','من هو','ماذا يرى ويفعل'],[
+    ['مشرف','فني ميداني على الموبايل','يمسح المواقع ويحدّث التركيب ويقترح مواقع غير مسجّلة ويرى أداءه وجدوله'],
+    ['مهندس','مكتب إدارة المشروع','كل ما سبق + الجدولة وإسناد الفنيين واعتماد الشركات والتدقيق والأهداف والعُهدة'],
+    ['أدمن','المشرف العام','كل شيء + إنشاء الحسابات وسلامة البيانات وإعادة الضبط'],
+    ['متابعة','الجهة الوزارية','شاشة واحدة للقراءة فقط: التقدم العام والمشاعر والشركات والوتيرة']]));
+
+  B.push('<h2>٤ · رحلة النقطة الواحدة</h2>');
+  B.push('<p><b>المسح الميداني:</b> يقف المشرف أمام الموقع، يراجع البيانات المسجّلة ويصحّح ما اختلف، يسجّل القياسات والتحديات ويلتقط الصور الإلزامية، ثم يحدد: مناسب أم مناسب بتعديل أم غير مناسب.</p>');
+  B.push('<p><b>الجدولة:</b> المكتب يراجع الممسوح ويقرر ما يدخل خطة التركيب، والنظام يعرض طابور «جاهز للجدولة» بالأقدم أولًا.</p>');
+  B.push('<p><b>إسناد الفني:</b> توزيع النقاط المجدولة — مربعًا كاملًا أو نقاطًا مختارة بالبحث. الفني يجدها في زر «جدولي».</p>');
+  B.push('<p><b>التركيب:</b> الفني يحدّث الحالة، وصورة ما بعد التركيب إلزامية. ولو واجه مانعًا يضغط «بلّغ» فتصل رسالة منظّمة للمكتب فيها هوية النقطة ورابط خريطتها.</p>');
+  B.push('<p><b>التدقيق الهندسي:</b> المهندس يُدخل السيريال ويعتمد أو يُرجع للفريق، والنظام ينبّه لو كان السيريال مكررًا أو غير معروف.</p>');
+
+  B.push('<h2>٥ · لوحة المتابعة — أربعة تبويبات</h2>');
+  B.push(tbl(['التبويب','ماذا يضم','لمن'],[
+    ['متابعة','النظرة العامة · الوتيرة والهدف · التركيب والجدولة · المعدل اليومي · حسب المشعر · حسب الشركة','الجميع — والتبويب الوحيد للوزارة'],
+    ['تخطيط','سلامة خط الإنتاج · توزيع الفرق والإسناد · إشعار الشركات · العُهدة','المهندس والأدمن'],
+    ['تشغيل','المسح · التحديات · المتعذّر والراكد · التدقيق · الإنتاجية · السباق','المشرف والمهندس والأدمن'],
+    ['النظام','سلامة البيانات · سجل الأحداث · إعادة الضبط','المهندس والأدمن']]));
+
+  B.push('<h2>٦ · القواعد التي تحمي البيانات</h2><ul>');
+  ['أسماء الشركات من قائمة موحّدة فقط — المشرف يطلب والمهندس يعتمد، فلا تتفرّع أسماء الشركة الواحدة.',
+   'رقم الشاخص بصيغة موحّدة إلزامية، ويُصدَّر إلى إكسل كنص فلا يتحوّل إلى تاريخ.',
+   'الصور تُحفظ منفصلة عن السجل فلا يمتلئ المستند ولا تضيع الصورة.',
+   'سجل الأحداث لا يُعدَّل ولا يُحذف — أثر تدقيقي دائم.',
+   'نسخة احتياطية تلقائية يوميًا ٥:٣٠ صباحًا محفوظة بتاريخها.',
+   'العمل محفوظ على الجهاز أولًا ولا يُمسح قبل تأكيد الخادم استلامه.'
+  ].forEach(function(x){ B.push('<li>'+esc(x)+'</li>'); });
+  B.push('</ul>');
+
+  B.push('<h2>٧ · ماذا يخرج من النظام</h2>');
+  B.push(tbl(['المخرج','المحتوى','لمن'],[
+    ['تقرير إكسل','أوراق مفصّلة حسب الأقسام المختارة','الإدارة'],
+    ['تقرير PDF','نفس الأقسام بالرسوم جاهزة للطباعة','الوزارة والإدارة'],
+    ['ملف JSON للتكامل','كل نقطة بهويتها وإحداثياتها وشبكتها وحالتها وسيريالها','الأنظمة الأخرى'],
+    ['نسخة احتياطية','كل السجلات بصورها وقابلة للدمج','المشرفين'],
+    ['ملخص واتساب','فقرة جاهزة بأرقام اليوم','الإدارة']]));
+
+  B.push('<h2>٨ · أسئلة متكررة</h2>');
+  B.push('<p><b>هل يعمل بلا إنترنت؟</b> نعم. كل ما يُسجَّل يُحفظ على الجهاز فورًا ويرفع نفسه تلقائيًا أول ما تعود الشبكة.</p>');
+  B.push('<p><b>ماذا لو وجد المشرف موقعًا غير مسجّل؟</b> يفتح «موقع غير مسجّل»، والنظام يفحص ما حوله في ١٤٠ مترًا ويعرض المواقع القريبة أولًا، فإن تأكد أنه جديد أرسل مقترحًا بصورة الشاخص لاعتماد المكتب.</p>');
+  B.push('<p><b>من يستطيع حذف البيانات؟</b> الأدمن وحده وبعد كتابة عبارة تأكيد حرفية، وتبقى الحسابات وقائمة الشركات وسجل الأحداث محفوظة.</p>');
+  B.push('<p><b>كيف نتأكد أن الجهاز المركّب هو الصحيح؟</b> السيريال يُدخل عند التدقيق ويُطابق مع سجل الأجهزة، وأي تكرار أو سيريال غير معروف يُنبَّه عليه قبل الاعتماد.</p>');
+
+  return '<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word">'
+    +'<head><meta charset="utf-8"><title>دليل نظام قارئات نُسُك</title>'
+    +'<style>'
+    +'body{font-family:"Segoe UI","Arial",sans-serif;direction:rtl;text-align:right;color:#1A1A1A;line-height:1.8;font-size:11pt}'
+    +'h1{color:#A87F2E;font-size:22pt;margin:0 0 4pt;text-align:center}'
+    +'h2{color:#A87F2E;font-size:14pt;margin:18pt 0 6pt;border-bottom:1pt solid #C9A24B;padding-bottom:3pt}'
+    +'p.sub{text-align:center;color:#5A5A5A;margin:0 0 6pt}'
+    +'table{border-collapse:collapse;width:100%;margin:6pt 0 10pt;direction:rtl}'
+    +'th{background:#F2EAD8;border:0.5pt solid #C9A24B;padding:5pt;text-align:right;font-size:10pt}'
+    +'td{border:0.5pt solid #D8D2C4;padding:5pt;text-align:right;font-size:10pt;color:#3A3A3A}'
+    +'ul{margin:4pt 24pt 10pt 0}li{margin-bottom:4pt}'
+    +'</style></head><body>'+B.join('')+'</body></html>';
+};
+window.doGuide = function(){
+  try{
+    var html=window.nskGuide();
+    var d=new Date(), p2=function(n){ return String(n).padStart(2,'0'); };
+    var name='دليل-نظام-نُسُك-'+d.getFullYear()+p2(d.getMonth()+1)+p2(d.getDate())+'.doc';
+    var a=document.createElement('a');
+    a.href=URL.createObjectURL(new Blob(['\ufeff'+html],{type:'application/msword'}));
+    a.download=name; document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(function(){ try{URL.revokeObjectURL(a.href);}catch(e){} },4000);
+    toast('نزل دليل النظام — يفتح في Word ✓');
+    try{ if(window.NSKSYNC) NSKSYNC.log('تنزيل دليل النظام'); }catch(e){}
+  }catch(e){ toast('تعذّر إنشاء الملف',1); }
+};
 window.doSchema = function(){
   try{
     var s=JSON.stringify(window.nskSchema(),null,1);
@@ -3594,6 +3704,7 @@ window.mergeBackupText = async function(txt){
 };
 $('#bkBtn').onclick = ()=>window.doBackup();
 $('#schBtn').onclick = ()=>window.doSchema();
+$('#docBtn').onclick = ()=>window.doGuide();
 $('#mgBtn').onclick = ()=>{ const f=$('#mergeFile'); if(f&&f.click) f.click(); };
 $('#mergeFile').onchange = async ev=>{
   const f=ev.target.files && ev.target.files[0]; if(!f) return;
@@ -4592,7 +4703,8 @@ function paceHtml(c){
   else if(P.rem===0) h+='<p class="pMsg pOkC">اكتمل مسح جميع النقاط 🎉</p>';
   else if(!fin) h+='<p class="pMsg pWarn">لا يوجد نشاط مسح خلال آخر ٧ أيام — لن يكتمل بالمعدل الحالي.</p>';
   else h+='<p class="pMsg '+(P.ok?'pOkC':'pWarn')+'">بالمعدل الحالي يكتمل المسح: '+fin+(P.ok?' — قبل الموعد المستهدف ✓':' — بعد الموعد المستهدف ⚠️')+'</p>';
-  if(canEdit) h+='<label class="pDl">الموعد المستهدف <input type="date" id="paceDl" value="'+escA(dl)+'"></label>';
+  if(canEdit) h+='<label class="pDl">الموعد المستهدف <input type="date" id="paceDl" value="'+escA(dl)+'">'
+    +(dl?'<button type="button" class="dtClr" id="paceDlX">مسح</button>':'')+'</label>';
   else if(dl) h+='<p class="pMsg">الموعد المستهدف: '+esc2(dl)+'</p>';
   /* V2.1: الوتيرة حسب المشعر */
   var G=goalObj(), RT=regTypeStats(), DR=dailySvReg(7);
@@ -4607,6 +4719,7 @@ function paceHtml(c){
       +'<td>'+(f2?arS(f2.slice(8,10)+'/'+f2.slice(5,7)):'—')+'</td>'
       +'<td>'+(canEdit
         ?'<input type="date" class="pRgDl" data-z="'+escA(g.z)+'" value="'+escA(rdl)+'">'
+          +(rdl?'<button type="button" class="dtClr" data-z="'+escA(g.z)+'">مسح</button>':'')
         :(rdl?esc2(rdl):'—'))+'</td></tr>';
   });
   h+='</tbody></table>';
@@ -6110,17 +6223,38 @@ function render(){
   evCbWire('evCbUs','كل المستخدمين',eo.us,function(){return evF.user;},function(v){evF.user=v;});
   var ex=$i('evXl'); if(ex) ex.onclick=evXlsx;
   evPaint();
-  var pd=$i('paceDl'); if(pd) pd.onchange=function(){
-    var v=pd.value||'';
-    saveGoal(function(g){ g.deadline=v; });
+  /* منتقي التاريخ في iOS لا يُطلق change دائمًا عند Reset — نستمع للاثنين ونؤجّل إعادة البناء
+     حتى لا تُهدَم الحقول والمنتقي ما زال مفتوحًا */
+  function bindDate(el, fn){
+    if(!el) return;
+    var tm=null;
+    function go(){ clearTimeout(tm); tm=setTimeout(function(){ fn(el.value||''); render(); }, 260); }
+    el.onchange=go; el.oninput=go;
+    el.onblur=function(){ clearTimeout(tm); fn(el.value||''); render(); };
+  }
+  bindDate($i('paceDl'), function(v){ saveGoal(function(g){ if(v) g.deadline=v; else delete g.deadline; }); });
+  var pdX=$i('paceDlX'); if(pdX) pdX.onclick=function(){
+    saveGoal(function(g){ delete g.deadline; });
+    try{ if(window.NSKSYNC) NSKSYNC.log('مسح الموعد المستهدف العام'); }catch(e){}
     render();
   };
   Array.prototype.forEach.call(document.querySelectorAll('#nskDash .pRgDl'),function(inp){
-    inp.onchange=function(){
+    if(inp.type!=='date'){ inp.onchange=function(){
       var z=inp.getAttribute('data-z'), v=inp.value||'';
       saveGoal(function(g){ if(v) g.regions[z]=v; else delete g.regions[z]; });
       render();
-    }; });
+    }; return; }
+    bindDate(inp, function(v){
+      var z=inp.getAttribute('data-z');
+      saveGoal(function(g){ if(v) g.regions[z]=v; else delete g.regions[z]; });
+    });
+  });
+  Array.prototype.forEach.call(document.querySelectorAll('#nskDash .dtClr'),function(b){ b.onclick=function(){
+    var z=b.getAttribute('data-z');
+    saveGoal(function(g){ delete g.regions[z]; });
+    try{ if(window.NSKSYNC) NSKSYNC.log('مسح الموعد المستهدف — '+z); }catch(e){}
+    render();
+  }; });
   Array.prototype.forEach.call(document.querySelectorAll('#nskDash .pTyMin'),function(inp){
     inp.onchange=function(){
       var ty=inp.getAttribute('data-ty'), v=parseInt(inp.value,10);
@@ -6633,6 +6767,9 @@ body.dxPrint #nskDash .dPulse{display:block}
 #nskDash .pTyStrip{display:flex;flex-wrap:wrap;gap:8px;margin:4px 0 10px}
 #nskDash .pTyStrip label{display:flex;align-items:center;gap:6px;font-size:.85em;background:rgba(255,255,255,.05);border:1px solid rgba(150,150,150,.35);border-radius:10px;padding:6px 10px}
 #nskDash .pTyStrip input{width:64px;background:rgba(255,255,255,.07);border:1.5px solid rgba(150,150,150,.65);border-radius:8px;color:inherit;padding:5px 6px;text-align:center;font:inherit}
+#nskDash .dtClr{margin-inline-start:6px;background:transparent;border:1px solid rgba(224,82,82,.65);
+  border-radius:8px;color:#E05252;font:inherit;font-size:11px;padding:5px 9px;cursor:pointer;min-height:30px}
+#nskDash .dtClr:active{opacity:.6}
 #nskDash .pRgDl{background:rgba(255,255,255,.07);border:1.5px solid rgba(150,150,150,.65);border-radius:8px;color:inherit;padding:5px 8px;font:inherit;max-width:150px;min-width:118px;min-height:34px}
 html[data-theme="light"] #nskDash .pTyStrip label{background:rgba(0,0,0,.035);border-color:rgba(0,0,0,.18)}
 html[data-theme="light"] #nskDash .pTyStrip input,
