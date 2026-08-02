@@ -1087,7 +1087,7 @@ window.addEventListener('error', function(e){
 <div id="app">
   <header>
     <div class="t">
-      <div class="eyebrow">متابعة المشروع ١٤٤٨هـ <span style="color:var(--muted);letter-spacing:0;font-weight:600">· نسخة V7.9</span></div>
+      <div class="eyebrow">متابعة المشروع ١٤٤٨هـ <span style="color:var(--muted);letter-spacing:0;font-weight:600">· نسخة V8.0</span></div>
       <h1 id="ttl">المسح الميداني</h1>
     </div>
     <button class="pill" id="modeBtn" type="button">المسح</button>
@@ -3757,7 +3757,7 @@ window.nskGuide = function(role){
   var ROLE={
     eng:'<b>دورك في النظام:</b> أنت العقل المدبّر. تقرر ما يدخل خطة التركيب، وتوزّع النقاط على الفنيين، وتعتمد ما يقترحونه، وتدقّق كل جهاز مركّب بسيرياله، وتضبط الأهداف وتتابع الوتيرة، وتخاطب الشركات بمواعيد التركيب. هذا الدليل يغطي النظام كله بما فيه فصلا الميدان والوزارة، لأنك تحتاج أن تفهم ما يراه كل طرف.',
     sup:'<b>دورك في المشروع:</b> أنت عين المشروع في الميدان. كل رقم يصل إلى الإدارة أو الوزارة أنت من سجّله وأنت واقف أمام الموقع. عملك أربعة: تمسح بدقة، وتصحّح ما اختلف عن السجل، وتركّب وتوثّق بالصور، وتُبلّغ فورًا عن أي عائق.',
-    min:'<b>دوركم في النظام:</b> جهة متابعة تقرأ ولا تعدّل. تعرض لكم الشاشة الصورة التنفيذية للمشروع بأرقام لحظية من الميدان، وتستخرجون منها تقاريركم مباشرة دون وسيط.'
+    min:'<b>عمّ يتحدّث هذا الدليل:</b> يشرح شاشة المتابعة بندًا بندًا — ما يعنيه كل رقم، ومن أين جاء، ومتى يتغيّر، وكيف تُستخرج منه التقارير. الأرقام لحظية من الميدان، والشاشة للقراءة فلا يغيّر فتحُها شيئًا في بيانات المشروع.'
   }[role]||'';
   function note(t){ return '<div class="note">'+esc(t)+'</div>'; }
   function COMMON(){
@@ -3792,12 +3792,15 @@ window.nskGuide = function(role){
 
   if(c){
     B.push('<h2>٢ · الوضع الحالي لحظة استخراج هذا الملف</h2>');
-    B.push(tbl(['البند','العدد','النسبة'],[
-      ['تم المسح', c.svDone, '٪'+_pct(c.svDone,c.total)],
-      ['مُركّب', c.ok, '٪'+_pct(c.ok,c.total)],
-      ['مجدول', c.sch, ''],
-      ['متعذّر', c.bad, ''],
-      ['لم يُجدول بعد', c.none, '']]));
+    B.push(tbl(['مرحلة المسار','العدد','النسبة'],[
+      ['١ · لم يُمسح بعد', c.noSurvey, '٪'+_pct(c.noSurvey,c.total)],
+      ['٢ · مُسح وينتظر الجدولة', c.awaitPlan, '٪'+_pct(c.awaitPlan,c.total)],
+      ['٣ · مجدول للتركيب', c.sch, '٪'+_pct(c.sch,c.total)],
+      ['٤ · مُركّب', c.ok, '٪'+_pct(c.ok,c.total)],
+      ['— متعذّر', c.bad, '٪'+_pct(c.bad,c.total)],
+      ['الإجمالي', c.total, '٪١٠٠']]));
+    B.push(note('كل موقع في مرحلة واحدة فقط، ومجموع المراحل يساوي الإجمالي. '
+      +'الموقع لا يدخل «ينتظر الجدولة» إلا بعد اكتمال مسحه — فالجدولة قرار يُبنى على المسح.'));
   }
 
   if(role==='sup'){
@@ -5106,15 +5109,22 @@ function counts(){
     else if(s==='متعذّر') c.bad++;
   });
   c.plan=c.sch+c.run+c.ok+c.bad;   /* c.run صفر دائمًا منذ V7.9 — يبقى لتوافق سجلات قديمة */
-  c.none=Math.max(0,N-c.plan);
+  c.none=Math.max(0,N-c.plan);     /* كل ما لم يدخل الجدولة — مُسح أو لم يُمسح */
   c.svDone=0; c.svFit=0; c.svBad=0; c.svHalf=0;
+  const _svIds={};
   Object.keys(recs).forEach(function(k){
     const r=recs[k];
-    if(r.fstat==='done'||r.status==='done'||r.fstat==='blocked') c.svDone++;
+    if(r.fstat==='done'||r.status==='done'||r.fstat==='blocked'){ c.svDone++; _svIds[k]=1; }
     if(r.fit==='مناسب') c.svFit++;
     if(r.fit==='غير مناسب') c.svBad++;
     if(r.fit==='مناسب بتعديل') c.svHalf++;
   });
+  /* V8.0: فصل مرحلتين كانتا مدموجتين في «لم يُجدول»:
+     – noSurvey   : لم يُمسح بعد — ليس بانتظار جدولة بل بانتظار زيارة.
+     – awaitPlan  : مُسح فعلًا وينتظر قرار الجدولة — وهو الطابور الحقيقي للمكتب. */
+  c.awaitPlan=0;
+  Object.keys(_svIds).forEach(function(k){ if(!inss[k]) c.awaitPlan++; });
+  c.noSurvey=Math.max(0, N - c.svDone);
   const dbx=C.db(), reg={};
   ['منى','عرفات','مزدلفة'].forEach(function(z){ reg[z]={t:0,s:0,o:0}; });
   dbx.d.forEach(function(r){
