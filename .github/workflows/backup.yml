@@ -24,6 +24,21 @@ jobs:
           FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
         run: node scripts/backup.mjs
 
+      # رفع النسخة الكاملة إلى درايف المالك — قبل التشفير لأنها تُرفع خامًا
+      # إلى مساحته الخاصة. يتجاوز نفسه بهدوء إن لم تُضبط الأسرار.
+      - name: Upload to Google Drive
+        env:
+          GDRIVE_SA: ${{ secrets.GDRIVE_SA }}
+          GDRIVE_FOLDER: ${{ secrets.GDRIVE_FOLDER }}
+          GDRIVE_KEEP_DAYS: '45'
+        run: |
+          if [ -z "$GDRIVE_SA" ]; then
+            echo "::notice::GDRIVE_SA غير مضبوط — تخطّي الرفع للدرايف"
+          else
+            npm i googleapis@144 --no-save --no-audit --no-fund
+            node scripts/drive-upload.mjs
+          fi
+
       # المستودع عام — لا تُكتب بيانات خام أبدًا كنص صريح.
       # الحزمة تُشفَّر بمفتاح من الأسرار، وبلا مفتاح تُحذف ولا تُنشر.
       - name: Encrypt bundle
@@ -42,6 +57,7 @@ jobs:
 
       - name: Guard — no plaintext data may be committed
         run: |
+          rm -f backups/photos.json
           LEAK=$(find backups/latest -name '*.json' ! -name '_meta.json' | head -5)
           if [ -n "$LEAK" ]; then
             echo "::error::وُجد ملف بيانات صريح: $LEAK — أُلغيت العملية"

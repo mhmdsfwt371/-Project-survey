@@ -15,9 +15,13 @@ let total = 0; const report = []; const bundle = {};
 
 for (const col of cols) {
   if (col.id === 'photos') {
-    // الصور ضخمة — تُحصى فقط هنا، وأرشفتها الكاملة مرحلة لاحقة
-    const c = (await col.count().get()).data().count;
-    report.push(`photos: ${c} (count only)`);
+    /* الصور ضخمة: تُحصى للملخّص، وتُكتب كاملة في ملف منفصل
+       يرفعه drive-upload إلى درايف المالك — ولا يدخل المستودع أبدًا. */
+    const snapP = await col.get();
+    const ph = {};
+    snapP.forEach(d => { ph[d.id] = d.data(); });
+    writeFileSync('backups/photos.json', JSON.stringify(ph, iso, 0));
+    report.push(`photos: ${snapP.size}`);
     continue;
   }
   const snap = await col.get();
