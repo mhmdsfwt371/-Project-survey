@@ -1087,7 +1087,7 @@ window.addEventListener('error', function(e){
 <div id="app">
   <header>
     <div class="t">
-      <div class="eyebrow">متابعة المشروع ١٤٤٨هـ <span style="color:var(--muted);letter-spacing:0;font-weight:600">· نسخة V8.0</span></div>
+      <div class="eyebrow">متابعة المشروع ١٤٤٨هـ <span style="color:var(--muted);letter-spacing:0;font-weight:600">· نسخة V8.1</span></div>
       <h1 id="ttl">المسح الميداني</h1>
     </div>
     <button class="pill" id="modeBtn" type="button">المسح</button>
@@ -7342,6 +7342,87 @@ function evStale(ev){
     return !((C.all('recs')||{})[id] || (C.all('inss')||{})[id]);
   }catch(e){ return false; }
 }
+/* ===== V8.1: إشعارات الجهة الوزارية =====
+   الوزارة لا تتابع الأحداث الفردية — لا معنى لإخطارها بكل تركيب.
+   بل تتابع الحالة: بلوغ المعالم، وانحراف الوتيرة، وتراكم المتعذّر، والركود.
+   لذلك تُشتقّ إشعاراتها من الأرقام لحظةَ الفتح، لا من سجل الأحداث. */
+function minAlerts(){
+  var out=[];
+  try{
+    var c=(window.counts&&window.counts())||null; if(!c) return out;
+    var tot=c.total||0; if(!tot) return out;
+    var pc=function(n){ return Math.round((n||0)/tot*100); };
+
+    /* ١ — معالم الإنجاز: تُعلَن مرة واحدة عند تجاوز العتبة */
+    var okP=pc(c.ok), svP=pc(c.svDone);
+    [100,90,75,50,25].some(function(m){
+      if(okP>=m){ out.push({k:'ms', ic:'🏁', col:'#3AD6A0',
+        t:'بلغ التركيب '+AR(m)+'٪ من المشروع',
+        d:'مُركّب '+AR(c.ok)+' من '+AR(tot)+' موقع.'}); return true; }
+      return false;
+    });
+    [100,90,75,50,25].some(function(m){
+      if(svP>=m){ out.push({k:'ms', ic:'📍', col:'#4BC9F5',
+        t:'بلغ المسح الميداني '+AR(m)+'٪',
+        d:'مُسح '+AR(c.svDone)+' من '+AR(tot)+' موقع.'}); return true; }
+      return false;
+    });
+
+    /* ٢ — الوتيرة مقابل الموعد المستهدف */
+    try{
+      var P=pace&&pace(); var dl=goalDeadline&&goalDeadline();
+      if(P && dl){
+        if(P.finish && P.finish>dl){
+          out.push({k:'pace', ic:'⚠️', col:'#E05252',
+            t:'الاكتمال المتوقع يتجاوز الموعد المستهدف',
+            d:'المتوقع '+arS(P.finish)+' والمستهدف '+arS(dl)
+              +'. المطلوب يوميًا '+AR(P.req||0)+' والمنجز فعليًا '+AR(P.avg7||0)+'.'});
+        } else if(P.finish){
+          out.push({k:'pace', ic:'✅', col:'#3AD6A0',
+            t:'الوتيرة ضمن الموعد المستهدف',
+            d:'الاكتمال المتوقع '+arS(P.finish)+' قبل '+arS(dl)+'.'});
+        }
+      } else if(!dl){
+        out.push({k:'pace', ic:'🗓', col:'#9AA1AB',
+          t:'لم يُحدَّد موعد مستهدف بعد',
+          d:'بلا موعد لا يمكن حساب المطلوب يوميًا ولا تاريخ الاكتمال المتوقع.'});
+      }
+    }catch(e){}
+
+    /* ٣ — تراكم المتعذّر */
+    if(c.bad>0){
+      var bp=pc(c.bad);
+      out.push({k:'bad', ic:'⛔', col: bp>=2?'#E05252':'#E8873A',
+        t:'مواقع متعذّرة: '+AR(c.bad)+(bp?' ('+AR(bp)+'٪)':''),
+        d: bp>=2 ? 'تجاوزت ٢٪ من المشروع — تستدعي مراجعة الأسباب مع المنفّذ.'
+                 : 'ضمن الحد الطبيعي، وتُتابَع أسبابها في تقرير الشركات.'});
+    }
+
+    /* ٤ — الركود: لا نشاط ميداني منذ مدة */
+    try{
+      var rc=window.NSKCORE.all('recs'), ins=window.NSKCORE.all('inss'), last=0;
+      [rc,ins].forEach(function(m){ Object.keys(m||{}).forEach(function(k){
+        var d=String((m[k]||{}).date||''); if(d){ var t=Date.parse(d.replace(' ','T')); if(t>last) last=t; } }); });
+      if(last){
+        var days=Math.floor((Date.now()-last)/86400000);
+        if(days>=3) out.push({k:'stall', ic:'⏸', col:'#E8873A',
+          t:'لا نشاط ميداني منذ '+AR(days)+' يومًا',
+          d:'آخر عملية مسجّلة في '+arS(new Date(last).toISOString().slice(0,10))+'.'});
+      } else {
+        out.push({k:'stall', ic:'⏸', col:'#9AA1AB',
+          t:'لم يبدأ العمل الميداني بعد', d:'لا توجد عمليات مسجّلة حتى الآن.'});
+      }
+    }catch(e){}
+
+    /* ٥ — طابور الجدولة */
+    if(c.awaitPlan>0){
+      out.push({k:'queue', ic:'🗓', col:'#4BC9F5',
+        t:AR(c.awaitPlan)+' موقعًا مُسحت وتنتظر الجدولة',
+        d:'اكتمل مسحها ولم يصدر قرار جدولتها بعد.'});
+    }
+  }catch(e){}
+  return out;
+}
 function evRelevant(ev, u){
   var role=(u&&u.role)||'', me=String((u&&(u.name||u.email))||'').trim();
   var txt=String((ev&&ev.txt)||''), by=String((ev&&ev.by)||'').trim();
@@ -7391,6 +7472,8 @@ function placeBell(box, anchor){
 }
 window.nskBell = function(blAnchor){
   var u=window.NSK_USER||user||{};
+  var isMin=(u.role==='viewer');
+  var MINALERT = isMin ? minAlerts() : [];
   var ALL=events.filter(function(e){ return evRelevant(e,u).ok; }).slice(0,120);
   var seen=seenAt();
   var ov=document.getElementById('bellOv'); if(ov) ov.remove();
@@ -7407,16 +7490,30 @@ window.nskBell = function(blAnchor){
     +'<button type="button" id="blX" aria-label="إغلاق">×</button></div>'
     +'<p class="bl-h">'+(u.role==='supervisor'
         ? 'ما أُسند إليك وما أُرجع من تدقيقك. اضغط أي سطر لتفتح موقعه أو تراسل صاحبه.'
+        : isMin
+        ? 'مؤشّرات المشروع لحظة الفتح — معالم الإنجاز والوتيرة والمتعذّر والركود. محسوبة من الأرقام لا من سجل العمليات.'
         : 'ما يحتاج قرارك. اضغط أي سطر لتفتح موقعه على الخريطة أو تراسل من نفّذه.')+'</p>'
     +'<input id="blQ" type="search" placeholder="ابحث باسم النقطة أو الشاخص أو المربع أو الشركة…" autocomplete="off">'
-    +'<div class="bl-cats">'+chips+'</div>'
+    +(isMin ? '' : '<div class="bl-cats">'+chips+'</div>')
     +'<div class="bl-l" id="blList"></div>'
     +'<p class="bl-h" style="margin:12px 0 0">لا تظهر الأحداث الأقدم من أسبوعين ولا التي حُذفت سجلاتها.</p>'
     +'</div>';
   document.body.appendChild(ov);
 
   var cur='all', q='';
+  function paintMin(){
+    var h='';
+    if(!MINALERT.length){ h='<div class="dEmpty">لا مؤشّرات تستدعي الانتباه 👌</div>'; }
+    else MINALERT.forEach(function(a){
+      h+='<div class="blRow" style="border-inline-start-color:'+a.col+';cursor:default">'
+        +'<div class="bl-hd"><em style="border-color:'+a.col+'88;color:'+a.col+'">'+a.ic+'</em></div>'
+        +'<b class="blPt" style="color:'+a.col+'">'+esc2(a.t)+'</b>'
+        +'<span>'+esc2(a.d)+'</span></div>';
+    });
+    var box=document.getElementById('blList'); if(box) box.innerHTML=h;
+  }
   function paint(){
+    if(isMin) return paintMin();
     var L=ALL.filter(function(e){
       if(cur!=='all' && evKind(e)[0]!==cur) return false;
       if(q && evText(e).indexOf(q)<0) return false;
@@ -7487,7 +7584,9 @@ window.nskBell = function(blAnchor){
   }
   paint();
   (function(){
-    var qi=document.getElementById('blQ'); if(!qi) return;
+    var qi=document.getElementById('blQ');
+    if(qi && isMin){ qi.style.display='none'; return; }
+    if(!qi) return;
     var tm=null;
     qi.oninput=function(){ clearTimeout(tm); tm=setTimeout(function(){
       q=String(qi.value||'').trim().toLowerCase(); paint();
