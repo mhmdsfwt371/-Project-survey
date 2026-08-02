@@ -1087,7 +1087,7 @@ window.addEventListener('error', function(e){
 <div id="app">
   <header>
     <div class="t">
-      <div class="eyebrow">متابعة المشروع ١٤٤٨هـ <span style="color:var(--muted);letter-spacing:0;font-weight:600">· نسخة V8.3</span></div>
+      <div class="eyebrow">متابعة المشروع ١٤٤٨هـ <span style="color:var(--muted);letter-spacing:0;font-weight:600">· نسخة V8.4</span></div>
       <h1 id="ttl">المسح الميداني</h1>
     </div>
     <button class="pill" id="modeBtn" type="button">المسح</button>
@@ -3459,7 +3459,7 @@ $('#expPdf').onclick=()=>{
     return (xa.o-xb.o)||xa.l.localeCompare(xb.l,'ar')||String(A.r.id).localeCompare(String(B.r.id),'ar');
   });
   const w=window.open('','_blank');
-  if(!w){ toast('اسمح بالنوافذ التقفز على الشاشة أولًا',1); return; }
+  if(!w){ toast('اسمح بالنوافذ التظهر على الشاشة أولًا',1); return; }
   const page=({r,p})=>{
     const v=r.v||{};
     const info=Object.keys(v).map(k=>
@@ -3616,7 +3616,7 @@ $('#lxPdf').onclick=()=>{
   const body=listExportRows();
   if(!body.length){ toast('لا توجد مواقع في القائمة الحالية',1); return; }
   const w=window.open('','_blank');
-  if(!w){ toast('اسمح بالنوافذ التقفز على الشاشة أولًا',1); return; }
+  if(!w){ toast('اسمح بالنوافذ التظهر على الشاشة أولًا',1); return; }
   w.document.write('<!doctype html><html lang="ar" dir="rtl"><head><meta charset="utf-8"/>'+
     '<title>قائمة المواقع</title><style>body{font-family:Tahoma,Arial;font-size:11px;margin:18px}'+
     'table{border-collapse:collapse;width:100%}th,td{border:1px solid #999;padding:4px 6px;text-align:right}'+
@@ -3769,7 +3769,7 @@ window.nskGuide = function(role){
     var C2=[];
     C2.push('<h2>أمور تخص الجميع</h2>');
     C2.push('<h3>الجرس 🔔</h3>');
-    C2.push('<p>يعرض ما يخصّك أنت فقط، ولا يصل أحدًا تنبيه عن عمله هو. الفني يرى ما أُسند إليه وما أُرجع من تدقيقه، والمهندس يرى البلاغات والمتعذّر والمقترحات. أما الجهة الوزارية فترى مؤشّرات المشروع لا عملياته: معالم الإنجاز، والتأخّر عن الموعد المستهدف، وزيادة المتعذّر، والتوقّف، وقائمة انتظار الجدولة — تُحسب من الأرقام وقت فتح الجرس. ولا يقفز أي تنبيه على شاشتك أثناء العمل — الرقم على الجرس وحده هو الإشارة.</p>');
+    C2.push('<p>يعرض ما يخصّك أنت فقط، ولا يصل أحدًا تنبيه عن عمله هو. الفني يرى ما أُسند إليه وما أُرجع من تدقيقه، والمهندس يرى البلاغات والمتعذّر والمقترحات. أما الجهة الوزارية فترى مؤشّرات المشروع لا عملياته: معالم الإنجاز، والتأخّر عن الموعد المستهدف، وزيادة المتعذّر، والتوقّف، وقائمة انتظار الجدولة — تُحسب من الأرقام وقت فتح الجرس. ولا يظهر أي تنبيه على شاشتك أثناء العمل — الرقم على الجرس وحده هو الإشارة.</p>');
     C2.push('<h3>النسخ الاحتياطي</h3>');
     C2.push('<p>«نسخة احتياطية كاملة» تنزّل كل السجلات بصورها. «دمج نسخة زميل» يستقبل ملف زميل ويدمجه: الجديد يُضاف، وعند التعارض يكسب الأحدث مع الاحتفاظ بصور وسجلّ الطرفين. وللنظام نسخة تلقائية يومية على الخادم.</p>');
     C2.push('<h3>حل المشكلات الشائعة</h3>');
