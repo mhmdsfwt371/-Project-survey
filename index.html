@@ -912,6 +912,20 @@ textarea.in{min-height:74px;resize:vertical}
 #mgrTbl .mgDr{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;
   background:rgba(232,135,58,.09);border:1px solid rgba(232,135,58,.35);border-radius:10px;
   padding:9px 12px;margin-bottom:10px;font-size:11.5px;line-height:1.7;color:var(--muted,#9AA1AB)}
+#nskDash .syBox{border:1px solid rgba(75,201,245,.35);border-radius:10px;overflow:hidden;margin:10px 0 6px}
+#nskDash .syHd{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;
+  background:rgba(75,201,245,.10);padding:9px 12px;font-size:12px}
+#nskDash .syHd button{background:transparent;border:1px solid rgba(75,201,245,.6);border-radius:8px;
+  color:#4BC9F5;font:inherit;font-size:11.5px;padding:6px 12px;cursor:pointer}
+#nskDash .syRow{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:8px 12px;font-size:11.5px;
+  border-top:1px solid rgba(150,150,150,.15)}
+#nskDash .syRow em{font-style:normal;font-size:10.5px;color:#4BC9F5;
+  border:1px solid rgba(75,201,245,.45);border-radius:999px;padding:1px 8px}
+#nskDash .syRow b{font-weight:600}
+#nskDash .syRow span{color:inherit;font-weight:700;opacity:.9}
+#nskDash .syRow time{margin-inline-start:auto;color:var(--muted,#9AA1AB);font-size:10.5px}
+#nskDash .syRow i{font-style:normal;color:#E8873A;font-size:10.5px;width:100%}
+#nskDash .syRow.more{color:var(--muted,#9AA1AB);justify-content:center}
 #mgrTbl .mgDrB{display:flex;gap:6px;flex:0 0 auto}
 #mgrTbl .mgDr button{background:transparent;border:1px solid rgba(232,135,58,.6);border-radius:8px;
   color:#E8873A;font:inherit;font-size:11.5px;padding:6px 12px;cursor:pointer;flex:0 0 auto}
@@ -1025,7 +1039,7 @@ window.addEventListener('error', function(e){
 <div id="app">
   <header>
     <div class="t">
-      <div class="eyebrow">متابعة المشروع ١٤٤٨هـ <span style="color:var(--muted);letter-spacing:0;font-weight:600">· نسخة V6.4</span></div>
+      <div class="eyebrow">متابعة المشروع ١٤٤٨هـ <span style="color:var(--muted);letter-spacing:0;font-weight:600">· نسخة V6.5</span></div>
       <h1 id="ttl">المسح الميداني</h1>
     </div>
     <button class="pill" id="modeBtn" type="button">المسح</button>
@@ -4570,9 +4584,19 @@ window.NSKSYNC = {
     pendUp++; chipIdle();
     const body=Object.assign({},rec,{_up:serverTimestamp(),_by:(user.name||user.email||'')});
     const ph=body.photos; if(ph){ delete body.photos; body.phN=Object.keys(ph).length; }
+    /* وسم محلي: هذه النسخة بانتظار تأكيد الخادم */
+    try{ rec.synced=false; rec.syncTry=(rec.syncTry||0)+1; rec.syncErr=''; }catch(e){}
     setDoc(doc(db,kind,String(id)), body)
-      .then(function(){ pendUp=Math.max(0,pendUp-1); lastSync=new Date(); chipIdle(); })
-      .catch(function(e){ pendUp=Math.max(0,pendUp-1); chip('تعذّر الرفع — سيُعاد تلقائيًا',1); setTimeout(chipIdle,4000); console.warn('push',e); });
+      .then(function(){
+        pendUp=Math.max(0,pendUp-1); lastSync=new Date(); chipIdle();
+        _markSynced(kind, id, true, '');
+      })
+      .catch(function(e){
+        pendUp=Math.max(0,pendUp-1);
+        chip('تعذّر الرفع — سيُعاد تلقائيًا',1); setTimeout(chipIdle,4000);
+        _markSynced(kind, id, false, (e && (e.code||e.message)) || 'خطأ غير معروف');
+        console.warn('push',e);
+      });
     if(ph){ Object.keys(ph).forEach(function(k){
       const d=String(ph[k]||''); if(!d) return;
       if(d.length>980000){ console.warn('photo too large for cloud, kept on device:',k); return; }
@@ -4593,6 +4617,19 @@ window.NSKSYNC = {
   }
 };
 
+/* يثبّت نتيجة الرفع على السجل المحلي — بلا هذا يبقى العدّاد كاذبًا للأبد */
+function _markSynced(kind, id, ok, err){
+  try{
+    var C=window.NSKCORE; if(!C) return;
+    var m=C.all(kind); if(!m) return;
+    var r=m[String(id)]; if(!r) return;
+    r.synced=!!ok;
+    r.syncAt=ok ? new Date().toISOString() : (r.syncAt||'');
+    r.syncErr=ok ? '' : String(err||'');
+    try{ save(); }catch(e){}
+    try{ if(window.NSKDASH && NSKDASH.refresh) NSKDASH.refresh(); }catch(e){}
+  }catch(e){}
+}
 async function applySnap(kind, snap){
   const C = window.NSKCORE; if(!C) return;
   let changed=0;
@@ -5441,6 +5478,40 @@ function pendProps(){
   });
   return {n:n, old:oldest};
 }
+/* السجلات التي لم يؤكّد الخادم استلامها — ومن أنشأ كلًا منها */
+window.unsyncedList = function(){
+  var C=window.NSKCORE, out=[];
+  ['recs','inss','props'].forEach(function(kind){
+    var m=C.all(kind)||{};
+    Object.keys(m).forEach(function(k){
+      var r=m[k]; if(!r || r.synced) return;
+      out.push({ kind:kind, id:k,
+        by:_tnorm(r.by||r._by||'') || 'غير معروف',
+        date:String(r.date||''),
+        tries:(r.syncTry||0),
+        err:String(r.syncErr||''),
+        label:(kind==='recs'?'مسح':kind==='inss'?'تركيب':'مقترح') });
+    });
+  });
+  out.sort(function(a,b){ return String(b.date||'').localeCompare(String(a.date||'')); });
+  return out;
+};
+/* إعادة رفع كل ما لم يُزامَن */
+window.retrySync = async function(){
+  var L=window.unsyncedList();
+  if(!L.length){ toast('كل شيء مُزامَن ✓'); return; }
+  if(!window.NSKSYNC){ toast('لا اتصال بالخادم الآن',1); return; }
+  toast('جارٍ إعادة رفع '+L.length+'…');
+  var C=window.NSKCORE;
+  L.forEach(function(x){
+    try{ var r=(C.all(x.kind)||{})[x.id]; if(r) NSKSYNC.push(x.kind, x.id, r); }catch(e){}
+  });
+  setTimeout(function(){
+    var n=window.unsyncedList().length;
+    toast(n? ('بقي '+n+' بلا مزامنة — راجع الشبكة',1) : 'تمّت مزامنة الكل ✓');
+    try{ if(window.NSKDASH) NSKDASH.refresh(); }catch(e){}
+  }, 3500);
+};
 function sysChecks(){
   var C=window.NSKCORE, dbx=C.db(), inss=C.all('inss'), recs=C.all('recs'), props=C.all('props');
   var ser={}, dup=[], noco=0, pend=0;
@@ -6449,8 +6520,29 @@ function render(){
     h+='<div class="dGrid">';
     h+=card(S.dup.length,'سيريالات مكرّرة','#E05252');
     h+=card(S.noco,'مواقع بلا إحداثيات','#E8873A');
-    h+=card(S.pend,'تغييرات لم تُزامن من هذا الجهاز','#4BC9F5');
+    h+=card(S.pend,'تغييرات لم تُزامن بعد','#4BC9F5');
     h+='</div>';
+    (function(){
+      var UL=[]; try{ UL=window.unsyncedList()||[]; }catch(e){}
+      if(!UL.length){
+        h+='<p class="dTs" style="color:#3AD6A0">كل التغييرات مؤكَّدة على الخادم ✓</p>';
+        return;
+      }
+      h+='<div class="syBox"><div class="syHd"><b>'+AR(UL.length)+' تغييرًا لم يؤكّده الخادم</b>'
+        +'<button type="button" id="syRetry">إعادة الرفع الآن</button></div>';
+      UL.slice(0,12).forEach(function(x){
+        h+='<div class="syRow"><em>'+esc2(x.label)+'</em>'
+          +'<b>'+esc2(x.id)+'</b>'
+          +'<span>👤 '+esc2(x.by)+'</span>'
+          +(x.date?'<time>'+esc2(x.date)+'</time>':'')
+          +(x.err?'<i>'+esc2(x.err)+'</i>':(x.tries?'<i>محاولات: '+AR(x.tries)+'</i>':''))
+          +'</div>';
+      });
+      if(UL.length>12) h+='<div class="syRow more">و'+AR(UL.length-12)+' غيرها…</div>';
+      h+='</div>';
+      h+='<p class="dTs">هذه تغييرات محفوظة على الجهاز ولم يؤكّد الخادم استلامها بعد. '
+        +'لن تُفقد — تُرفع تلقائيًا عند عودة الشبكة، أو اضغط «إعادة الرفع الآن».</p>';
+    })();
     if(nDraft) h+='<p class="dTs" style="color:#E8873A">'+AR(nDraft)
       +' سجل مسح مسوّدة ناقصة — فُتح الموقع وعُدّل دون تسجيل زيارة، فلا يُحتسب مسحًا ولا يظهر في لوحة الإدارة. '
       +'نظّفها من لوحة الإدارة ← شريط المسوّدات ← «حذف نهائيًا».</p>';
@@ -6679,6 +6771,7 @@ function render(){
     var ni=R.querySelector('.qaNt');
     if(qaReturn(R.getAttribute('data-id'), ni?ni.value:'')){ try{ toast('أُرجع للفريق ↩'); }catch(e){} render(); }
   }; });
+  var _sy=$i('syRetry'); if(_sy) _sy.onclick=function(){ window.retrySync(); };
   Array.prototype.forEach.call(document.querySelectorAll('#nskDash .qaGo'),function(el){ el.onclick=function(){
     var id=el.getAttribute('data-id');
     try{ var d=$i('nskDash'); if(d) d.style.display='none'; }catch(e){}
