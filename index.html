@@ -1039,7 +1039,7 @@ window.addEventListener('error', function(e){
 <div id="app">
   <header>
     <div class="t">
-      <div class="eyebrow">متابعة المشروع ١٤٤٨هـ <span style="color:var(--muted);letter-spacing:0;font-weight:600">· نسخة V6.5</span></div>
+      <div class="eyebrow">متابعة المشروع ١٤٤٨هـ <span style="color:var(--muted);letter-spacing:0;font-weight:600">· نسخة V6.6</span></div>
       <h1 id="ttl">المسح الميداني</h1>
     </div>
     <button class="pill" id="modeBtn" type="button">المسح</button>
@@ -5704,11 +5704,21 @@ async function wipeCloud(withSettings, onProg){
     var snap=await getDocsFromServer(collection(db,kind));
     await batchDel(snap.docs.map(function(d){ return d.ref; }));
     if(KP[kind]){
+      /* من الذاكرة */
       var m=window.NSKCORE.all(kind)||{}, ids=Object.keys(m);
       for(var ii=0; ii<ids.length; ii++){
         try{ await window.storage.delete(KP[kind]+ids[ii], false); }catch(e){}
         try{ window.NSKCORE.rm(kind, ids[ii]); }catch(e){}
       }
+      /* ثم كنس أي مفتاح باقٍ في التخزين لم يُحمَّل للذاكرة أصلًا */
+      try{
+        var lst=await window.storage.list(KP[kind], false);
+        var keys=(lst && lst.keys) || [];
+        for(var kk=0; kk<keys.length; kk++){
+          try{ await window.storage.delete(keys[kk], false); }catch(e){}
+          try{ window.NSKCORE.rm(kind, String(keys[kk]).slice(KP[kind].length)); }catch(e){}
+        }
+      }catch(e){}
     }
   }
   /* الصور تُحذف صفحات صغيرة (١٥ صورة) حتى لا يُنزَّل الكولكشن الضخم دفعة واحدة */
@@ -5725,8 +5735,30 @@ async function wipeCloud(withSettings, onProg){
     try{ var s=window.NSKCORE.all('settings')||{};
       Object.keys(s).forEach(function(k){ window.NSKCORE.rm('settings',k); }); }catch(e){}
   }
+  /* آثار محلية لا تُرى في العدّادات لكنها تبقى: علامة قراءة الإشعارات وتبويب اللوحة */
+  try{ localStorage.removeItem('nsk.seen'); }catch(e){}
+  try{ localStorage.removeItem('nsk.dtab'); }catch(e){}
   return n;
 }
+/* يتحقق فعليًا أن كل شيء صار صفرًا — ذاكرةً وتخزينًا */
+window.wipeVerify = async function(){
+  var C=window.NSKCORE, left=[];
+  var KP={recs:'rec:', inss:'ins:', props:'new:'};
+  Object.keys(KP).forEach(function(kind){
+    var n=Object.keys(C.all(kind)||{}).length;
+    if(n) left.push({where:'الذاكرة', kind:kind, n:n});
+  });
+  for(var kind in KP){
+    try{
+      var lst=await window.storage.list(KP[kind], false);
+      var n2=((lst && lst.keys) || []).length;
+      if(n2) left.push({where:'التخزين', kind:kind, n:n2});
+    }catch(e){}
+  }
+  var uns=0; try{ uns=(window.unsyncedList()||[]).length; }catch(e){}
+  if(uns) left.push({where:'بانتظار الرفع', kind:'—', n:uns});
+  return { clean: left.length===0, left: left };
+};
 function devicesObj(){ try{ return window.NSKCORE.get('settings','devices')||{}; }catch(e){ return {}; } }
 function saveDevices(list, srcTag){
   var d={list:list, n:list.length, at:_now(), src:srcTag||'import'};
@@ -6793,9 +6825,17 @@ function render(){
     wg.disabled=true; wg.textContent='جارٍ المسح…';
     try{
       var n=await wipeCloud(withSet, function(k){ wg.textContent='جارٍ المسح… '+AR(k); });
-      try{ if(window.NSKSYNC) NSKSYNC.log('إعادة ضبط شاملة: حُذف '+n+' مستند'+(withSet?' + الإعدادات':'')); }catch(e){}
-      try{ toast('اكتملت إعادة الضبط: '+AR(n)+' مستند — جارٍ إعادة التحميل'); }catch(e){}
-      setTimeout(function(){ location.reload(); }, 1500);
+      wg.textContent='جارٍ التحقق…';
+      var V={clean:true,left:[]}; try{ V=await window.wipeVerify(); }catch(e){}
+      try{ if(window.NSKSYNC) NSKSYNC.log('إعادة ضبط شاملة: حُذف '+n+' مستند'+(withSet?' + الإعدادات':'')
+        +(V.clean?' — تحقّق: كل الأرقام صفر':' — تبقّى: '+V.left.map(function(x){return x.kind+' '+x.n;}).join(' · '))); }catch(e){}
+      if(V.clean){
+        try{ toast('اكتملت إعادة الضبط: حُذف '+AR(n)+' مستند — كل الأرقام صفر ✓'); }catch(e){}
+      } else {
+        var _leftOver=V.left.map(function(x){ return x.kind+' ('+x.where+'): '+AR(x.n); }).join('، ');
+        try{ toast('حُذف '+AR(n)+' مستند — لكن تبقّى: '+_leftOver,1); }catch(e){}
+      }
+      setTimeout(function(){ location.reload(); }, V.clean?1500:4000);
     }catch(e){
       wg.disabled=false; wg.textContent='🗑 تنفيذ إعادة الضبط';
       try{ toast('تعذّر إكمال المسح — تحقق من الاتصال',1); }catch(x){}
