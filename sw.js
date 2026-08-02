@@ -1,5 +1,5 @@
 /* Nusuk Survey — offline shell cache */
-const CACHE = 'nusuk-survey-v5.4';
+const CACHE = 'nusuk-survey-v5.5';
 const SHELL = [
   './',
   './index.html',
@@ -56,7 +56,7 @@ self.addEventListener('fetch', function (e) {
   const isShellPage = req.mode === 'navigate' || req.url.indexOf('index.html') !== -1;
   if (isShellPage) {
     e.respondWith(
-      fetchWithTimeout(req, 3500).then(function (res) {
+      fetchWithTimeout(new Request(req.url, { cache: 'reload', credentials: 'same-origin' }), 3500).then(function (res) {
         if (res && res.status === 200) {
           const copy = res.clone();
           caches.open(CACHE).then(function (c) { c.put(req, copy); });

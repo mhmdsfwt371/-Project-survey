@@ -22,11 +22,55 @@ window.addEventListener('beforeinstallprompt',function(e){ e.preventDefault(); w
   try{ document.dispatchEvent(new Event('nsk-bip')); }catch(x){} });
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', function(){
-    navigator.serviceWorker.register('sw.js').catch(function(e){
-      console.log('sw registration failed', e);
-    });
+    navigator.serviceWorker.register('sw.js', {updateViaCache:'none'}).then(function(reg){
+      try{ reg.update(); }catch(e){}
+      setInterval(function(){ try{ reg.update(); }catch(e){} }, 10*60*1000);
+    }).catch(function(e){ console.log('sw registration failed', e); });
+  });
+  /* لو تغيّر العامل النشط أثناء التشغيل: أعد التحميل مرة واحدة */
+  var _rl=false;
+  navigator.serviceWorker.addEventListener('controllerchange', function(){
+    if(_rl) return; _rl=true; location.reload();
   });
 }
+/* يقارن نسخة الملف على الخادم بالنسخة المشغّلة — ويعرض شريطًا صريحًا */
+window.nskCheckUpd = function(silent){
+  try{
+    var cur=''; try{ cur=((document.querySelector('.eyebrow')||{}).textContent||'').match(/V[\d.]+/); cur=cur?cur[0]:''; }catch(e){}
+    if(!cur) return;
+    fetch('sw.js?t='+Date.now(), {cache:'no-store'}).then(function(r){ return r.text(); }).then(function(t){
+      var m=t.match(/nusuk-survey-v([\d.]+)/); if(!m) return;
+      var srv='V'+m[1];
+      if(srv===cur){ if(!silent){ try{ toast('أنت على أحدث نسخة '+cur+' ✓'); }catch(e){} } return; }
+      var b=document.getElementById('updBar');
+      if(!b){
+        b=document.createElement('div'); b.id='updBar';
+        b.innerHTML='<span>نسخة جديدة <b>'+srv+'</b> جاهزة — أنت على '+cur+'</span>'
+          +'<button type="button" id="updGo">تحديث الآن</button>';
+        document.body.appendChild(b);
+        document.getElementById('updGo').onclick=function(){ window.doUpdate(); };
+      }
+    }).catch(function(){});
+  }catch(e){}
+};
+/* يمسح الكاش ويسجّل عاملًا جديدًا ثم يعيد التحميل — تحديث قسري */
+window.doUpdate = async function(){
+  var g=document.getElementById('updGo'); if(g){ g.disabled=true; g.textContent='جارٍ التحديث…'; }
+  try{
+    if(window.caches){ var ks=await caches.keys(); await Promise.all(ks.map(function(k){ return caches.delete(k); })); }
+  }catch(e){}
+  try{
+    if(navigator.serviceWorker){
+      var rs=await navigator.serviceWorker.getRegistrations();
+      await Promise.all(rs.map(function(r){ return r.unregister(); }));
+    }
+  }catch(e){}
+  setTimeout(function(){ location.replace(location.pathname+'?v='+Date.now()); }, 350);
+};
+window.addEventListener('load', function(){ setTimeout(function(){ window.nskCheckUpd(true); }, 2500); });
+document.addEventListener('visibilitychange', function(){
+  if(!document.hidden) setTimeout(function(){ window.nskCheckUpd(true); }, 800);
+});
 </script>
 <style>
 /* required styles */
@@ -858,6 +902,13 @@ textarea.in{min-height:74px;resize:vertical}
   box-shadow:0 6px 20px rgba(0,0,0,.45)
 }
 #fab:focus-visible{outline:2px solid var(--cream);outline-offset:2px}
+#updBar{position:fixed;inset-block-start:0;inset-inline:0;z-index:9990;background:#C9A24B;color:#0A0B0D;
+  display:flex;align-items:center;justify-content:center;gap:10px;flex-wrap:wrap;
+  padding:calc(9px + env(safe-area-inset-top,0px)) 14px 9px;font-size:13px;font-weight:700;
+  box-shadow:0 3px 14px rgba(0,0,0,.4)}
+#updBar button{background:#0A0B0D;color:#F1EDE0;border:0;border-radius:999px;
+  padding:7px 16px;font:inherit;font-weight:800;cursor:pointer}
+#updBar button:disabled{opacity:.6}
 #belPill.has{border-color:#4BC9F5;color:#4BC9F5}
 #belPill.hot{border-color:#E8873A;color:#E8873A;font-weight:800}
 #nskGps{position:absolute;inset-block-end:14px;inset-inline-end:14px;z-index:830;
@@ -967,7 +1018,7 @@ window.addEventListener('error', function(e){
 <div id="app">
   <header>
     <div class="t">
-      <div class="eyebrow">قارئات نُسُك ١٤٤٨هـ <span style="color:var(--muted);letter-spacing:0;font-weight:600">· نسخة V5.4</span></div>
+      <div class="eyebrow">قارئات نُسُك ١٤٤٨هـ <span style="color:var(--muted);letter-spacing:0;font-weight:600">· نسخة V5.5</span></div>
       <h1 id="ttl">المسح الميداني</h1>
     </div>
     <button class="pill" id="modeBtn" type="button">المسح</button>
@@ -1065,6 +1116,7 @@ window.addEventListener('error', function(e){
           <button class="btn p" id="bkBtn" type="button" style="margin-bottom:10px">
             ⬇ نسخة احتياطية كاملة</button>
           <button class="btn s" id="mgBtn" type="button">⬆ دمج نسخة زميل / استعادة</button>
+          <button class="btn s" id="updBtn" type="button" style="margin-top:10px">🔄 فحص التحديثات الآن</button>
           <button class="btn s" id="schBtn" type="button" style="margin-top:10px">🧩 ملف الواجهات JSON — للمطوّرين والتكامل</button>
           <div id="docWrap">
           <div style="font-size:11px;color:var(--muted);line-height:1.8;margin-top:12px">📄 دليل النظام Word:</div>
@@ -3554,9 +3606,10 @@ window.nskGuide = function(role){
              min:'دليل الاستخدام — الجهة الوزارية'}[role]||'دليل الاستخدام';
   var ROLE={
     eng:'<b>دورك في النظام:</b> أنت العقل المدبّر. تقرر ما يدخل خطة التركيب، وتوزّع النقاط على الفنيين، وتعتمد ما يقترحونه، وتدقّق كل جهاز مركّب بسيرياله، وتضبط الأهداف وتتابع الوتيرة، وتخاطب الشركات بمواعيد التركيب. هذا الدليل يغطي النظام كله بما فيه فصلا الميدان والوزارة، لأنك تحتاج أن تفهم ما يراه كل طرف.',
-    sup:'<b>دورك في النظام:</b> أنت العين في الميدان. كل رقم يظهر في تقارير الإدارة والوزارة مصدره ما تسجّله أنت أمام الموقع. مهمتك: مسح المواقع بدقة، تصحيح ما اختلف عن السجل، تنفيذ التركيب وتوثيقه بالصور، والتبليغ فورًا عمّا يمنعك.',
+    sup:'<b>إنت مين في المشروع؟</b> إنت العين اللي في الأرض. أي رقم بيوصل للإدارة أو الوزارة إنت اللي كتبته وإنت واقف قدام الموقع. شغلك: تمسح صح، تصحّح اللي مختلف، تركّب وتصوّر، وتبلّغ فورًا لو فيه حاجة واقفاك.',
     min:'<b>دوركم في النظام:</b> جهة متابعة تقرأ ولا تعدّل. تعرض لكم الشاشة الصورة التنفيذية للمشروع بأرقام لحظية من الميدان، وتستخرجون منها تقاريركم مباشرة دون وسيط.'
   }[role]||'';
+  function note(t){ return '<div class="note">'+esc(t)+'</div>'; }
   function COMMON(){
     var C2=[];
     C2.push('<h2>أمور تخص الجميع</h2>');
@@ -3575,7 +3628,7 @@ window.nskGuide = function(role){
     return C2.join('');
   }
   var B=[];
-  B.push('<h1>نظام قارئات نُسُك ١٤٤٨هـ</h1>');
+  B.push('<h1>متابعة مشروع قارئات نُسُك ١٤٤٨هـ</h1>');
   B.push('<p class="sub">'+esc(TITLE)+'</p>');
   B.push('<p class="sub">النسخة '+esc(ver)+' · مُستخرج بتاريخ '+esc(dt)+'</p>');
   if(ROLE) B.push('<div class="role">'+ROLE+'</div>');
@@ -3599,27 +3652,51 @@ window.nskGuide = function(role){
   }
 
   if(role==='sup'){
-    B.push('<h2>٣ · عملك اليومي — خطوة بخطوة</h2>');
-    B.push('<p><b>١ · افتح الموقع من الخريطة.</b> النقاط ملوّنة بحالتها، وزر ◎ يرجّعك لموقعك في أي وقت.</p>');
-    B.push('<p><b>٢ · راجع «بيانات مسجّلة».</b> الشركة والشاخص والمربع والسعة والشبكة مكتوبة من ملفات المشروع — اقرأها فقط، واضغط «تعديل» لو وجدت غيرها في الموقع.</p>');
-    B.push('<p><b>٣ · سجّل القياسات والتحديات</b> ثم التقط الصور. الصور الإلزامية لا يقبل الحفظ بدونها.</p>');
-    B.push('<p><b>٤ · حدّد الصلاحية:</b> مناسب أم مناسب بتعديل أم غير مناسب — واذكر السبب.</p>');
-    B.push('<p><b>٥ · في التركيب</b> حدّث الحالة: بدأ التركيب، أو تم التركيب (صورة ما بعد التركيب إلزامية)، أو متعذّر.</p>');
-    B.push('<p><b>٦ · لو واجهت مانعًا</b> اضغط «📣 بلّغ» واختر السبب — تصل رسالة للمكتب فيها رقم الشاخص والمربع ورابط موقعك على الخريطة، فلا يسألك أحد «أنهي مخيم».</p>');
-    B.push('<p><b>٧ · «جدولي»</b> يعرض النقاط المُسندة إليك، ولكل نقطة رابط ملاحة يوصلك إليها.</p>');
-    B.push('<p><b>٨ · لو وجدت موقعًا غير مسجّل</b> اضغط «موقع غير مسجّل». النظام يفحص ١٤٠ مترًا حولك ويعرض المسجّل القريب أولًا — راجعه قبل أن تنشئ جديدًا.</p>');
-    B.push('<h2>٤ · أشياء تريحك</h2><ul>');
-    ['لا تحتاج إنترنت — كل ما تسجّله محفوظ على جهازك ويرفع نفسه تلقائيًا أول ما تعود الشبكة، ولا تضغط أي زر مزامنة.',
-     'لا يُمسح شيء من جهازك قبل أن يؤكّد الخادم استلامه.',
-     'اسم الشركة تختاره من القائمة فقط. لو لم تجدها اطلب إضافتها من داخل القائمة نفسها ويعتمدها المهندس.',
-     'رقم الشاخص بصيغة أرقام/أرقام — التطبيق يرفض غيرها حتى لا تختلط الأرقام لاحقًا.',
-     'جرس 🔔 في اللوحة يعرض ما يخصّك أنت فقط: ما أُسند إليك وما أُرجع من تدقيقك.'
+    B.push('<h2>٣ · إيه اللي تعمله كل يوم</h2>');
+    B.push('<p class="lead">اتبع الترتيب ده وخلاص. كل خطوة سطر واحد.</p>');
+    B.push('<h3>أول حاجة: افتح الموقع</h3>');
+    B.push('<p>افتح الخريطة. النقط ملوّنة على حسب حالتها. دوس على النقطة اللي واقف عندها.</p>');
+    B.push('<p>ضِعت في الخريطة؟ دوس زر <b>◎</b> يرجّعك لمكانك.</p>');
+    B.push('<h3>تاني حاجة: اقرا «بيانات مسجّلة»</h3>');
+    B.push('<p>فوق هتلاقي بيانات مكتوبة من قبلك: الشركة، الشاخص، المربع، السعة، الشبكة.</p>');
+    B.push('<p><b>اقراها بس.</b> لو لقيت حاجة على الأرض غير المكتوبة، دوس <b>«تعديل»</b> جنب البند وصححها.</p>');
+    B.push('<h3>تالت حاجة: املا القياسات</h3>');
+    B.push('<p>الأبعاد، الكهربا، مسار الكابل، عدد الأطقم، ساعات التركيب.</p>');
+    B.push('<p>وبعدين اختار التحديات من القايمة. لو اخترت «أخرى» اكتب هي إيه.</p>');
+    B.push('<h3>رابع حاجة: صوّر</h3>');
+    B.push('<p>الصور اللي عليها نجمة إلزامية. التطبيق مش هيحفظ من غيرها.</p>');
+    B.push('<h3>خامس حاجة: قول رأيك في الموقع</h3>');
+    B.push('<p>مناسب؟ ولا مناسب بس محتاج تعديل؟ ولا غير مناسب خالص؟ اختار — واكتب السبب.</p>');
+    B.push('<p>احفظ. الموقع هيبقى لونه «تمت الزيارة» على الخريطة على طول.</p>');
+    B.push('<h3>وقت التركيب</h3>');
+    B.push('<p>افتح النقطة وحدّث الحالة:</p>');
+    B.push(tbl(['الحالة','امتى تختارها'],[
+      ['بدأ التركيب','أول ما تبدأ شغل'],
+      ['تم التركيب','خلصت — والصورة بعد التركيب لازم'],
+      ['متعذّر','مش قادر تركّب، واكتب ليه']]));
+    B.push('<h3>لو فيه حاجة واقفاك</h3>');
+    B.push('<p>دوس <b>«📣 بلّغ»</b> واختار السبب.</p>');
+    B.push('<p>الرسالة هتروح للمكتب وفيها رقم الشاخص والمربع ولينك مكانك على الخريطة. يعني محدش هيسألك «أنهي مخيم».</p>');
+    B.push('<h3>نقاطك إنت</h3>');
+    B.push('<p>زر <b>«📋 جدولي»</b> بيوريك النقط اللي المهندس دّاهالك. كل نقطة معاها لينك ملاحة يوصّلك.</p>');
+    B.push('<h3>لقيت مخيم مش موجود في التطبيق؟</h3>');
+    B.push('<p>دوس <b>«＋ موقع غير مسجّل»</b>.</p>');
+    B.push('<p>التطبيق هيوريك المواقع المسجّلة اللي قريبة منك الأول — <b>بُصّ عليها</b>، لأن أغلب الوقت بيكون المخيم موجود وإنت واقف جنبه.</p>');
+    B.push('<p>متأكد إنه جديد؟ كمّل البيانات وصوّر الشاخص وابعت للمكتب.</p>');
+    B.push(note('المخيم ماعندوش شركة؟ اختار السبب «عدم وجود تخصيص» — ساعتها التطبيق مش هيطلب منك شركة.'));
+    B.push('<h2>٤ · حاجات تريّحك</h2><ul>');
+    ['مش محتاج نت. اشتغل عادي — الشغل بيتحفظ على موبايلك ويرفع نفسه لوحده أول ما النت يرجع.',
+     'مفيش حاجة بتتمسح من موبايلك غير لما السيرفر يقول استلمت.',
+     'اسم الشركة بتختاره من القايمة. مش لاقيها؟ اطلب إضافتها من جوه القايمة والمهندس هيعتمدها.',
+     'رقم الشاخص لازم يكون أرقام/أرقام — زي ٥٧/٢. التطبيق هيرفض أي شكل تاني.',
+     'الجرس 🔔 فوق بيوريك حاجاتك إنت بس: اللي اتدّالك واللي اترجّعلك. مش هيوريك شغل زمايلك.'
     ].forEach(function(x){ B.push('<li>'+esc(x)+'</li>'); });
     B.push('</ul>');
-    B.push('<h2>٥ · أسئلة سريعة</h2>');
-    B.push('<p><b>نسيت أحفظ وخرجت من النموذج؟</b> ما كتبته يبقى في المسوّدة، افتح الموقع مرة أخرى وستجده.</p>');
-    B.push('<p><b>الموقع الحقيقي مختلف عن المسجّل؟</b> صحّحه من «تعديل» بجوار البند، والتصحيح يظهر للمكتب فورًا.</p>');
-    B.push('<p><b>دقة الموقع ضعيفة؟</b> التطبيق ينبّهك بالرقم ويفتح الخريطة على موقعك لتصحّح النقطة بنفسك.</p>');
+    B.push('<h2>٥ · أسئلة بتتسأل كتير</h2>');
+    B.push('<p><b>خرجت من غير ما أحفظ — راح الشغل؟</b><br>لأ. مكتوب في المسوّدة. افتح الموقع تاني هتلاقيه.</p>');
+    B.push('<p><b>الموقع على الأرض غير المكتوب في التطبيق؟</b><br>دوس «تعديل» جنب البند وصححه. المكتب هيشوف التصحيح على طول.</p>');
+    B.push('<p><b>الـ GPS بتاعي مش دقيق؟</b><br>التطبيق هيقولك الدقة كام، ويفتحلك الخريطة على مكانك عشان تظبط النقطة بإيدك.</p>');
+    B.push('<p><b>مش لاقي التحديث؟</b><br>روح تبويب «الرفع» ودوس «🔄 فحص التحديثات الآن».</p>');
     B.push(COMMON());
     return wrap(B);
   }
@@ -3702,7 +3779,7 @@ window.nskGuide = function(role){
   }
 function _nskWrap(B){
   return '<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word">'
-    +'<head><meta charset="utf-8"><title>دليل نظام قارئات نُسُك</title>'
+    +'<head><meta charset="utf-8"><title>دليل متابعة مشروع قارئات نُسُك ١٤٤٨هـ</title>'
     +'<style>'
     +'body{font-family:"Segoe UI","Arial",sans-serif;direction:rtl;text-align:right;color:#1A1A1A;line-height:1.8;font-size:11pt}'
     +'h1{color:#A87F2E;font-size:22pt;margin:0 0 4pt;text-align:center}'
@@ -3713,6 +3790,8 @@ function _nskWrap(B){
     +'td{border:0.5pt solid #D8D2C4;padding:5pt;text-align:right;font-size:10pt;color:#3A3A3A}'
     +'h3{color:#1A1A1A;font-size:11.5pt;margin:12pt 0 4pt}'
     +'div.role{background:#FBF6E9;border-right:3pt solid #C9A24B;padding:8pt 10pt;margin:10pt 0 4pt;font-size:10.5pt}'
+    +'div.note{background:#FBF6E9;border-right:3pt solid #C9A24B;padding:7pt 10pt;margin:8pt 0;font-size:10.5pt}'
+    +'p.lead{color:#5A5A5A;font-size:10.5pt;margin:2pt 0 8pt}'
     +'ul{margin:4pt 24pt 10pt 0}li{margin-bottom:4pt}'
     +'</style></head><body>'+B.join('')+'</body></html>';
 }
@@ -3721,7 +3800,7 @@ window.doGuide = function(role){
     var html=window.nskGuide(role);
     var d=new Date(), p2=function(n){ return String(n).padStart(2,'0'); };
     var tag={eng:'المهندس', sup:'الفني-والمشرف', min:'الوزارة'}[role]||'الكامل';
-    var name='دليل-نُسُك-'+tag+'-'+d.getFullYear()+p2(d.getMonth()+1)+p2(d.getDate())+'.doc';
+    var name='دليل-متابعة-قارئات-نُسُك-'+tag+'-'+d.getFullYear()+p2(d.getMonth()+1)+p2(d.getDate())+'.doc';
     var a=document.createElement('a');
     a.href=URL.createObjectURL(new Blob(['\ufeff'+html],{type:'application/msword'}));
     a.download=name; document.body.appendChild(a); a.click(); a.remove();
@@ -3800,6 +3879,7 @@ window.mergeBackupText = async function(txt){
         (fail?' · فشل حفظ '+fail:''), fail?1:0);
 };
 $('#bkBtn').onclick = ()=>window.doBackup();
+$('#updBtn').onclick = ()=>window.nskCheckUpd(false);
 $('#schBtn').onclick = ()=>window.doSchema();
 window.applyDocRole = function(){
   var ro=nskRole();
@@ -6637,11 +6717,25 @@ function render(){
 function seenAt(){ try{ return +(localStorage.getItem('nsk.seen')||0); }catch(e){ return 0; } }
 function markSeen(){ try{ localStorage.setItem('nsk.seen', String(Date.now())); }catch(e){} }
 /* هل هذا الحدث يخصّ هذا المستخدم؟ يُرجع {ok, hot} — hot = يستحق تنبيهًا فوريًا */
+/* حدث قديم يشير إلى سجل لم يعد موجودًا (حُذف أو مُسح) — لا معنى لعرضه */
+function evStale(ev){
+  try{
+    var txt=String((ev&&ev.txt)||'');
+    var t=ev&&ev.t?ev.t.getTime():0;
+    if(t && (Date.now()-t) > 14*24*3600*1000) return true;      /* أقدم من أسبوعين */
+    var m=txt.match(/\b(NEW-[A-Z]+-\d+|NSK-[A-Z]+-[A-Z]+-\d+)\b/);
+    if(!m) return false;
+    var id=m[1], C=window.NSKCORE;
+    if(id.indexOf('NEW-')===0) return !((C.all('props')||{})[id]);
+    return !((C.all('recs')||{})[id] || (C.all('inss')||{})[id]);
+  }catch(e){ return false; }
+}
 function evRelevant(ev, u){
   var role=(u&&u.role)||'', me=String((u&&(u.name||u.email))||'').trim();
   var txt=String((ev&&ev.txt)||''), by=String((ev&&ev.by)||'').trim();
   if(role==='viewer') return {ok:false, hot:false};       /* الوزارة: بلا ضجيج إطلاقًا */
   if(by && by===me)   return {ok:false, hot:false};       /* لا يُنبَّه أحد على فعل نفسه */
+  if(evStale(ev))     return {ok:false, hot:false};       /* سجله حُذف أو الحدث قديم */
   var isProp   = /موقع مقترح|مقترح جديد|طلب إضافة شركة/.test(txt);
   var isBlock  = /متعذّر/.test(txt);
   var isReport = /بلاغ ميداني/.test(txt);
@@ -6682,6 +6776,7 @@ window.nskBell = function(){
           +'<span>'+esc2(e.by||'—')+' · '+(e.t?arS(fmtT(e.t)):'—')+'</span></div>';
       }).join('')+'</div>'
       : '<div class="dEmpty">لا جديد يخصّك 👌</div>')
+    +'<p class="bl-h" style="margin:10px 0 0">لا تظهر هنا الأحداث الأقدم من أسبوعين ولا التي حُذفت سجلاتها.</p>'
     +'</div>';
   document.body.appendChild(ov);
   ov.addEventListener('click', function(e){ if(e.target===ov) closeBell(); });
