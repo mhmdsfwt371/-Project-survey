@@ -1077,7 +1077,7 @@ window.addEventListener('error', function(e){
 <div id="app">
   <header>
     <div class="t">
-      <div class="eyebrow">متابعة المشروع ١٤٤٨هـ <span style="color:var(--muted);letter-spacing:0;font-weight:600">· نسخة V7.0</span></div>
+      <div class="eyebrow">متابعة المشروع ١٤٤٨هـ <span style="color:var(--muted);letter-spacing:0;font-weight:600">· نسخة V7.1</span></div>
       <h1 id="ttl">المسح الميداني</h1>
     </div>
     <button class="pill" id="modeBtn" type="button">المسح</button>
@@ -2966,7 +2966,7 @@ window.wipeDrafts = async function(){
   try{ if(window.NSKSYNC) NSKSYNC.log('حذف '+n+' مسوّدة ناقصة'); }catch(e){}
   toast('حُذفت '+n+' مسوّدة ✓');
   try{ drawMgr(); }catch(e){}
-  try{ paint(); }catch(e){}
+  try{ if(window.paint) window.paint(); }catch(e){}
   try{ if(window.NSKDASH) NSKDASH.refresh(); }catch(e){}
 };
 window.editProp = function(id){
@@ -3731,7 +3731,7 @@ window.nskGuide = function(role){
   var m=String(V).match(/V[\d.]+/), ver=m?m[0]:'';
   var C=window.NSKCORE, dbx=C.db();
   var nG=(dbx.g||[]).length, nP=(dbx.p||[]).length, nT=dbx.d.length;
-  var c=null; try{ c=counts(); }catch(e){}
+  var c=null; try{ if(window.counts) c=window.counts(); }catch(e){}
   function esc(s){ return String(s==null?'':s).replace(/[&<>]/g,function(x){
     return x==='&'?'&amp;':x==='<'?'&lt;':'&gt;'; }); }
   function tbl(head, rows){
@@ -3943,6 +3943,8 @@ function _isAdminRole(){
   }catch(e){ return false; }
 }
 /* PDF: نافذة طباعة — المتصفح يشكّل العربية ويتيح «حفظ كـ PDF» */
+function _dvEsc(t){ return String(t==null?'':t)
+  .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
 window.doGuidePdf = function(role){
   try{
     var html=window.nskGuide(role);
@@ -3959,9 +3961,9 @@ window.doGuidePdf = function(role){
     ov=document.createElement('div'); ov.id='docOv';
     ov.innerHTML='<div class="dv-bar">'
       +'<button type="button" id="dvX" aria-label="رجوع">✕ رجوع</button>'
-      +'<b>دليل '+esc2(tag)+'</b>'
+      +'<b>دليل '+_dvEsc(tag)+'</b>'
       +'<button type="button" id="dvP" class="p">🖨 حفظ PDF</button>'
-      +'</div><iframe id="dvF" title="دليل '+esc2(tag)+'"></iframe>';
+      +'</div><iframe id="dvF" title="دليل '+_dvEsc(tag)+'"></iframe>';
     document.body.appendChild(ov);
     var f=document.getElementById('dvF');
     f.srcdoc=html;
@@ -5980,6 +5982,8 @@ window.setLock = async function(on, msg, pin){
   toast(on?'أُغلق التطبيق للجميع عداك ✓':'أُعيد فتح التطبيق ✓');
   try{ if(window.NSKDASH) NSKDASH.refresh(); }catch(e){}
 };
+try{ window.paint = paint; }catch(e){}
+try{ window.counts = counts; }catch(e){}
 window.wipeVerify = async function(){
   var C=window.NSKCORE, left=[];
   var KP={recs:'rec:', inss:'ins:', props:'new:'};

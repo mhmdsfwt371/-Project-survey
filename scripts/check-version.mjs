@@ -72,19 +72,32 @@ try {
 
 /* ── حارس النطاقات: يمنع تكرار خطأ isOwner (V7.0) ────────────────
    كل <script> نطاق مستقل. دالة معرّفة في كتلة ومُستدعاة في أخرى
-   بلا window. تنفجر وقت التشغيل فقط — لا يمسكها node --check.     */
+   بلا window. تنفجر وقت التشغيل فقط — لا يمسكها node --check.
+   الاستبعاد على مستوى السطر لا الكتلة: كتلة واحدة قد تضمّ مكتبة
+   مصغّرة في سطر عملاق + كود التطبيق في أسطر عادية.
+   والعزل يخصّ type=module وحدها — كتل classic تتشارك النطاق العام. */
 {
   const src = readFileSync('index.html', 'utf8');
   const re = /<script\b([^>]*)>([\s\S]*?)<\/script>/g;
   const blocks = []; let m;
-  while ((m = re.exec(src))) blocks.push({ a: m.index, b: re.lastIndex, code: m[2] });
-  const isLib = c => c.length > 50000 && c.length / (c.split('\n').length) > 400;
-  const lib = new Set(blocks.map((x, i) => (isLib(x.code) ? i : -1)).filter(i => i >= 0));
+  while ((m = re.exec(src))) blocks.push({ a: m.index, b: re.lastIndex, mod: /module/.test(m[1]) });
   const blk = p => { for (let i = 0; i < blocks.length; i++) if (p >= blocks[i].a && p < blocks[i].b) return i; return null; };
 
+  /* خريطة الأسطر: أي موضع داخل سطر أطول من 600 حرف = كود مصغّر */
+  const MINIFIED = 600;
+  const lineStart = [0];
+  for (let i = 0; i < src.length; i++) if (src[i] === '\n') lineStart.push(i + 1);
+  const lineLen = lineStart.map((st, i) => (i + 1 < lineStart.length ? lineStart[i + 1] : src.length) - st);
+  const isMin = pos => {
+    let lo = 0, hi = lineStart.length - 1;
+    while (lo < hi) { const mid = (lo + hi + 1) >> 1; if (lineStart[mid] <= pos) lo = mid; else hi = mid - 1; }
+    return lineLen[lo] > MINIFIED;
+  };
+
   const defs = new Map();
-  for (const d of src.matchAll(/\bfunction\s+([A-Za-z_]\w{3,})\s*\(/g)) {
-    const i = blk(d.index); if (i === null || lib.has(i)) continue;
+  for (const d of src.matchAll(/\bfunction\s+([A-Za-z_]\w{2,})\s*\(/g)) {
+    if (isMin(d.index)) continue;
+    const i = blk(d.index); if (i === null) continue;
     if (!defs.has(d[1])) defs.set(d[1], new Set());
     defs.get(d[1]).add(i);
   }
@@ -92,11 +105,17 @@ try {
   for (const [name, where] of defs) {
     if (where.size > 1) continue;
     const home = [...where][0];
+    /* كتل classic تتشارك النطاق العام — العزل يخصّ الوحدات وحدها */
+    if (!blocks[home].mod) continue;
     const rx = new RegExp('(?<![\\w.$])' + name + '\\s*\\(', 'g');
     for (const u of src.matchAll(rx)) {
-      const i = blk(u.index); if (i === null || lib.has(i) || i === home) continue;
-      const pre = src.slice(Math.max(0, u.index - 9), u.index);
+      if (isMin(u.index)) continue;
+      const i = blk(u.index); if (i === null || i === home) continue;
+      const pre = src.slice(Math.max(0, u.index - 12), u.index);
       if (pre.includes('window.') || pre.includes('function ')) continue;
+      if (/[.:]\s*$/.test(pre)) continue;
+      if (/[{,]\s*$/.test(pre)) continue;                       /* اختصار تابع في كائن */
+      if (/\b(?:const|let|var)\s+$/.test(pre)) continue;
       leaks.push(`${name}() معرّفة في كتلة ${home} ومُستدعاة في ${i}`);
       break;
     }
