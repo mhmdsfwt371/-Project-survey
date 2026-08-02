@@ -745,7 +745,8 @@ svg.leaflet-image-layer.leaflet-interactive path {
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 html,body{height:100%;margin:0;overscroll-behavior:none}
 body{font-family:var(--ar);background:var(--ink);color:var(--cream);font-size:15px}
-button,input,select,textarea{font-family:inherit;font-size:inherit}
+button,/* ١٦ بكسل حدٌّ أدنى: سفاري iOS يكبّر الصفحة تلقائيًا عند لمس حقل أصغر منه */
+input,select,textarea{font-family:inherit;font-size:16px}
 
 #app{height:100%;display:flex;flex-direction:column}
 header{
@@ -979,6 +980,22 @@ textarea.in{min-height:74px;resize:vertical}
   color:#E8873A;font:inherit;font-size:11.5px;padding:6px 12px;cursor:pointer;flex:0 0 auto}
 #mgrTbl .mgDr #mgDrDel{border-color:rgba(224,82,82,.6);color:#E05252}
 #belPill.has{border-color:#4BC9F5;color:#4BC9F5}
+/* الاسم كان يشغل أعرض مساحة في الشريط وهو أقلّها استعمالًا */
+.pill.av{min-width:38px;width:38px;padding:0;border-radius:50%;
+  font-weight:800;font-size:12.5px;letter-spacing:0;display:inline-flex;
+  align-items:center;justify-content:center;flex:0 0 auto}
+#nearBar{position:absolute;inset-inline:12px;bottom:calc(12px + env(safe-area-inset-bottom,0px));
+  z-index:520;background:var(--panel,#141619);border:1px solid var(--line,#2c3a34);
+  border-radius:12px;padding:10px 13px;display:flex;align-items:center;gap:10px;
+  box-shadow:0 6px 20px rgba(0,0,0,.35);font-size:12.5px}
+#nearBar b{flex:1 1 auto;font-weight:600}
+#nearBar span{color:var(--muted,#9AA1AB);font-size:11.5px}
+#nearBar button{background:var(--gold,#C9A24B);border:0;border-radius:9px;color:#0A0B0D;
+  font:inherit;font-size:12px;font-weight:800;padding:8px 15px;cursor:pointer;flex:0 0 auto}
+#nearBar .nbX{background:transparent;color:var(--muted,#9AA1AB);font-size:16px;padding:4px 6px;font-weight:400}
+#fProg{position:sticky;top:0;z-index:5;height:3px;background:rgba(150,150,150,.25)}
+#fProg i{display:block;height:100%;background:var(--gold,#C9A24B);width:0;transition:width .25s}
+.fld.miss{outline:2px solid #E05252;outline-offset:3px;border-radius:10px}
 #belPill.hot{border-color:#E8873A;color:#E8873A;font-weight:800}
 #nskGps{position:absolute;inset-block-end:14px;inset-inline-end:14px;z-index:830;
   width:44px;height:44px;border-radius:50%;border:1.5px solid rgba(75,201,245,.85);
@@ -1072,7 +1089,14 @@ html[data-theme="light"] .leaflet-bar a{background:#fff;color:#333}
 </head>
 <body>
 <script>
-try{var _th=localStorage.getItem('nsk-theme');if(_th==='light')document.documentElement.dataset.theme='light';}catch(x){}
+  try{
+    var _th=localStorage.getItem('nsk-theme');
+    if(_th==='light') document.documentElement.dataset.theme='light';
+    else if(!_th){
+      var _r=''; try{ _r=(JSON.parse(localStorage.getItem('nsk.user')||'null')||{}).role||''; }catch(e){}
+      if(_r==='supervisor' || _r==='') document.documentElement.dataset.theme='light';
+    }
+  }catch(x){}
 window.addEventListener('error', function(e){
   try{
     var d=document.getElementById('bootErr');
@@ -1087,12 +1111,12 @@ window.addEventListener('error', function(e){
 <div id="app">
   <header>
     <div class="t">
-      <div class="eyebrow">متابعة المشروع ١٤٤٨هـ <span style="color:var(--muted);letter-spacing:0;font-weight:600">· نسخة V8.7</span></div>
+      <div class="eyebrow">متابعة المشروع ١٤٤٨هـ <span style="color:var(--muted);letter-spacing:0;font-weight:600">· نسخة V8.8</span></div>
       <h1 id="ttl">المسح الميداني</h1>
     </div>
     <button class="pill" id="modeBtn" type="button">المسح</button>
     <button class="pill" id="belPill" type="button" title="ما يخصّك" hidden>🔔</button>
-    <button class="pill" id="meBtn" type="button">المشرف</button>
+    <button class="pill av" id="meBtn" type="button" title="الحساب">؟</button>
     <button class="pill" id="goBtn" type="button">مواقع</button>
     <button class="pill" id="thBtn" type="button" title="فاتح / داكن">🌓</button>
   </header>
@@ -1234,8 +1258,8 @@ window.addEventListener('error', function(e){
   <nav>
     <button class="on" data-v="vMap" type="button">الخريطة</button>
     <button data-v="vList" type="button">المواقع</button>
-    <button data-v="vMgr" type="button">لوحة الإدارة</button>
-    <button data-v="vOut" type="button">الرفع</button>
+    <button data-v="vMgr" type="button">السجلات</button>
+    <button data-v="vOut" type="button">النسخ والأدلة</button>
   </nav>
 </div>
 <button id="fab" type="button" onclick="startNew()">＋ موقع غير مسجّل</button>
@@ -1795,6 +1819,7 @@ function askPos(cb, hiAcc){
   if(!navigator.geolocation){ if(cb) cb(false); return; }
   navigator.geolocation.getCurrentPosition(function(p){
     myPos=[p.coords.latitude,p.coords.longitude];
+      try{ if(window.paintNear) window.paintNear(); }catch(e){}
     myAcc=Math.round(p.coords.accuracy||0); myAt=Date.now();
     paintMe(); try{ drawList(); }catch(e){}
     if(cb) cb(true);
@@ -2381,6 +2406,11 @@ window.openForm = function(id){
   $('#pg').addEventListener('change', onPhoto);
   show('vForm');
   document.getElementById('vForm').scrollTop=0;
+  try{ window.paintProg(); }catch(e){}
+  try{
+    var _f=document.getElementById('nf');
+    if(_f && !_f._pg){ _f._pg=1; _f.addEventListener('input', function(){ window.paintProg(); }); }
+  }catch(e){}
 };
 
 function setFit(a){
@@ -2636,6 +2666,49 @@ window.nskTell = function(id){
     done(); };
 };
 
+/* ---------------- أقرب نقطة لم تُزر (V8.8) ----------------
+   الفني يفتح التطبيق على ١٧٨٧ نقطة ولا شيء يقول له: ابدأ من هنا. */
+function _nearest(){
+  try{
+    if(!myPos) return null;
+    var C=window.NSKCORE, d=C.db().d, best=null, bd=Infinity;
+    for(var i=0;i<d.length;i++){
+      var r=d[i], id=r[0];
+      if(st(id)!=='new') continue;                 /* لم تُزر فقط */
+      var pos=posOf(r); if(!pos || pos[0]==null) continue;
+      var m=metres(myPos[0],myPos[1],pos[0],pos[1]);
+      if(m<bd){ bd=m; best={id:id,row:r,m:Math.round(m)}; }
+    }
+    return best;
+  }catch(e){ return null; }
+}
+window.paintNear=function(){
+  try{
+    var host=document.getElementById('vMap'); if(!host) return;
+    var bar=document.getElementById('nearBar');
+    var u=window.NSK_USER||{};
+    var off=false; try{ off=localStorage.getItem('nsk.near')==='off'; }catch(e){}
+    var show=(u.role==='supervisor'||u.role==='admin'||u.role==='engineer');
+    if(off || !show || appMode!=='survey'){ if(bar) bar.remove(); return; }
+    var n=_nearest();
+    if(!n){ if(bar) bar.remove(); return; }
+    var C=window.NSKCORE;
+    var sq=n.row[8]?('مربع '+n.row[8]):'', zn=C.szOf(n.row)||'';
+    var dist=n.m<1000 ? (n.m+' م') : ((n.m/1000).toFixed(1)+' كم');
+    if(!bar){
+      bar=document.createElement('div'); bar.id='nearBar';
+      host.appendChild(bar);
+    }
+    bar.innerHTML='<button type="button" class="nbX" title="إخفاء">×</button>'
+      +'<b>أقرب نقطة لم تُزر<br><span>'+_dvEsc([zn,sq].filter(Boolean).join(' · ')+' — '+dist)+'</span></b>'
+      +'<button type="button" class="nbGo">اذهب</button>';
+    bar.querySelector('.nbGo').onclick=function(){ try{ window.goMap(n.id); }catch(e){} };
+    bar.querySelector('.nbX').onclick=function(){
+      try{ localStorage.setItem('nsk.near','off'); }catch(e){}
+      bar.remove();
+    };
+  }catch(e){}
+};
 /* ---------------- propose a missing site ---------------- */
 function metres(a,b,c,d){
   const R=6371000, p=Math.PI/180;
@@ -3112,13 +3185,58 @@ function openNewForm(la,lo,ac,near,editId){
   };
   show('vForm');
   document.getElementById('vForm').scrollTop=0;
+  try{ window.paintProg(); }catch(e){}
+  try{
+    var _f=document.getElementById('nf');
+    if(_f && !_f._pg){ _f._pg=1; _f.addEventListener('input', function(){ window.paintProg(); }); }
+  }catch(e){}
 }
 
+/* يبرز الحقول الناقصة ويقفز لأولها بدل رسالة عامة لا تدلّ على مكانها */
+/* شريط تقدّم أعلى النموذج — النموذج طويل ولا شيء يقول كم بقي */
+window.paintProg=function(){
+  try{
+    var f=document.getElementById('nf')||document.getElementById('sf');
+    if(!f) return;
+    var bar=document.getElementById('fProg');
+    if(!bar){
+      bar=document.createElement('div'); bar.id='fProg';
+      bar.innerHTML='<i></i>';
+      f.insertBefore(bar, f.firstChild);
+    }
+    var need=f.querySelectorAll('[name][required], [name][data-req]');
+    if(!need.length) need=f.querySelectorAll('[name]');
+    var done=0;
+    Array.prototype.forEach.call(need,function(el){ if(String(el.value||'').trim()) done++; });
+    var pctv=need.length?Math.round(done/need.length*100):0;
+    bar.querySelector('i').style.width=pctv+'%';
+    bar.title='اكتمل '+pctv+'٪';
+  }catch(e){}
+};
+function _focusMiss(form, names){
+  try{
+    form.querySelectorAll('.fld.miss').forEach(function(e){ e.classList.remove('miss'); });
+    var first=null;
+    names.forEach(function(n){
+      var el=form.querySelector('[name="'+n+'"]'); if(!el) return;
+      var box=el.closest('.fld')||el.parentElement;
+      if(box) box.classList.add('miss');
+      if(!first) first=el;
+    });
+    var LBL={region:'المشعر', stype:'نوع الموقع', square:'رقم المربع', sign:'رقم الشاخص'};
+    var say=names.map(function(n){ return LBL[n]||n; }).join(' · ');
+    toast('ناقص: '+say, 1);
+    if(first){
+      first.scrollIntoView({behavior:'smooth', block:'center'});
+      setTimeout(function(){ try{ first.focus({preventScroll:true}); }catch(e){} }, 380);
+    }
+  }catch(e){ toast('أكمل الحقول الإلزامية أولًا',1); }
+}
 async function saveNew(){
   const f=document.getElementById('nf'), v={};
   f.querySelectorAll('[name]').forEach(el=>{ if(el.value) v[el.name]=el.value; });
   const miss=['region','stype','square','sign'].filter(k=>!v[k]);
-  if(miss.length){ toast('أكمل الحقول الإلزامية أولًا',1); return; }
+  if(miss.length){ _focusMiss(f, miss); return; }
   v.sign=normSign(v.sign); v.square=normSign(v.square);
   try{
     const sEl=document.querySelector('#nf [name="sign"]'); if(sEl) sEl.value=v.sign;
@@ -3858,7 +3976,7 @@ window.nskGuide = function(role){
     B.push('<p><b>خرجت قبل الحفظ — هل ضاع عملي؟</b><br>لا. ما كتبته محفوظ في المسوّدة. افتح الموقع مرة أخرى تجده.</p>');
     B.push('<p><b>الموقع على الأرض يخالف المسجّل في التطبيق؟</b><br>اضغط «تعديل» بجوار البند وصحّحه. ويظهر التصحيح للمكتب فورًا.</p>');
     B.push('<p><b>تحديد موقعي غير دقيق؟</b><br>يعرض التطبيق مقدار الدقة، ويفتح الخريطة على موقعك لتضبط النقطة بنفسك.</p>');
-    B.push('<p><b>لم يصلني التحديث؟</b><br>افتح تبويب «الرفع» واضغط «🔄 فحص التحديثات الآن».</p>');
+    B.push('<p><b>لم يصلني التحديث؟</b><br>افتح تبويب «النسخ والأدلة» واضغط «🔄 فحص التحديثات الآن».</p>');
     B.push(COMMON());
     return wrap(B);
   }
@@ -7714,7 +7832,18 @@ $i('dashFab').onclick=function(){ window.NSKDASH.open(); };
   var IOS=/iPad|iPhone|iPod/.test(navigator.userAgent||'');
   function mk(){
     if(document.getElementById('nskInst')) return;
-    var tb=document.getElementById('thBtn'); if(!tb||!tb.parentNode) return;
+    try{
+    var mb=document.getElementById('meBtn');
+    if(mb){
+      var u=window.NSK_USER||JSON.parse(localStorage.getItem('nsk.user')||'null')||{};
+      var nm=String(u.name||u.email||'').trim();
+      var parts=nm.split(/[\s@._-]+/).filter(Boolean);
+      var ini=parts.length>1 ? (parts[0][0]+parts[1][0]) : (nm.slice(0,2)||'؟');
+      mb.textContent=ini.toUpperCase();
+      mb.title='الحساب — '+(nm||'غير مسجّل');
+    }
+  }catch(e){}
+  var tb=document.getElementById('thBtn'); if(!tb||!tb.parentNode) return;
     var b=document.createElement('button'); b.id='nskInst'; b.type='button';
     b.textContent='⬇ تثبيت التطبيق';
     tb.parentNode.insertBefore(b, tb);
