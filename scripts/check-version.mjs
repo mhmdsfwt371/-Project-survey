@@ -20,17 +20,21 @@ const cache  = grab('sw.js', /nusuk-survey-v(\d+\.\d+)/, 'سلسلة CACHE');
 const schema = grab('docs/api-schema.json', /"app_version"\s*:\s*"(V\d+\.\d+)"/, 'app_version');
 const sysmd  = grab('docs/system.md', /النسخة\s*`(V\d+\.\d+)`/, 'رقم النسخة');
 
-let docx = null;
-try {
-  const xml = execSync('unzip -p docs/nusuk-guide.docx word/document.xml', { encoding: 'utf8' });
-  const m = xml.match(/(V\d+\.\d+)/);
-  docx = m ? m[1] : null;
-  if (!docx) fail.push('docs/nusuk-guide.docx: لا يحمل رقم نسخة');
-} catch { fail.push('docs/nusuk-guide.docx: تعذّرت قراءته'); }
+function docxVer(f){
+  try {
+    const xml = execSync(`unzip -p ${f} word/document.xml`, { encoding: 'utf8' });
+    const m = xml.match(/(V\d+\.\d+)/);
+    if (!m) { fail.push(`${f}: لا يحمل رقم نسخة`); return null; }
+    return m[1];
+  } catch { fail.push(`${f}: تعذّرت قراءته`); return null; }
+}
+const docx   = docxVer('docs/nusuk-guide.docx');
+const manual = docxVer('docs/nusuk-user-manual.docx');
 
 const want = app;
 const seen = { 'sw.js': cache && 'V' + cache, 'docs/api-schema.json': schema,
-               'docs/system.md': sysmd, 'docs/nusuk-guide.docx': docx };
+               'docs/system.md': sysmd, 'docs/nusuk-guide.docx': docx,
+               'docs/nusuk-user-manual.docx': manual };
 if (want) {
   ok.push(`نسخة التطبيق: ${want}`);
   for (const [f, v] of Object.entries(seen)) {

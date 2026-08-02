@@ -858,6 +858,8 @@ textarea.in{min-height:74px;resize:vertical}
   box-shadow:0 6px 20px rgba(0,0,0,.45)
 }
 #fab:focus-visible{outline:2px solid var(--cream);outline-offset:2px}
+#belPill.has{border-color:#4BC9F5;color:#4BC9F5}
+#belPill.hot{border-color:#E8873A;color:#E8873A;font-weight:800}
 #nskGps{position:absolute;inset-block-end:14px;inset-inline-end:14px;z-index:830;
   width:44px;height:44px;border-radius:50%;border:1.5px solid rgba(75,201,245,.85);
   background:var(--panel,#141619);color:#4BC9F5;font-size:20px;line-height:1;
@@ -965,10 +967,11 @@ window.addEventListener('error', function(e){
 <div id="app">
   <header>
     <div class="t">
-      <div class="eyebrow">قارئات نُسُك ١٤٤٨هـ <span style="color:var(--muted);letter-spacing:0;font-weight:600">· نسخة V5.2</span></div>
+      <div class="eyebrow">قارئات نُسُك ١٤٤٨هـ <span style="color:var(--muted);letter-spacing:0;font-weight:600">· نسخة V5.3</span></div>
       <h1 id="ttl">المسح الميداني</h1>
     </div>
     <button class="pill" id="modeBtn" type="button">المسح</button>
+    <button class="pill" id="belPill" type="button" title="ما يخصّك" hidden>🔔</button>
     <button class="pill" id="meBtn" type="button">المشرف</button>
     <button class="pill" id="goBtn" type="button">مواقع</button>
     <button class="pill" id="thBtn" type="button" title="فاتح / داكن">🌓</button>
@@ -1063,10 +1066,12 @@ window.addEventListener('error', function(e){
             ⬇ نسخة احتياطية كاملة</button>
           <button class="btn s" id="mgBtn" type="button">⬆ دمج نسخة زميل / استعادة</button>
           <button class="btn s" id="schBtn" type="button" style="margin-top:10px">🧩 ملف الواجهات JSON — للمطوّرين والتكامل</button>
-          <div style="font-size:11px;color:var(--muted);line-height:1.8;margin-top:12px">📄 دليل النظام Word — نسخة لكل دور:</div>
-          <button class="btn s" id="docEng" type="button" style="margin-top:7px">دليل المهندس — إدارة المشروع</button>
+          <div id="docWrap">
+          <div style="font-size:11px;color:var(--muted);line-height:1.8;margin-top:12px">📄 دليل النظام Word:</div>
           <button class="btn s" id="docSup" type="button" style="margin-top:7px">دليل الفني والمشرف — العمل الميداني</button>
+          <button class="btn s" id="docEng" type="button" style="margin-top:7px">دليل المهندس — إدارة المشروع</button>
           <button class="btn s" id="docMin" type="button" style="margin-top:7px">دليل الوزارة — المتابعة</button>
+          </div>
           <input id="mergeFile" type="file" accept=".json,application/json" hidden/>
           <div style="font-size:11px;color:var(--muted);line-height:1.8;margin-top:9px">
             النسخة تشمل كل المسوحات والتركيبات والمواقع المقترحة بصورها.
@@ -3346,6 +3351,7 @@ function updFab(){
   f.style.display = (appMode!=='install' && _curV==='vMap' && !sheetOpen) ? '' : 'none';
 }
 function show(v){
+  try{ if(window.closeBell) window.closeBell(); }catch(e){}
   document.querySelectorAll('.view').forEach(s=>s.classList.toggle('on',s.id===v));
   document.body.classList.toggle('nsk-vform', v==='vForm');
   document.querySelectorAll('nav button').forEach(b=>b.classList.toggle('on',b.dataset.v===v));
@@ -3761,9 +3767,21 @@ window.mergeBackupText = async function(txt){
 };
 $('#bkBtn').onclick = ()=>window.doBackup();
 $('#schBtn').onclick = ()=>window.doSchema();
+window.applyDocRole = function(){
+  var ro=nskRole();
+  var vis = ro==='admin'||ro==='engineer' ? {docSup:1,docEng:1,docMin:1}
+          : ro==='viewer'                 ? {docMin:1}
+          :                                 {docSup:1};
+  ['docSup','docEng','docMin'].forEach(function(id){
+    var b=document.getElementById(id); if(b) b.style.display = vis[id]?'':'none';
+  });
+  try{ var s=document.getElementById('schBtn');
+    if(s) s.style.display = (ro==='admin'||ro==='engineer')?'':'none'; }catch(e){}
+};
 $('#docEng').onclick = ()=>window.doGuide('eng');
 $('#docSup').onclick = ()=>window.doGuide('sup');
 $('#docMin').onclick = ()=>window.doGuide('min');
+try{ window.applyDocRole(); }catch(e){}
 $('#mgBtn').onclick = ()=>{ const f=$('#mergeFile'); if(f&&f.click) f.click(); };
 $('#mergeFile').onchange = async ev=>{
   const f=ev.target.files && ev.target.files[0]; if(!f) return;
@@ -3975,6 +3993,8 @@ body.nsk-sup #dCopy{display:none!important}
   window.NSKGATE={
     unlock:function(p){
       window.NSK_USER=p;
+      try{ if(window.applyDocRole) window.applyDocRole(); }catch(e){}
+      try{ if(window.paintBell) window.paintBell(); }catch(e){}
       try{ if(p.role==='viewer') document.body.classList.add('nsk-viewer'); }catch(e){}
       try{ if(p.role==='supervisor') document.body.classList.add('nsk-sup'); }catch(e){}
       var g=document.getElementById('fbGate'); if(g) g.style.display='none';
@@ -6273,6 +6293,8 @@ function render(){
   applyTab();
   var bb=$i('bellBtn'); if(bb) bb.onclick=function(){ window.nskBell(); };
   try{ paintBell(); }catch(e){}
+  try{ var bp=document.getElementById('belPill');
+    if(bp && !bp._w){ bp._w=1; bp.onclick=function(){ window.nskBell(); }; } }catch(e){}
   $i('dMap').onclick=function(){ window.NSKDASH.close(); };
   $i('dRef').onclick=function(){ render(); };
   var xb=$i('dChalX'); if(xb) xb.onclick=exportChal;
@@ -6566,31 +6588,47 @@ window.nskBell = function(){
       : '<div class="dEmpty">لا جديد يخصّك 👌</div>')
     +'</div>';
   document.body.appendChild(ov);
-  ov.addEventListener('click', function(e){ if(e.target===ov) ov.remove(); });
-  ov.querySelector('#blX').onclick=function(){ ov.remove(); };
+  ov.addEventListener('click', function(e){ if(e.target===ov) closeBell(); });
+  ov.querySelector('#blX').onclick=function(e){ e.stopPropagation(); closeBell(); };
   markSeen(); paintBell();
 };
+function closeBell(){ var o=document.getElementById('bellOv'); if(o) o.remove(); }
+window.closeBell=closeBell;
+window.paintBell=function(){ try{ return paintBell(); }catch(e){} };
 function paintBell(){
-  var b=document.getElementById('bellBtn'); if(!b) return;
-  var u=window.NSK_USER||user||{};
-  if(((u.role||'')==='viewer')){ b.style.display='none'; return; }
+  var u=window.NSK_USER||user||{}, hide=((u.role||'')==='viewer');
   var s=seenAt(), n=0, hot=false;
-  events.forEach(function(e){
+  if(!hide) events.forEach(function(e){
     var t=e.t?e.t.getTime():0; if(t<=s) return;
     var r=evRelevant(e,u); if(!r.ok) return;
     n++; if(r.hot) hot=true;
   });
-  b.style.display='';
-  b.textContent = n? ('🔔 '+AR(n)) : '🔔';
-  b.classList.toggle('has', n>0);
-  b.classList.toggle('hot', hot);
+  [document.getElementById('bellBtn'), document.getElementById('belPill')].forEach(function(b){
+    if(!b) return;
+    if(hide){ b.hidden=true; b.style.display='none'; return; }
+    b.hidden=false; b.style.display='';
+    b.textContent = n? ('🔔 '+AR(n)) : '🔔';
+    b.classList.toggle('has', n>0);
+    b.classList.toggle('hot', hot);
+  });
 }
+/* جرس الشريط العلوي يُربط عند إقلاع الموديول — لا ينتظر فتح اللوحة */
+(function(){
+  function wireBel(){
+    var b=document.getElementById('belPill');
+    if(b && !b._w){ b._w=1; b.onclick=function(){ window.nskBell(); }; }
+    try{ paintBell(); }catch(e){}
+  }
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded', wireBel);
+  else wireBel();
+  setTimeout(wireBel, 1200);
+})();
 window.NSKDASH={
-  open:function(){ render(); const d=$i('nskDash'); d.style.display='block';
+  open:function(){ try{ closeBell(); }catch(e){} render(); const d=$i('nskDash'); d.style.display='block';
     if(!$i('dashX')){ const x=document.createElement('button'); x.id='dashX'; x.type='button';
       x.className='nskX'; x.setAttribute('aria-label','إغلاق'); x.textContent='×';
       x.onclick=function(){ window.NSKDASH.close(); }; d.appendChild(x); } },
-  close:function(){ $i('nskDash').style.display='none'; },
+  close:function(){ $i('nskDash').style.display='none'; try{ closeBell(); }catch(e){} },
   refresh:function(){ const d=$i('nskDash'); if(!d || d.style.display!=='block') return;
     const a=document.activeElement;
     if(a && (/^ev(Q|From|To)$/.test(a.id||'') || (a.classList && a.classList.contains('evCbQ')))){ evPaint(); return; }
