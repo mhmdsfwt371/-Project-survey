@@ -965,7 +965,7 @@ window.addEventListener('error', function(e){
 <div id="app">
   <header>
     <div class="t">
-      <div class="eyebrow">قارئات نُسُك ١٤٤٨هـ <span style="color:var(--muted);letter-spacing:0;font-weight:600">· نسخة V4.9</span></div>
+      <div class="eyebrow">قارئات نُسُك ١٤٤٨هـ <span style="color:var(--muted);letter-spacing:0;font-weight:600">· نسخة V5.0</span></div>
       <h1 id="ttl">المسح الميداني</h1>
     </div>
     <button class="pill" id="modeBtn" type="button">المسح</button>
@@ -4689,7 +4689,7 @@ function zN(z){ z=String(z||''); return z.indexOf('عرف')>=0?'عرفات':z.in
 var DXS=[['pace','الوتيرة والهدف'],['over','نظرة عامة (الرسوم الدائرية)'],['inst','التركيب والجدولة'],
  ['daily','معدل التركيب اليومي'],['survey','المسح الميداني'],
  ['chal','التحديات الميدانية'],['reg','حسب المشعر'],
- ['co','حسب شركة الخدمة'],['stuck','المتعذر والراكد'],['pipe','سلامة خط الإنتاج'],['assign','توزيع فرق التركيب'],['stock','عُهدة الأجهزة'],['qa','التدقيق والسيريالات'],['sys','سلامة البيانات'],
+ ['co','حسب شركة الخدمة'],['stuck','المتعذر والراكد'],['pipe','سلامة خط الإنتاج'],['assign','توزيع فرق التركيب'],['conote','إشعار الشركات'],['stock','عُهدة الأجهزة'],['qa','التدقيق والسيريالات'],['sys','سلامة البيانات'],
  ['team','إنتاجية الفريق'],['race','سباق المشرفين'],['ev','آخر الأحداث']];
 function dxSaved(){ try{ return JSON.parse(localStorage.getItem('nsk.dx2')||'null'); }catch(e){ return null; } }
 function dxOpen(){
@@ -5107,6 +5107,92 @@ function qaReturn(id, note){
   try{ if(window.NSKSYNC) NSKSYNC.log('إرجاع تركيب '+id+' لفريقه'+(nt?' — '+nt:'')); }catch(e){}
   return true;
 }
+function coCtcObj(){ try{ return window.NSKCORE.get('settings','cocontacts')||{}; }catch(e){ return {}; } }
+function saveCoCtc(list, srcTag){
+  var d={list:list, n:list.length, at:_now(), src:srcTag||'import'};
+  try{
+    window.NSKCORE.set('settings','cocontacts',d);
+    if(window.NSKSYNC) NSKSYNC.push('settings','cocontacts',d);
+    if(window.NSKSYNC) NSKSYNC.log('تحديث أرقام الشركات: '+list.length+' شركة ('+(srcTag||'import')+')');
+  }catch(e){}
+  return d;
+}
+/* الأعمدة: الشركة | الرقم | المسؤول — يقبل أي ترتيب فيه اسم ورقم */
+function coParse(text){
+  var lines=String(text||'').split(/\r?\n/), out=[], seen={};
+  lines.forEach(function(ln,i){
+    ln=String(ln||'').trim(); if(!ln) return;
+    var p=ln.split(/[\t,;|]/).map(function(x){ return String(x||'').trim().replace(/^"|"$/g,''); });
+    if(p.length<2) return;
+    var c='', ph='', nm='';
+    p.forEach(function(x){
+      var digits=x.replace(/[^\d]/g,'');
+      if(!ph && digits.length>=9 && digits.length<=15 && /^[\d\s+\-()]+$/.test(x)) ph=digits;
+      else if(!c) c=x; else if(!nm) nm=x;
+    });
+    if(i===0 && /شرك|company|اسم/i.test(c) && !ph) return;
+    if(!c || !ph) return;
+    /* السعودي المحلي 05xxxxxxxx → 9665xxxxxxxx */
+    if(/^05\d{8}$/.test(ph)) ph='966'+ph.slice(1);
+    var key=coNorm(c);
+    if(seen[key]) return; seen[key]=1;
+    out.push({c:key, p:ph, n:nm});
+  });
+  return out;
+}
+/* النقاط المجدولة لكل شركة */
+function coSched(){
+  var C=window.NSKCORE, dbx=C.db(), recs=C.all('recs'), inss=C.all('inss');
+  var CT=(coCtcObj().list)||[], ph={};
+  CT.forEach(function(x){ ph[coNorm(x.c)]={p:x.p,n:x.n}; });
+  var by={}, ord=[];
+  dbx.d.forEach(function(r){
+    var id=r[0], ins=inss[id]; if(!ins) return;
+    if((ins.status||'')!=='مجدول') return;
+    var fx=((recs[id]||{}).fix)||{};
+    var co=coNorm(fx.company||r[27]||r[10]||'');
+    if(!co) co='غير محددة';
+    if(!by[co]){ by[co]={co:co, n:0, pts:[], first:'', tel:(ph[co]||{}).p||'', who:(ph[co]||{}).n||''}; ord.push(co); }
+    var g=by[co], sg=String(fx.sign||r[9]||''), sq=String(fx.square||r[8]||'');
+    var d=String(ins.sched||'');
+    g.n++;
+    g.pts.push({sg:sg||String(r[1]||id), sq:sq, z:zN(C.szOf(r)||''), d:d});
+    if(d && (!g.first || d<g.first)) g.first=d;
+  });
+  ord.sort(function(a,b){ return by[b].n-by[a].n; });
+  return {rows:ord.map(function(k){ return by[k]; }), have:CT.length};
+}
+function coMsg(g){
+  var L=['السادة / '+g.co,'تحية طيبة،',''];
+  L.push('نفيدكم بجدولة تركيب قارئات نُسُك ١٤٤٨هـ في مواقعكم:');
+  var P=g.pts.slice().sort(function(a,b){ return String(a.d||'z').localeCompare(String(b.d||'z')); });
+  P.slice(0,40).forEach(function(x){
+    L.push('• '+x.z+(x.sq?' · مربع '+x.sq:'')+' · شاخص '+x.sg+(x.d?' — الموعد '+x.d:''));
+  });
+  if(P.length>40) L.push('• …وباقي '+(P.length-40)+' موقعًا في الجدول المرفق');
+  L.push('');
+  L.push('الإجمالي: '+P.length+' موقع'+(g.first?' · أقرب موعد '+g.first:''));
+  L.push('نرجو تسهيل دخول الفريق للمواقع وتوفير مصدر الكهرباء في الموعد المحدد.');
+  L.push('');
+  L.push('— '+((user&&(user.name||user.email))||'إدارة المشروع')+' · إدارة مشروع قارئات نُسُك');
+  return L.join('\n');
+}
+function coNotify(co, mode){
+  var S=coSched(), g=null;
+  S.rows.forEach(function(x){ if(x.co===co) g=x; });
+  if(!g){ try{ toast('لا توجد نقاط مجدولة لهذه الشركة',1); }catch(e){} return; }
+  var t=coMsg(g);
+  if(mode==='wa' && g.tel){
+    try{ window.open('https://wa.me/'+g.tel+'?text='+encodeURIComponent(t),'_blank'); }catch(e){}
+  } else if(navigator.share){
+    navigator.share({text:t}).catch(function(){});
+  } else {
+    try{ var ta=document.createElement('textarea'); ta.value=t; ta.style.position='fixed'; ta.style.opacity='0';
+      document.body.appendChild(ta); ta.select(); document.execCommand('copy'); ta.remove();
+      toast('اتنسخ نص الإشعار — الصقه في المحادثة'); }catch(e){}
+  }
+  try{ if(window.NSKSYNC) NSKSYNC.log('إشعار موعد تركيب — '+co+' — '+g.n+' موقع'); }catch(e){}
+}
 function ctcObj(){ try{ return window.NSKCORE.get('settings','contacts')||{}; }catch(e){ return {}; } }
 function saveCtc(mut){
   try{
@@ -5427,7 +5513,7 @@ function copySummary(){
 /* V4.9: تقسيم اللوحة لتبويبات — القسم يُخفى لا يُعاد بناؤه */
 var DTABS=[
   ['watch','متابعة',      ['over','pace','inst','daily','reg','co'],      'الصورة التنفيذية — للوزارة والإدارة'],
-  ['plan','تخطيط',        ['pipe','assign','stock'],                      'ما قبل التنفيذ: الجدولة والفرق والعُهدة'],
+  ['plan','تخطيط',        ['pipe','assign','conote','stock'],             'ما قبل التنفيذ: الجدولة والفرق والإشعار والعُهدة'],
   ['ops','تشغيل',         ['me','survey','chal','stuck','qa','team','race'],'الميدان اليوم: المسح والتحديات والتدقيق'],
   ['adm','النظام',        ['sys','ev'],                                   'سجل الأحداث وسلامة البيانات وإعادة الضبط']
 ];
@@ -5858,7 +5944,40 @@ function render(){
       }
     })();
 
-    h+='</section><section class="dSec" data-sec="qa">';
+    /* V5.0: إشعار الشركات بمواعيد التركيب */
+    (function(){
+      var canN=!!(user && (user.role==='admin'||user.role==='engineer'));
+      var S=coSched();
+      h+='<section class="dSec" data-sec="conote">';
+      h+='<h2>إشعار الشركات بمواعيد التركيب</h2>';
+      if(!S.rows.length){
+        h+='<div class="dEmpty">لا توجد نقاط مجدولة بعد — أول ما تبدأ الجدولة تظهر هنا الشركات ومواعيدها.</div>';
+      } else {
+        var noTel=S.rows.filter(function(g){ return !g.tel; }).length;
+        h+='<div class="dGrid">';
+        h+=card(S.rows.length,'شركة لديها نقاط مجدولة','#E9CE83');
+        h+=card(S.have||'—','رقم محفوظ','#4BC9F5');
+        h+=card(noTel,'بلا رقم — تُرسل بالمشاركة', noTel?'#E8873A':'#3AD6A0');
+        h+='</div>';
+        h+='<table class="dT"><thead><tr><th>الشركة</th><th>مواقع مجدولة</th><th>أقرب موعد</th><th>الرقم</th><th></th></tr></thead><tbody>';
+        S.rows.forEach(function(g){
+          h+='<tr><td>'+esc2(g.co)+'</td><td><b>'+AR(g.n)+'</b></td><td>'+esc2(g.first||'—')+'</td>'
+            +'<td>'+(g.tel?'<span style="color:#3AD6A0">✔ محفوظ</span>':'<span class="pMut">—</span>')+'</td>'
+            +'<td>'+(canN?('<button type="button" class="dBtn'+(g.tel?' p':'')+' coWa" data-c="'+escA(g.co)+'" data-m="'+(g.tel?'wa':'sh')+'">'
+              +(g.tel?'📱 إشعار':'💬 مشاركة')+'</button>'):'')+'</td></tr>';
+        });
+        h+='</tbody></table>';
+        h+='<p class="dTs">الرسالة تحوي مواقع الشركة المجدولة بالمشعر والمربع والشاخص وموعد كلٍّ منها، ورجاء تسهيل الدخول وتوفير الكهرباء. كل إشعار يُسجَّل في سجل الأحداث.</p>';
+      }
+      if(canN){
+        var CC=(coCtcObj().list)||[];
+        h+='<h2 style="font-size:.95em;margin-top:14px">أرقام الشركات'+(CC.length?' — '+AR(CC.length)+' محفوظ':'')+'</h2>';
+        h+='<div class="pTyStrip"><label>ملف الأرقام <input id="ccFile" type="file" accept=".xlsx,.xls,.csv,.txt"></label></div>';
+        h+='<p class="dTs">الأعمدة: اسم الشركة · الرقم · اسم المسؤول (اختياري). يقبل إكسل و CSV، ويحوّل 05xxxxxxxx إلى 9665xxxxxxxx تلقائيًا. اسم الشركة يجب أن يطابق الاسم الموحّد المستخدم في المشروع ليُربط بمواقعها.</p>';
+      }
+      h+='</section>';
+    })();
+    h+='<section class="dSec" data-sec="qa">';
     h+='<h2>التدقيق الهندسي — اعتماد التركيبات والسيريالات</h2>';
     h+='<div class="dGrid">';
     h+=card(Q.pend.length,(qf?'مطابق للتصفية':'بانتظار التدقيق'),'#E8873A');
@@ -6130,6 +6249,32 @@ function render(){
       wg.disabled=false; wg.textContent='🗑 تنفيذ إعادة الضبط';
       try{ toast('تعذّر إكمال المسح — تحقق من الاتصال',1); }catch(x){}
     }
+  };
+  Array.prototype.forEach.call(document.querySelectorAll('#nskDash .coWa'),function(b){ b.onclick=function(){
+    coNotify(b.getAttribute('data-c'), b.getAttribute('data-m'));
+  }; });
+  var ccF=$i('ccFile'); if(ccF) ccF.onchange=function(){
+    var f=ccF.files&&ccF.files[0]; if(!f) return;
+    function done(txt){
+      var L=coParse(txt);
+      if(!L.length){ try{ toast('لم يُقرأ أي رقم — تأكد من وجود عمود للاسم وآخر للرقم',1); }catch(e){} return; }
+      saveCoCtc(L,'import');
+      try{ toast('استُوردت أرقام '+AR(L.length)+' شركة ✔'); }catch(e){}
+      render();
+    }
+    var rd=new FileReader();
+    if(/\.xlsx?$/i.test(f.name) && window.XLSX && XLSX.read){
+      rd.onload=function(){
+        try{
+          var wb=XLSX.read(new Uint8Array(rd.result),{type:'array'});
+          var ws=wb.Sheets[wb.SheetNames[0]];
+          var rows=XLSX.utils.sheet_to_json(ws,{header:1});
+          done(rows.map(function(r){ return (r||[]).join('\t'); }).join('\n'));
+        }catch(e){ try{ toast('تعذّرت قراءة ملف إكسل — جرّب حفظه بصيغة CSV',1); }catch(x){} }
+      };
+      rd.readAsArrayBuffer(f);
+    } else { rd.onload=function(){ done(rd.result); }; rd.readAsText(f); }
+    ccF.value='';
   };
   var dvF=$i('dvFile'); if(dvF) dvF.onchange=function(){
     var f=dvF.files&&dvF.files[0]; if(!f) return;
