@@ -1382,10 +1382,12 @@
   ]
  },
  "documents": {
+  "rule": "قاعدة ملزمة: مع كل إصدار تُرفع في نفس الدفعة index.html و sw.js و docs/api-schema.json و docs/system.md و docs/nusuk-guide.docx بنفس رقم النسخة — يفرضه scripts/check-version.mjs وسير docs-check.yml ويفشل البناء عند أي تفاوت",
   "system_md": "docs/system.md — الشرح التقني الكامل",
   "api_schema_json": "docs/api-schema.json — هذا الملف",
-  "user_guide_docx": "docs/nusuk-guide.docx — دليل مبسّط بالعربية للإدارة والوزارة (٤ صفحات)",
-  "afaqy_api_md": "docs/afaqy-api.md — مرجع تكامل أفاقي"
+  "user_guide_docx": "docs/nusuk-guide.docx — دليل مبسّط بالعربية",
+  "afaqy_api_md": "docs/afaqy-api.md — مرجع تكامل أفاقي",
+  "in_app": "نسخ حية تُبنى داخل التطبيق: ملف الواجهات JSON + ثلاثة أدلة Word حسب الدور — تعمل بلا إنترنت وتطابق النسخة المشغّلة دائمًا"
  },
  "company_notification": {
   "where": "لوحة المتابعة ← تبويب تخطيط ← إشعار الشركات بمواعيد التركيب",
@@ -1462,5 +1464,15 @@
    "paintBell()"
   ],
   "no_toast": "لا تنبيهات منبثقة تقاطع العمل — العدّاد وحده هو الإشارة، والتفاصيل عند الطلب"
+ },
+ "version_guard": {
+  "script": "scripts/check-version.mjs",
+  "workflow": ".github/workflows/docs-check.yml — عند كل دفع يلمس index.html أو sw.js أو docs/",
+  "checks": [
+   "تطابق رقم النسخة بين هيدر index.html و CACHE في sw.js و app_version في api-schema.json و system.md و nusuk-guide.docx",
+   "توازن وسوم أقسام لوحة المتابعة — قسم غير مغلق يبتلع ما بعده ويختفي مع إخفاء التبويب (خلل V5.0)",
+   "كل قسم data-sec مُسنَد إلى تبويب في DTABS وإلا لن يظهر لأحد"
+  ],
+  "on_failure": "يخرج بالكود 1 ويفشل سير العمل"
  }
 }

@@ -1,0 +1,23 @@
+name: Docs Version Check
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'index.html'
+      - 'sw.js'
+      - 'docs/**'
+      - 'scripts/check-version.mjs'
+  pull_request:
+  workflow_dispatch: {}
+permissions:
+  contents: read
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: تطابق نسخ التوثيق وسلامة أقسام اللوحة
+        run: node scripts/check-version.mjs
