@@ -929,9 +929,12 @@ input,select,textarea{font-family:inherit;font-size:16px}
 
 #app{height:100%;display:flex;flex-direction:column}
 header{
-  padding:10px 16px 11px;background:var(--panel);border-bottom:1px solid var(--line);
-  display:flex;align-items:center;flex-wrap:wrap;gap:8px 10px;flex:0 0 auto
+  padding:calc(9px + env(safe-area-inset-top,0px)) 14px 10px;
+  background:var(--panel);border-bottom:1px solid var(--line);
+  display:flex;flex-direction:column;align-items:stretch;gap:9px;flex:0 0 auto
 }
+header .hTop{display:flex;align-items:flex-start;gap:10px;width:100%}
+header .t{flex:1 1 auto;min-width:0}
 header .t{flex:1;min-width:0}
 header .eyebrow{font-size:10.5px;letter-spacing:.06em;color:var(--gold);font-weight:700;
   white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -1079,8 +1082,9 @@ textarea.in{min-height:74px;resize:vertical}
   font-size:12px;white-space:nowrap}
 .leaflet-popup-content .go.dir{background:var(--panel);color:var(--gold);
   border:1px solid var(--gold)}
-#fab{position:fixed;inset-block-end:calc(66px + env(safe-area-inset-bottom));inset-inline-start:16px;
-  background:#C77DFF;color:#1A0B26;border:0;border-radius:999px;padding:13px 18px;
+/* V11.0: كانا يحجبان النقاط تحتهما — صُغّرا */
+#fab{position:fixed;inset-block-end:calc(60px + env(safe-area-inset-bottom));inset-inline-start:12px;
+  background:#C77DFF;color:#1A0B26;border:0;border-radius:999px;padding:8px 13px;
   font-weight:800;font-size:13px;cursor:pointer;z-index:800;
   box-shadow:0 6px 20px rgba(0,0,0,.45)
 }
@@ -1092,7 +1096,7 @@ textarea.in{min-height:74px;resize:vertical}
 #updBar button{background:#0A0B0D;color:#F1EDE0;border:0;border-radius:999px;
   padding:7px 16px;font:inherit;font-weight:800;cursor:pointer}
 #updBar button:disabled{opacity:.6}
-#spaceBar{position:fixed;inset-block-end:calc(184px + env(safe-area-inset-bottom,0px));
+#spaceBar{position:fixed;inset-block-end:calc(232px + env(safe-area-inset-bottom,0px));
   inset-inline:10px;z-index:9500;background:#E8873A;color:#0A0B0D;border-radius:12px;
   display:flex;align-items:center;gap:9px;flex-wrap:wrap;padding:10px 13px;
   font-size:12px;font-weight:700;box-shadow:0 6px 20px rgba(0,0,0,.4)}
@@ -1168,9 +1172,11 @@ html[data-theme="light"] #nskDash input[type="file"]{background:#fff}
 /* زر الحساب وحده في أقصى اليسار — يفصله فراغ عن أزرار العمل،
    وعرضه محدود فلا يزاحمها مهما طال الاسم */
 /* صف الأزرار: سطر واحد لا يلتف، وزر الحساب في طرفه بعد فراغ */
-.hAct{display:flex;align-items:center;gap:7px;flex:1 1 auto;min-width:0;flex-wrap:nowrap}
-.pill.av{margin-inline-start:auto;max-width:34vw;overflow:hidden;
-  text-overflow:ellipsis;white-space:nowrap;min-width:0}
+.hAct{display:flex;align-items:center;gap:7px;width:100%;min-width:0;
+  flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none}
+.hAct::-webkit-scrollbar{display:none}
+.pill.av{flex:0 0 auto;max-width:36vw;overflow:hidden;align-self:flex-start;
+  text-overflow:ellipsis;white-space:nowrap;min-width:0;margin-top:2px}
 .hAct .pill{flex:0 0 auto}
 #msgEditor{position:fixed;inset:0;z-index:9900;background:rgba(0,0,0,.62);
   display:flex;align-items:flex-end;justify-content:center;padding:0}
@@ -1404,9 +1410,12 @@ window.addEventListener('error', function(e){
 </script>
 <div id="app">
   <header>
+    <div class="hTop">
     <div class="t">
-      <div class="eyebrow">متابعة المشروع ١٤٤٨هـ <span style="color:var(--muted);letter-spacing:0;font-weight:600">· نسخة V10.9</span></div>
+      <div class="eyebrow">متابعة المشروع ١٤٤٨هـ <span style="color:var(--muted);letter-spacing:0;font-weight:600">· نسخة V11.0</span></div>
       <h1 id="ttl">المسح الميداني</h1>
+    </div>
+    <button class="pill av" id="meBtn" type="button" title="الحساب">حسابي</button>
     </div>
     <div class="hAct">
       <button class="pill" id="modeBtn" type="button">المسح</button>
@@ -1415,9 +1424,8 @@ window.addEventListener('error', function(e){
     <button class="pill" id="goBtn" type="button">مواقع</button>
       <span class="segC"><button type="button" id="mcSt" class="seg on" title="تلوين حسب الحالة">حالة</button><button type="button" id="mcCo" class="seg" title="تلوين حسب الشركة">شركات</button></span>
     <button class="pill" id="thBtn" type="button" title="فاتح / داكن">🌓</button>
-      <button class="pill av" id="meBtn" type="button" title="الحساب">حسابي</button>
       </div>
-  </header>
+    </header>
 
   <main>
     <section class="view on" id="vMap"><div id="map"></div><div id="mBar"></div><button id="nskGps" type="button" onclick="goMe()" aria-label="اذهب إلى موقعي" title="موقعي">◎</button></section>
@@ -4950,8 +4958,8 @@ body.nsk-sup #dCopy{display:none!important}
 #fbSyncChip:empty{display:none}
 #fbSyncChip.bad{color:#E05252;border-color:#E05252}
 #dashFab{position:fixed;bottom:12px;right:12px;z-index:9400;border:1px solid var(--gold,#C9A24B);
-  background:var(--panel,#141619);color:var(--gold,#C9A24B);font:700 13px var(--ar,Tahoma,sans-serif);
-  padding:10px 14px;border-radius:999px;cursor:pointer;box-shadow:0 6px 20px rgba(0,0,0,.35)}
+  background:var(--panel,#141619);color:var(--gold,#C9A24B);font:700 11.5px var(--ar,Tahoma,sans-serif);
+  padding:8px 12px;border-radius:999px;cursor:pointer;box-shadow:0 6px 20px rgba(0,0,0,.35)}
 #nskDash{position:fixed;inset:0;z-index:9990;display:none;overflow:auto;background:var(--ink,#0A0B0D);
   color:var(--cream,#F1EDE0);font-family:var(--ar,Tahoma,sans-serif)}
 #nskDash .dWrap{max-width:980px;margin:0 auto;padding:18px 16px 60px}
