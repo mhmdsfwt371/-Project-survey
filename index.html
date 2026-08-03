@@ -1261,7 +1261,10 @@ html[data-theme="light"] #msgEditor .meT{background:#fff}
   cursor:pointer;font-size:12.5px}
 #coFilt .cpI:nth-child(odd){background:rgba(150,150,150,.06)}
 #coFilt .cpI.on{background:rgba(201,162,75,.16);outline:1px solid rgba(201,162,75,.5)}
-#coFilt .cpI input{width:17px;height:17px;flex:0 0 auto;accent-color:var(--gold,#C9A24B)}
+#coFilt .cpK{width:20px;height:20px;flex:0 0 auto;border-radius:5px;
+  border:1.5px solid rgba(150,150,150,.6);display:flex;align-items:center;
+  justify-content:center;font-size:13px;font-weight:900;color:#0A0B0D;line-height:1}
+#coFilt .cpI.on .cpK{background:var(--gold,#C9A24B);border-color:var(--gold,#C9A24B)}
 #coFilt .cpI i{width:12px;height:12px;border-radius:3px;flex:0 0 auto}
 #coFilt .cpI span{flex:1 1 auto;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 #coFilt .cpI em{font-style:normal;color:var(--muted,#9AA1AB);font-size:11px;flex:0 0 auto}
@@ -1415,7 +1418,7 @@ window.addEventListener('error', function(e){
   <header>
     <div class="hTop">
     <div class="t">
-      <div class="eyebrow">متابعة المشروع ١٤٤٨هـ <span style="color:var(--muted);letter-spacing:0;font-weight:600">· نسخة V11.3</span></div>
+      <div class="eyebrow">متابعة المشروع ١٤٤٨هـ <span style="color:var(--muted);letter-spacing:0;font-weight:600">· نسخة V11.4</span></div>
       <h1 id="ttl">المسح الميداني</h1>
     </div>
     <button class="pill av" id="meBtn" type="button" title="الحساب">حسابي</button>
@@ -2072,16 +2075,16 @@ window.toggleCoLayer = function(){
   try{ drawMap(); }catch(e){}
   try{ window.paintCoLegend(); }catch(e){}
 };
-try{ CO_LAYER = (localStorage.getItem('nsk.colayer')==='1'); }catch(e){}
+/* V11.4: الأصل عند كل فتح هو «حالة» — الخريطة الصفراء المعتادة.
+   وضع الشركات أداة يُدخلها المستخدم عمدًا، لا حالة تلاحقه بين الجلسات. */
+CO_LAYER=false;
+try{ localStorage.setItem('nsk.colayer','0'); localStorage.removeItem('nsk.cosel'); }catch(e){}
 /* ===== V10.9: منتقي الشركات =====
    القائمة الجانبية كانت تحجب الخريطة وتُظهر ما لا يُحتاج.
    الأصل: كل الشركات ملوّنة بلا قائمة. فإن اختار المستخدم شركةً أو أكثر
    اقتصرت الخريطة عليها وحدها — فيرى توزيعها وجدولتها نقيًّا. */
 var CO_SEL = new Set();
-try{
-  var _cs=JSON.parse(localStorage.getItem('nsk.cosel')||'[]');
-  if(Array.isArray(_cs)) CO_SEL=new Set(_cs);
-}catch(e){}
+/* الاختيار لا يُستعاد عند الفتح — يبدأ نظيفًا مع وضع الحالة */
 function _coSave(){
   try{ localStorage.setItem('nsk.cosel', JSON.stringify([].slice.call(CO_SEL))); }catch(e){}
 }
@@ -2110,19 +2113,19 @@ window.openCoFilt = function(){
     var h='';
     R.forEach(function(x){
       var on=tmp.has(x.co);
-      h+='<label class="cpI'+(on?' on':'')+'" data-co="'+_dvEsc(x.co)+'">'
-        +'<input type="checkbox"'+(on?' checked':'')+'>'
+      h+='<div class="cpI'+(on?' on':'')+'" data-co="'+_dvEsc(x.co)+'">'
+        +'<b class="cpK">'+(on?'✓':'')+'</b>'
         +'<i style="background:'+x.c+'"></i>'
-        +'<span>'+_dvEsc(x.co)+'</span><em>'+_updAR(x.n)+'</em></label>';
+        +'<span>'+_dvEsc(x.co)+'</span><em>'+_updAR(x.n)+'</em></div>';
     });
     list.innerHTML=h;
     Array.prototype.forEach.call(list.querySelectorAll('.cpI'),function(el){
-      el.onclick=function(ev){
-        ev.preventDefault();
+      el.onclick=function(){
         var co=el.getAttribute('data-co');
         if(tmp.has(co)) tmp.delete(co); else tmp.add(co);
-        el.classList.toggle('on', tmp.has(co));
-        var cb=el.querySelector('input'); if(cb) cb.checked=tmp.has(co);
+        var on2=tmp.has(co);
+        el.classList.toggle('on', on2);
+        var k=el.querySelector('.cpK'); if(k) k.textContent = on2 ? '✓' : '';
         var g=ov.querySelector('.cpGo');
         if(g) g.textContent = tmp.size ? ('عرض '+_updAR(tmp.size)) : 'عرض';
       };
