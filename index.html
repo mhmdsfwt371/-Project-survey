@@ -1105,8 +1105,11 @@ html[data-theme="light"] #nskDash input[type="file"]{background:#fff}
 #nskDash .pTyStrip label>span:first-child{flex:0 0 auto;font-size:12px}
 /* زر الحساب وحده في أقصى اليسار — يفصله فراغ عن أزرار العمل،
    وعرضه محدود فلا يزاحمها مهما طال الاسم */
-.pill.av{margin-inline-start:auto;max-width:38vw;overflow:hidden;
-  text-overflow:ellipsis;white-space:nowrap}
+/* صف الأزرار: سطر واحد لا يلتف، وزر الحساب في طرفه بعد فراغ */
+.hAct{display:flex;align-items:center;gap:7px;flex:1 1 auto;min-width:0;flex-wrap:nowrap}
+.pill.av{margin-inline-start:auto;max-width:34vw;overflow:hidden;
+  text-overflow:ellipsis;white-space:nowrap;min-width:0}
+.hAct .pill{flex:0 0 auto}
 #msgEditor{position:fixed;inset:0;z-index:9900;background:rgba(0,0,0,.62);
   display:flex;align-items:flex-end;justify-content:center;padding:0}
 #msgEditor .meB{background:var(--panel,#141619);border:1px solid var(--line,#2c3a34);
@@ -1284,15 +1287,17 @@ window.addEventListener('error', function(e){
 <div id="app">
   <header>
     <div class="t">
-      <div class="eyebrow">متابعة المشروع ١٤٤٨هـ <span style="color:var(--muted);letter-spacing:0;font-weight:600">· نسخة V9.8</span></div>
+      <div class="eyebrow">متابعة المشروع ١٤٤٨هـ <span style="color:var(--muted);letter-spacing:0;font-weight:600">· نسخة V9.9</span></div>
       <h1 id="ttl">المسح الميداني</h1>
     </div>
-    <button class="pill" id="modeBtn" type="button">المسح</button>
+    <div class="hAct">
+      <button class="pill" id="modeBtn" type="button">المسح</button>
     <button class="pill" id="belPill" type="button" title="ما يخصّك" hidden>🔔</button>
     
     <button class="pill" id="goBtn" type="button">مواقع</button>
     <button class="pill" id="thBtn" type="button" title="فاتح / داكن">🌓</button>
       <button class="pill av" id="meBtn" type="button" title="الحساب">حسابي</button>
+      </div>
   </header>
 
   <main>
