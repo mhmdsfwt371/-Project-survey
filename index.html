@@ -1420,7 +1420,7 @@ window.addEventListener('error', function(e){
   <header>
     <div class="hTop">
     <div class="t">
-      <div class="eyebrow">متابعة المشروع ١٤٤٨هـ <span style="color:var(--muted);letter-spacing:0;font-weight:600">· نسخة V12.3</span></div>
+      <div class="eyebrow">متابعة المشروع ١٤٤٨هـ <span style="color:var(--muted);letter-spacing:0;font-weight:600">· نسخة V12.4</span></div>
       <h1 id="ttl">المسح الميداني</h1>
     </div>
     <button class="pill ic" id="belPill" type="button" title="ما يخصّك" hidden>🔔</button>
@@ -4549,8 +4549,8 @@ window.nskGuide = function(role){
        'كم موقعًا دخل خطة التركيب وكم نُفّذ منه — يقيس تحوّل الخطة إلى عمل'],
       ['معدل التركيب اليومي',
        'أعمدة لآخر أربعة عشر يومًا. والاتجاه أهم من رقم اليوم الواحد: هل السرعة تصعد أم تهبط؟'],
-      ['حسب المشعر',
-       'منى وعرفات ومزدلفة، ولكل مشعر إجماليه ومجدوله ومُركّبه ونسبته — لمعرفة أي مشعر متأخّر'],
+      ['حسب المشعر ونوع النقطة',
+       'منى وعرفات ومزدلفة، ولكل مشعر إجماليه ونسبته، وتحته أنواع نقاطه — مخيمات وممرات وجمرات ومحطات قطار ومسجد نمرة — فيُرى أي نوع يتأخّر داخل أي مشعر'],
       ['حسب شركة الخدمة',
        'كل شركة ومواقعها وما رُكّب فيها وما تعذّر، والأقل إنجازًا في أعلى الجدول'],
       ['التحديات — أين وما هي وما المطلوب',
@@ -4641,7 +4641,7 @@ window.nskGuide = function(role){
     ['الوتيرة والهدف','المتبقّي ومتوسط سبعة أيام والمطلوب يوميًا وتاريخ الانتهاء المتوقع','حين تسأل: هل نصل في الوقت؟'],
     ['التركيب والجدولة','ما دخل الخطة وما نُفّذ منه','لقياس تحوّل الخطة إلى تنفيذ'],
     ['معدل التركيب اليومي','أعمدة آخر أربعة عشر يومًا','لترى إن كانت السرعة تصعد أم تهبط'],
-    ['حسب المشعر','كل مشعر بأرقامه ونسبته','حين توزّع الفرق بين المشاعر'],
+    ['حسب المشعر ونوع النقطة','كل مشعر بأرقامه، وتحته أنواع نقاطه','حين توزّع الفرق بين المشاعر'],
     ['حسب شركة الخدمة','الأقل إنجازًا في الأعلى','قبل مخاطبة الشركات']]));
   B.push('<h2>تبويب «تخطيط» — ما قبل التنفيذ</h2>');
   B.push('<p>هنا تُبنى الخطة قبل نزول أحد الميدان، وأربعة أقسام بترتيب العمل:</p>');
@@ -5051,6 +5051,8 @@ body.nsk-sup #dCopy{display:none!important}
 #nskDash .dCard b{display:block;font-size:19px;margin-bottom:2px;line-height:1.3}
 #nskDash .dCard span{color:var(--muted,#9AA1AB);font-size:10.5px;line-height:1.45;display:block}
 #nskDash .dBarRow{margin:12px 2px 2px}
+#nskDash tr.rgZ td{background:rgba(201,162,75,.10);border-top:1px solid rgba(201,162,75,.3)}
+#nskDash tr.rgT td:first-child{padding-inline-start:18px;color:var(--muted,#9AA1AB);font-size:.92em}
 #nskDash .chBar{height:9px;border-radius:999px;background:rgba(232,135,58,.28);overflow:hidden;margin:2px 0 4px}
 #nskDash .chBar i{display:block;height:100%;background:#3AD6A0;border-radius:999px;transition:width .3s}
 #nskDash .dBarLbl{display:flex;justify-content:space-between;color:var(--muted,#9AA1AB);font-size:12px;margin-bottom:5px}
@@ -8013,12 +8015,38 @@ function render(){
   })(); }
 
   h+='</section><section class="dSec" data-sec="reg">';
-  h+='<h2>حسب المشعر</h2><table class="dT"><thead><tr><th>المشعر</th><th>المواقع</th><th>دخل الجدولة</th><th>مُركّب</th><th>٪ الإنجاز</th><th style="min-width:96px">التقدم</th></tr></thead><tbody>';
-  ['منى','عرفات','مزدلفة'].forEach(function(z){
-    const g=c.reg[z]||{t:0,s:0,o:0};
-    h+='<tr><td>'+z+'</td><td>'+AR(g.t)+'</td><td>'+AR(g.s)+'</td><td style="color:#3AD6A0;font-weight:700">'+AR(g.o)+'</td><td>٪'+AR(pct(g.o,g.t))+'</td><td>'+miniBar(g.s,g.o,g.t)+'</td></tr>';
-  });
+  h+='<h2>حسب المشعر ونوع النقطة</h2>';
+  h+='<table class="dT"><thead><tr><th>المشعر / النوع</th><th>المواقع</th><th>دخل الجدولة</th>'
+    +'<th>مُركّب</th><th>٪ الإنجاز</th><th style="min-width:96px">التقدم</th></tr></thead><tbody>';
+  /* V12.4: تفصيل كل مشعر على أنواع نقاطه — الإجمالي وحده لا يقول أين التأخّر */
+  (function(){
+    var C=window.NSKCORE, dbx=C.db(), rc=C.all('recs'), inss=C.all('inss');
+    var R={};
+    dbx.d.forEach(function(r){
+      var z=C.szOf(r)||'أخرى', ty=C.tyOf(r);
+      if(!R[z]) R[z]={t:0,s:0,o:0,ty:{},ord:[]};
+      var g=R[z]; g.t++;
+      if(!g.ty[ty]){ g.ty[ty]={t:0,s:0,o:0}; g.ord.push(ty); }
+      var e=g.ty[ty]; e.t++;
+      var st=(inss[r[0]]||{}).status||'';
+      if(st && st!=='لم يبدأ'){ g.s++; e.s++; }
+      if(st==='مُركّب'){ g.o++; e.o++; }
+    });
+    ['منى','عرفات','مزدلفة'].forEach(function(z){
+      var g=R[z]||{t:0,s:0,o:0,ty:{},ord:[]};
+      h+='<tr class="rgZ"><td><b>'+z+'</b></td><td><b>'+AR(g.t)+'</b></td><td><b>'+AR(g.s)+'</b></td>'
+        +'<td style="color:#3AD6A0;font-weight:800">'+AR(g.o)+'</td>'
+        +'<td><b>٪'+AR(pct(g.o,g.t))+'</b></td><td>'+miniBar(g.s,g.o,g.t)+'</td></tr>';
+      g.ord.slice().sort(function(a,b){ return g.ty[b].t-g.ty[a].t; }).forEach(function(ty){
+        var e=g.ty[ty];
+        h+='<tr class="rgT"><td>↳ '+esc2(ty)+'</td><td>'+AR(e.t)+'</td><td>'+AR(e.s)+'</td>'
+          +'<td style="color:#3AD6A0">'+AR(e.o)+'</td>'
+          +'<td>٪'+AR(pct(e.o,e.t))+'</td><td>'+miniBar(e.s,e.o,e.t)+'</td></tr>';
+      });
+    });
+  })();
   h+='</tbody></table>';
+  h+='<p class="dTs">كل مشعر بإجماليه، وتحته أنواع نقاطه مرتّبة بالعدد — فيُرى أي نوع يتأخّر داخل أي مشعر.</p>';
 
   h+='</section><section class="dSec" data-sec="team">';
   h+='<h2>إنتاجية الفريق</h2>'+teamHtml();
