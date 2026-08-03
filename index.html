@@ -67,7 +67,21 @@ window.doUpdate = async function(){
   }catch(e){}
   setTimeout(function(){ location.replace(location.pathname+'?v='+Date.now()); }, 350);
 };
+/* V9.2: حرفا الاسم في زر الحساب — دالة مستقلة تُستدعى عند الإقلاع وبعد الدخول */
+window.paintMe=function(){
+  try{
+    var mb=document.getElementById('meBtn'); if(!mb) return;
+    var u=window.NSK_USER||JSON.parse(localStorage.getItem('nsk.user')||'null')||{};
+    var nm=String(u.name||u.email||'').trim();
+    if(!nm){ mb.textContent='؟'; mb.title='الحساب'; return; }
+    var parts=nm.split(/[\s@._-]+/).filter(Boolean);
+    var ini=parts.length>1 ? (parts[0][0]+parts[1][0]) : nm.slice(0,2);
+    mb.textContent=String(ini||'؟').toUpperCase();
+    mb.title='الحساب — '+nm;
+  }catch(e){}
+};
 window.addEventListener('load', function(){
+  try{ window.paintMe(); }catch(e){}
   try{ if(window.paintLock) window.paintLock(); }catch(e){}
   /* #my يفتح «جدولي» مباشرة — الرابط المرسَل لقائد الفريق */
   try{
@@ -989,6 +1003,8 @@ textarea.in{min-height:74px;resize:vertical}
 html[data-theme="light"] #nskDash input[type="file"]{background:#fff}
 #nskDash .pTyStrip label{display:flex;align-items:center;gap:9px;flex-wrap:wrap;width:100%}
 #nskDash .pTyStrip label>span:first-child{flex:0 0 auto;font-size:12px}
+/* زر الحساب وحده في أقصى اليسار — يفصله فراغ عن أزرار العمل */
+.pill.av{margin-inline-start:auto}
 #nskDash .tmBox{border:1px solid rgba(150,150,150,.25);border-radius:10px;overflow:hidden;margin-top:8px}
 #nskDash .tmRow{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:9px 11px;font-size:12.5px}
 #nskDash .tmRow:nth-child(odd){background:rgba(150,150,150,.07)}
@@ -1149,14 +1165,15 @@ window.addEventListener('error', function(e){
 <div id="app">
   <header>
     <div class="t">
-      <div class="eyebrow">متابعة المشروع ١٤٤٨هـ <span style="color:var(--muted);letter-spacing:0;font-weight:600">· نسخة V9.1</span></div>
+      <div class="eyebrow">متابعة المشروع ١٤٤٨هـ <span style="color:var(--muted);letter-spacing:0;font-weight:600">· نسخة V9.2</span></div>
       <h1 id="ttl">المسح الميداني</h1>
     </div>
     <button class="pill" id="modeBtn" type="button">المسح</button>
     <button class="pill" id="belPill" type="button" title="ما يخصّك" hidden>🔔</button>
-    <button class="pill av" id="meBtn" type="button" title="الحساب">؟</button>
+    
     <button class="pill" id="goBtn" type="button">مواقع</button>
     <button class="pill" id="thBtn" type="button" title="فاتح / داكن">🌓</button>
+      <button class="pill av" id="meBtn" type="button" title="الحساب">؟</button>
   </header>
 
   <main>
@@ -4696,7 +4713,8 @@ async function healBoss(user, p){
 }
 
 onAuthStateChanged(auth, u=>{
-  if(u){ afterUser(u); setTimeout(paintLock, 400); }
+  if(u){ afterUser(u); setTimeout(paintLock, 400);
+    setTimeout(function(){ try{ if(window.paintMe) window.paintMe(); }catch(e){} }, 600); }
   else{
     say('');
     try{ localStorage.removeItem('nsk.user'); }catch(e){}
@@ -8021,18 +8039,7 @@ $i('dashFab').onclick=function(){ window.NSKDASH.open(); };
   var IOS=/iPad|iPhone|iPod/.test(navigator.userAgent||'');
   function mk(){
     if(document.getElementById('nskInst')) return;
-    try{
-    var mb=document.getElementById('meBtn');
-    if(mb){
-      var u=window.NSK_USER||JSON.parse(localStorage.getItem('nsk.user')||'null')||{};
-      var nm=String(u.name||u.email||'').trim();
-      var parts=nm.split(/[\s@._-]+/).filter(Boolean);
-      var ini=parts.length>1 ? (parts[0][0]+parts[1][0]) : (nm.slice(0,2)||'؟');
-      mb.textContent=ini.toUpperCase();
-      mb.title='الحساب — '+(nm||'غير مسجّل');
-    }
-  }catch(e){}
-  var tb=document.getElementById('thBtn'); if(!tb||!tb.parentNode) return;
+    var tb=document.getElementById('thBtn'); if(!tb||!tb.parentNode) return;
     var b=document.createElement('button'); b.id='nskInst'; b.type='button';
     b.textContent='⬇ تثبيت التطبيق';
     tb.parentNode.insertBefore(b, tb);
