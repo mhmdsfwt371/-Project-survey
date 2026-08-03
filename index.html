@@ -54,14 +54,11 @@ function _updSafe(){
         if(typed) return false;
       }
     }
-    /* لوحة مفتوحة؟ العنصر ثابت في الصفحة ويُخفى بـ display — فالوجود وحده لا يكفي */
-    var dsh=document.getElementById('nskDash');
-    if(dsh && dsh.style && dsh.style.display==='block') return false;
-    if(document.getElementById('msgEditor')) return false;
-    if(document.getElementById('docOv')) return false;
-    /* المستخدم يكتب الآن؟ */
+    /* V12.7: يُمنع التحديث لما يُفقد عملًا فقط — لا لكل انشغال.
+       قراءة اللوحة ليست عملًا يضيع، وكان اشتراط إغلاقها يُبقي التحديث مؤجَّلًا أبدًا. */
+    if(document.getElementById('msgEditor')) return false;   /* رسالة قيد التحرير */
     var a=document.activeElement;
-    if(a && /^(INPUT|SELECT|TEXTAREA)$/.test(a.tagName||'')) return false;
+    if(a && /^(INPUT|SELECT|TEXTAREA)$/.test(a.tagName||'')) return false;   /* يكتب الآن */
     /* تغييرات لم تُرفع بعد؟ ننتظر وصولها */
     try{ if((window.unsyncedList&&window.unsyncedList()||[]).length) return false; }catch(e){}
     return true;
@@ -109,7 +106,13 @@ window.autoUpd = function(){
     return;
   }
   if(_cdT) return;
-  var left=8;
+  /* مهلة أطول حين تكون اللوحة أو الدليل مفتوحًا — للقراءة وقت */
+  var busy=false;
+  try{
+    var d0=document.getElementById('nskDash');
+    busy = !!(d0 && d0.style && d0.style.display==='block') || !!document.getElementById('docOv');
+  }catch(e){}
+  var left = busy ? 20 : 8;
   var AD='٠١٢٣٤٥٦٧٨٩';
   var b=_updBox();
   var draw=function(){
@@ -1420,7 +1423,7 @@ window.addEventListener('error', function(e){
   <header>
     <div class="hTop">
     <div class="t">
-      <div class="eyebrow">متابعة المشروع ١٤٤٨هـ <span style="color:var(--muted);letter-spacing:0;font-weight:600">· نسخة V12.6</span></div>
+      <div class="eyebrow">متابعة المشروع ١٤٤٨هـ <span style="color:var(--muted);letter-spacing:0;font-weight:600">· نسخة V12.7</span></div>
       <h1 id="ttl">المسح الميداني</h1>
     </div>
     <button class="pill ic" id="belPill" type="button" title="ما يخصّك" hidden>🔔</button>
