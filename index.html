@@ -69,6 +69,17 @@ window.doUpdate = async function(){
 };
 window.addEventListener('load', function(){
   try{ if(window.paintLock) window.paintLock(); }catch(e){}
+  /* #my يفتح «جدولي» مباشرة — الرابط المرسَل لقائد الفريق */
+  try{
+    if(location.hash==='#my'){
+      var tries=0;
+      var tk=setInterval(function(){
+        var b=document.getElementById('nskMine');
+        if(b && b.style.display!=='none'){ clearInterval(tk); b.click(); }
+        else if(++tries>25) clearInterval(tk);   /* حتى ١٢ ثانية ريثما تصل البيانات */
+      }, 500);
+    }
+  }catch(e){}
   setTimeout(function(){ window.nskCheckUpd(true); }, 2500);
 });
 document.addEventListener('visibilitychange', function(){
@@ -978,6 +989,16 @@ textarea.in{min-height:74px;resize:vertical}
 html[data-theme="light"] #nskDash input[type="file"]{background:#fff}
 #nskDash .pTyStrip label{display:flex;align-items:center;gap:9px;flex-wrap:wrap;width:100%}
 #nskDash .pTyStrip label>span:first-child{flex:0 0 auto;font-size:12px}
+#nskDash .tmBox{border:1px solid rgba(150,150,150,.25);border-radius:10px;overflow:hidden;margin-top:8px}
+#nskDash .tmRow{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:9px 11px;font-size:12.5px}
+#nskDash .tmRow:nth-child(odd){background:rgba(150,150,150,.07)}
+#nskDash .tmRow b{flex:1 1 110px}
+#nskDash .tmRow span{color:var(--muted,#9AA1AB);font-size:11.5px}
+#nskDash .tmRow em{font-style:normal;font-size:10.5px;padding:2px 7px;border-radius:999px}
+#nskDash .tmRow em.okk{color:#3AD6A0;border:1px solid rgba(58,214,160,.5)}
+#nskDash .tmRow em.bad{color:#E8873A;border:1px solid rgba(232,135,58,.5)}
+#nskDash .tmSend{background:transparent;border:1px solid rgba(58,214,160,.6);border-radius:8px;
+  color:#3AD6A0;font:inherit;font-size:11.5px;padding:6px 12px;cursor:pointer;flex:0 0 auto}
 #nskDash .syBox{border:1px solid rgba(75,201,245,.35);border-radius:10px;overflow:hidden;margin:10px 0 6px}
 #nskDash .syHd{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;
   background:rgba(75,201,245,.10);padding:9px 12px;font-size:12px}
@@ -1128,7 +1149,7 @@ window.addEventListener('error', function(e){
 <div id="app">
   <header>
     <div class="t">
-      <div class="eyebrow">متابعة المشروع ١٤٤٨هـ <span style="color:var(--muted);letter-spacing:0;font-weight:600">· نسخة V8.9</span></div>
+      <div class="eyebrow">متابعة المشروع ١٤٤٨هـ <span style="color:var(--muted);letter-spacing:0;font-weight:600">· نسخة V9.0</span></div>
       <h1 id="ttl">المسح الميداني</h1>
     </div>
     <button class="pill" id="modeBtn" type="button">المسح</button>
@@ -5679,6 +5700,27 @@ function dxXlsx(sel){
     var nm3=(T3.list||[]).slice(); Object.keys(AD3.teams).forEach(function(n){ if(nm3.indexOf(n)<0) nm3.push(n); });
     add('فرق التركيب',[['الفريق','مُسند نشط','ركّب','مُدقّق']].concat(
       nm3.map(function(n){ var t=AD3.teams[n]||{t:0,ok:0,act:0,ver:0}; return [n,t.act,t.ok,t.ver||0]; })),[24,12,10,10]);
+    /* V9.0: إرسال جدول الغد لكل قائد فريق على واتساب */
+    (function(){
+      var rows=nm3.map(function(n){
+        var g=(typeof teamPts==='function')?teamPts(n):{n:0};
+        return {name:n, n:g.n, tel:(typeof teamPhone==='function')?teamPhone(n):''};
+      }).filter(function(x){ return x.n>0; });
+      if(!rows.length) return;
+      h+='<h2 style="font-size:.95em;margin-top:16px">إرسال الجداول على واتساب</h2>';
+      h+='<div class="tmBox">';
+      rows.forEach(function(x){
+        h+='<div class="tmRow"><b>'+esc2(x.name)+'</b>'
+          +'<span>'+AR(x.n)+' نقطة</span>'
+          +(x.tel?'<em class="okk">✔ رقمه محفوظ</em>':'<em class="bad">بلا رقم</em>')
+          +'<button type="button" class="tmSend" data-t="'+escA(x.name)+'">📤 إرسال</button></div>';
+      });
+      h+='</div>';
+      h+='<button type="button" class="dBtn p" id="tmAll" style="margin-top:9px">📤 إرسال جداول كل الفرق ('+AR(rows.length)+')</button>';
+      h+='<p class="dTs">الرسالة تحمل ملخّص المربعات وعددها ورابطًا يفتح «جدولي» بالخريطة والاتجاهات. '
+        +'يُفتح واتساب على محادثة القائد والرسالة جاهزة — تبقى ضغطة الإرسال. '
+        +'والرقم يُقرأ من «أرقام المكتب» بمطابقة اسم الفريق باسم صاحب الرقم.</p>';
+    })();
     var rws=[['المشعر','المربع','النقاط','الفريق']];
     AD3.sq.forEach(function(g){ var ks=Object.keys(g.tset); rws.push([g.z,g.sq,g.n,(ks.length===1?(ks[0]||'—'):'متعدد')]); });
     add('توزيع المربعات',rws,[10,10,10,22]);
@@ -6082,9 +6124,92 @@ function coSched(){
   ord.sort(function(a,b){ return by[b].n-by[a].n; });
   return {rows:ord.map(function(k){ return by[k]; }), have:CT.length};
 }
+/* ===== V9.0: إرسال جدول الغد لقائد الفريق =====
+   رقم القائد يُقرأ من دليل أرقام المكتب بمطابقة اسم الفريق باسم صاحب الرقم. */
+function teamPhone(team){
+  var t=_tnorm(team); if(!t) return '';
+  try{
+    var L=(ctcObj().list)||[];
+    for(var i=0;i<L.length;i++) if(_tnorm(L[i].n)===t) return String(L[i].p||'').replace(/[^\d]/g,'');
+  }catch(e){}
+  return '';
+}
+/* نقاط الفريق المجدولة — مجمّعة بالمشعر والمربع */
+function teamPts(team){
+  var C=window.NSKCORE, dbx=C.db(), recs=C.all('recs'), inss=C.all('inss');
+  var t=_tnorm(team), out=[], byq={}, ord=[];
+  dbx.d.forEach(function(r){
+    var id=r[0], iv=inss[id]; if(!iv) return;
+    if(iv.status!=='مجدول') return;
+    if(_tnorm(iv.team)!==t) return;
+    var fx=((recs[id]||{}).fix)||{};
+    var z=C.szOf(r), sq=fx.square||r[8]||'—';
+    var k=z+'|'+sq;
+    if(!byq[k]){ byq[k]={z:z,sq:sq,n:0}; ord.push(k); }
+    byq[k].n++;
+    out.push({id:id, z:z, sq:sq, d:iv.sched||''});
+  });
+  ord.sort(function(a,b){ return byq[b].n-byq[a].n; });
+  var dates=out.map(function(x){ return x.d; }).filter(Boolean).sort();
+  return {n:out.length, groups:ord.map(function(k){ return byq[k]; }), first:dates[0]||''};
+}
+/* الرسالة: ملخّص يُفهم بلا فتح + رابط حيّ يفتح «جدولي» بالخريطة والاتجاهات */
+function teamMsg(team){
+  var g=teamPts(team); if(!g.n) return null;
+  var base=location.origin+location.pathname;
+  var L=[];
+  L.push('م. '+team+' — جدول التركيب');
+  if(g.first) L.push('أقرب موعد: '+g.first);
+  L.push('');
+  g.groups.slice(0,10).forEach(function(x){
+    L.push('• '+x.z+' · مربع '+x.sq+' — '+x.n+' '+(x.n===1?'نقطة':'نقطة'));
+  });
+  if(g.groups.length>10) L.push('• …و'+(g.groups.length-10)+' مربعًا آخر');
+  L.push('');
+  L.push('الإجمالي: '+g.n+' نقطة');
+  L.push('');
+  L.push('افتح جدولك بالخريطة والاتجاهات:');
+  L.push(base+'#my');
+  return {text:L.join('\n'), n:g.n};
+}
+/* زر واحد لكل فريق — يفتح واتساب على محادثة القائد والرسالة جاهزة */
+window.sendTeam=function(team){
+  var m=teamMsg(team);
+  if(!m){ toast('لا نقاط مجدولة لهذا الفريق',1); return; }
+  var ph=teamPhone(team);
+  if(ph){
+    try{ window.open('https://wa.me/'+ph+'?text='+encodeURIComponent(m.text),'_blank'); }catch(e){}
+    try{ if(window.NSKSYNC) NSKSYNC.log('إرسال جدول '+m.n+' نقطة إلى '+team); }catch(e){}
+    return;
+  }
+  /* بلا رقم محفوظ: مشاركة عامة ليختار المحادثة بنفسه */
+  if(navigator.share){ navigator.share({text:m.text}).catch(function(){}); }
+  else {
+    try{ var ta=document.createElement('textarea'); ta.value=m.text;
+      ta.style.position='fixed'; ta.style.opacity='0'; document.body.appendChild(ta);
+      ta.select(); document.execCommand('copy'); ta.remove();
+      toast('لا رقم محفوظ للقائد — نُسخت الرسالة',1); }catch(e){}
+  }
+};
+/* إرسال جداول كل الفرق تباعًا */
+window.sendAllTeams=function(){
+  var AD=assignData(), T=teamsObj();
+  var names=(T.list||[]).slice();
+  Object.keys(AD.teams||{}).forEach(function(n){ if(names.indexOf(n)<0) names.push(n); });
+  var ready=names.filter(function(n){ var g=teamPts(n); return g.n>0; });
+  if(!ready.length){ toast('لا توجد فرق لها نقاط مجدولة',1); return; }
+  if(!confirm('سيُفتح واتساب لكل قائد على حدة — '+ready.length+' فريقًا.\n'
+    +'اضغط «إرسال» في كل محادثة ثم ارجع للتطبيق.')) return;
+  var i=0;
+  (function step(){
+    if(i>=ready.length){ toast('اكتمل فتح '+ready.length+' محادثة ✓'); return; }
+    window.sendTeam(ready[i++]);
+    setTimeout(step, 1400);
+  })();
+};
 function coMsg(g){
   var L=['السادة / '+g.co,'تحية طيبة،',''];
-  L.push('نفيدكم بجدولة تركيب متابعة المشروع ١٤٤٨هـ في مواقعكم:');
+  L.push('نفيدكم بجدولة تركيب القارئات لموسم ١٤٤٨هـ في مواقعكم:');
   var P=g.pts.slice().sort(function(a,b){ return String(a.d||'z').localeCompare(String(b.d||'z')); });
   P.slice(0,40).forEach(function(x){
     L.push('• '+x.z+(x.sq?' · مربع '+x.sq:'')+' · شاخص '+x.sg+(x.d?' — الموعد '+x.d:''));
@@ -7293,6 +7418,9 @@ function render(){
     if(qaReturn(R.getAttribute('data-id'), ni?ni.value:'')){ try{ toast('أُرجع للفريق ↩'); }catch(e){} render(); }
   }; });
   try{ if(window.wireFileInputs) window.wireFileInputs(document); }catch(e){}
+  Array.prototype.forEach.call(document.querySelectorAll('#nskDash .tmSend'),function(b){
+    b.onclick=function(){ window.sendTeam(b.getAttribute('data-t')); }; });
+  var _ta=$i('tmAll'); if(_ta) _ta.onclick=function(){ window.sendAllTeams(); };
   var _sy=$i('syRetry'); if(_sy) _sy.onclick=function(){ window.retrySync(); };
   var _lk=$i('lkBtn'); if(_lk) _lk.onclick=function(){
     var L=window.lockRead();
