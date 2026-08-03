@@ -1412,7 +1412,7 @@ window.addEventListener('error', function(e){
   <header>
     <div class="hTop">
     <div class="t">
-      <div class="eyebrow">متابعة المشروع ١٤٤٨هـ <span style="color:var(--muted);letter-spacing:0;font-weight:600">· نسخة V11.0</span></div>
+      <div class="eyebrow">متابعة المشروع ١٤٤٨هـ <span style="color:var(--muted);letter-spacing:0;font-weight:600">· نسخة V11.1</span></div>
       <h1 id="ttl">المسح الميداني</h1>
     </div>
     <button class="pill av" id="meBtn" type="button" title="الحساب">حسابي</button>
@@ -2059,11 +2059,7 @@ window.setMapColor = function(on){
   try{ localStorage.setItem('nsk.colayer', CO_LAYER?'1':'0'); }catch(e){}
   try{ drawMap(); }catch(e){}
   try{ window.paintCoChip(); }catch(e){}
-  try{
-    var a=document.getElementById('mcSt'), b=document.getElementById('mcCo');
-    if(a) a.classList.toggle('on', !CO_LAYER);
-    if(b) b.classList.toggle('on', CO_LAYER);
-  }catch(e){}
+  try{ if(window.syncMapColorBtns) window.syncMapColorBtns(); }catch(e){}
 };
 window.toggleCoLayer = function(){
   CO_LAYER=!CO_LAYER;
@@ -4883,6 +4879,22 @@ window.setTheme=function(t){
   if(mt) mt.content = curTheme==='light' ? '#F2EFE6' : '#0A0B0D';
 };
 $('#thBtn').onclick=()=>setTheme(curTheme==='light'?'dark':'light');
+/* V11.1: زرّا التلوين يُربطان هنا مع بقية أزرار الخريطة.
+   كانا مربوطين داخل دالة رسم اللوحة، فلا يعملان ما لم تُفتح اللوحة. */
+(function(){
+  var a=$('#mcSt'), b=$('#mcCo');
+  if(!a || !b) return;
+  function sync(){
+    var on=false;
+    try{ on=(localStorage.getItem('nsk.colayer')==='1'); }catch(e){}
+    a.classList.toggle('on', !on);
+    b.classList.toggle('on', on);
+  }
+  a.onclick=function(){ try{ window.setMapColor(false); }catch(e){} sync(); };
+  b.onclick=function(){ try{ window.setMapColor(true);  }catch(e){} sync(); };
+  sync();
+  window.syncMapColorBtns=sync;
+})();
 
 (async function init(){
   await loadAll(); await loadMe();
@@ -8037,21 +8049,7 @@ function render(){
   Array.prototype.forEach.call(document.querySelectorAll('#nskDash .tmSend'),function(b){
     b.onclick=function(){ window.sendTeam(b.getAttribute('data-t')); }; });
   var _ta=$i('tmAll'); if(_ta) _ta.onclick=function(){ window.sendAllTeams(); };
-  /* V10.8: وضعان صريحان لا مفتاح واحد — فلا يلتبس أيّهما يعمل الآن */
-  (function(){
-    var a=document.getElementById('mcSt'), b=document.getElementById('mcCo');
-    if(!a || !b || a._w) return; a._w=1;
-    function paint(){
-      try{
-        var on=(localStorage.getItem('nsk.colayer')==='1');
-        a.classList.toggle('on', !on);
-        b.classList.toggle('on', on);
-      }catch(e){}
-    }
-    a.onclick=function(){ window.setMapColor(false); paint(); };
-    b.onclick=function(){ window.setMapColor(true);  paint(); };
-    paint();
-  })();
+
   var _sy=$i('syRetry'); if(_sy) _sy.onclick=function(){ window.retrySync(); };
   var _lk=$i('lkBtn'); if(_lk) _lk.onclick=function(){
     var L=window.lockRead();
