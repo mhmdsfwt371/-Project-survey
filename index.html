@@ -961,6 +961,23 @@ textarea.in{min-height:74px;resize:vertical}
   color:inherit;font:inherit;font-size:11.5px;padding:7px 14px;cursor:pointer;flex:0 0 auto}
 #nskDash .lkBox.on button{border-color:rgba(58,214,160,.6);color:#3AD6A0}
 #nskDash .lkBox:not(.on) button{border-color:rgba(224,82,82,.6);color:#E05252}
+/* ===== V8.9: تنسيق موحّد لحقول اختيار الملفات =====
+   الزر الأصلي يعرض نصًّا إنجليزيًا من النظام وينكسر في الاتجاه من اليمين. */
+#nskDash input[type="file"],
+.pTyStrip input[type="file"]{
+  width:100%!important;max-width:100%;box-sizing:border-box;
+  background:rgba(255,255,255,.05);border:1.5px dashed rgba(150,150,150,.5);
+  border-radius:10px;padding:9px 11px;font:inherit;font-size:12.5px;color:var(--muted,#9AA1AB);
+  cursor:pointer;direction:rtl;text-align:right}
+#nskDash input[type="file"]::file-selector-button,
+.pTyStrip input[type="file"]::file-selector-button{
+  background:var(--gold,#C9A24B);color:#0A0B0D;border:0;border-radius:8px;
+  font:inherit;font-size:12px;font-weight:700;padding:7px 14px;margin-inline-end:10px;
+  cursor:pointer;-webkit-appearance:none}
+#nskDash input[type="file"]:hover{border-color:var(--gold,#C9A24B)}
+html[data-theme="light"] #nskDash input[type="file"]{background:#fff}
+#nskDash .pTyStrip label{display:flex;align-items:center;gap:9px;flex-wrap:wrap;width:100%}
+#nskDash .pTyStrip label>span:first-child{flex:0 0 auto;font-size:12px}
 #nskDash .syBox{border:1px solid rgba(75,201,245,.35);border-radius:10px;overflow:hidden;margin:10px 0 6px}
 #nskDash .syHd{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;
   background:rgba(75,201,245,.10);padding:9px 12px;font-size:12px}
@@ -1111,7 +1128,7 @@ window.addEventListener('error', function(e){
 <div id="app">
   <header>
     <div class="t">
-      <div class="eyebrow">متابعة المشروع ١٤٤٨هـ <span style="color:var(--muted);letter-spacing:0;font-weight:600">· نسخة V8.8</span></div>
+      <div class="eyebrow">متابعة المشروع ١٤٤٨هـ <span style="color:var(--muted);letter-spacing:0;font-weight:600">· نسخة V8.9</span></div>
       <h1 id="ttl">المسح الميداني</h1>
     </div>
     <button class="pill" id="modeBtn" type="button">المسح</button>
@@ -3194,6 +3211,24 @@ function openNewForm(la,lo,ac,near,editId){
 
 /* يبرز الحقول الناقصة ويقفز لأولها بدل رسالة عامة لا تدلّ على مكانها */
 /* شريط تقدّم أعلى النموذج — النموذج طويل ولا شيء يقول كم بقي */
+/* اسم الملف المختار يظهر بالعربية بدل «no file selected» */
+window.wireFileInputs=function(root){
+  try{
+    (root||document).querySelectorAll('#nskDash input[type="file"]').forEach(function(el){
+      if(el._wf) return; el._wf=1;
+      var hint=document.createElement('span');
+      hint.className='fName'; hint.textContent='لم يُختر ملف';
+      hint.style.cssText='font-size:11.5px;color:var(--muted,#9AA1AB);flex:1 1 100%';
+      if(el.parentNode) el.parentNode.appendChild(hint);
+      el.addEventListener('change', function(){
+        var f=el.files&&el.files[0];
+        hint.textContent = f ? ('✓ '+f.name+' — '+Math.max(1,Math.round(f.size/1024))+' ك.ب')
+                             : 'لم يُختر ملف';
+        hint.style.color = f ? '#3AD6A0' : 'var(--muted,#9AA1AB)';
+      });
+    });
+  }catch(e){}
+};
 window.paintProg=function(){
   try{
     var f=document.getElementById('nf')||document.getElementById('sf');
@@ -7257,6 +7292,7 @@ function render(){
     var ni=R.querySelector('.qaNt');
     if(qaReturn(R.getAttribute('data-id'), ni?ni.value:'')){ try{ toast('أُرجع للفريق ↩'); }catch(e){} render(); }
   }; });
+  try{ if(window.wireFileInputs) window.wireFileInputs(document); }catch(e){}
   var _sy=$i('syRetry'); if(_sy) _sy.onclick=function(){ window.retrySync(); };
   var _lk=$i('lkBtn'); if(_lk) _lk.onclick=function(){
     var L=window.lockRead();
