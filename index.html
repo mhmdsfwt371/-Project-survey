@@ -1420,7 +1420,7 @@ window.addEventListener('error', function(e){
   <header>
     <div class="hTop">
     <div class="t">
-      <div class="eyebrow">متابعة المشروع ١٤٤٨هـ <span style="color:var(--muted);letter-spacing:0;font-weight:600">· نسخة V11.9</span></div>
+      <div class="eyebrow">متابعة المشروع ١٤٤٨هـ <span style="color:var(--muted);letter-spacing:0;font-weight:600">· نسخة V12.0</span></div>
       <h1 id="ttl">المسح الميداني</h1>
     </div>
     <button class="pill ic" id="belPill" type="button" title="ما يخصّك" hidden>🔔</button>
@@ -4550,8 +4550,8 @@ window.nskGuide = function(role){
       ['حسب شركة الخدمة',
        'كل شركة ومواقعها وما رُكّب فيها وما تعذّر، والأقل إنجازًا في أعلى الجدول'],
       ['التحديات — أين وما هي وما المطلوب',
-       'كل موقع له عائق: موضعه بالمشعر والمربع والشاخص والشركة، والتحدي، ونصّ يكتبه المشرف في الميدان '
-       +'يوضّح ما يحتاجه — مقاسًا ناقصًا أو جهةً تُخاطَب أو بديلًا مقترحًا. والتحدي يُعدّ محلولًا حين يُركَّب الموقع']]));
+       'كم تحدّيًا ظهر وكم عُولج وكم بقي ونسبة المعالجة، وجدول بأنواع التحديات الأعلق أولًا، '
+       +'ثم كل موقع بموضعه ونصّ ما يحتاجه. والتحدي يُعدّ معالَجًا حين يُركَّب الموقع']]));
     B.push('<h2>٤ · التنبيهات التي تصلكم</h2>');
     B.push('<p>الجرس 🔔 أعلى الشاشة يعرض مؤشّرات المشروع، ولا يعرض العمليات اليومية:</p>');
     B.push(tbl(['التنبيه','متى يظهر'],[
@@ -5012,6 +5012,8 @@ body.nsk-sup #dCopy{display:none!important}
 #nskDash .dCard b{display:block;font-size:19px;margin-bottom:2px;line-height:1.3}
 #nskDash .dCard span{color:var(--muted,#9AA1AB);font-size:10.5px;line-height:1.45;display:block}
 #nskDash .dBarRow{margin:12px 2px 2px}
+#nskDash .chBar{height:9px;border-radius:999px;background:rgba(232,135,58,.28);overflow:hidden;margin:2px 0 4px}
+#nskDash .chBar i{display:block;height:100%;background:#3AD6A0;border-radius:999px;transition:width .3s}
 #nskDash .dBarLbl{display:flex;justify-content:space-between;color:var(--muted,#9AA1AB);font-size:12px;margin-bottom:5px}
 #nskDash .dBarLbl b{color:var(--cream,#F1EDE0)}
 #nskDash .dBarW{height:9px;border-radius:999px;background:rgba(128,128,128,.15);overflow:hidden}
@@ -7432,17 +7434,51 @@ function render(){
     h+='</section><section class="dSec" data-sec="chalm">';
     h+='<h2>التحديات — أين وما هي وما المطلوب</h2>';
     var open=CR.filter(function(x){ return !x.solved; });
+    var done=CR.length-open.length;
+    var rate=CR.length ? Math.round(done/CR.length*100) : 0;
     var byZ={'منى':0,'عرفات':0,'مزدلفة':0};
     open.forEach(function(x){ if(byZ[x.z]!=null) byZ[x.z]++; });
     var needSup=open.filter(function(x){ return x.note; }).length;
     h+='<div class="dGrid">';
-    h+=card(open.length,'تحدٍّ قائم', open.length?'#E8873A':'#3AD6A0');
-    h+=card(CR.length-open.length,'حُلَّ بالتركيب','#3AD6A0');
-    h+=card(needSup,'له وصف تفصيلي','#4BC9F5');
-    h+=card(byZ['منى']+'/'+byZ['عرفات']+'/'+byZ['مزدلفة'],'منى / عرفات / مزدلفة','var(--gold,#C9A24B)');
+    h+=card(CR.length,'تحدٍّ ظهر','var(--gold,#C9A24B)');
+    h+=card(done,'عُولج','#3AD6A0');
+    h+=card(open.length,'ما زال قائمًا', open.length?'#E8873A':'#3AD6A0');
+    h+=card(rate+'٪','نسبة المعالجة', rate>=70?'#3AD6A0':(rate>=40?'#E8C34B':'#E8873A'));
+    h+='</div>';
+    /* شريط تقدّم المعالجة */
+    h+='<div class="dBarLbl"><span>عُولج '+AR(done)+'</span><span>باقٍ '+AR(open.length)+'</span></div>';
+    h+='<div class="chBar"><i style="width:'+rate+'%"></i></div>';
+    /* تصنيف التحديات: أيّها أكثر وأيّها أعلق */
+    (function(){
+      var byT={};
+      CR.forEach(function(x){
+        (x.ch.length?x.ch:['بلا تصنيف — وصف حرّ']).forEach(function(n2){
+          var e=byT[n2]=byT[n2]||{t:0,o:0};
+          e.t++; if(!x.solved) e.o++;
+        });
+      });
+      var keys=Object.keys(byT).sort(function(a,b){ return byT[b].o-byT[a].o || byT[b].t-byT[a].t; });
+      if(!keys.length) return;
+      h+='<h2 style="font-size:.95em;margin-top:16px">أنواع التحديات — الأعلق أولًا</h2>';
+      h+='<table class="dT"><thead><tr><th>التحدي</th><th>ظهر</th><th>عُولج</th><th>باقٍ</th></tr></thead><tbody>';
+      keys.slice(0,12).forEach(function(k){
+        var e=byT[k];
+        h+='<tr><td>'+esc2(k)+'</td><td>'+AR(e.t)+'</td>'
+          +'<td style="color:#3AD6A0">'+AR(e.t-e.o)+'</td>'
+          +'<td style="color:'+(e.o?'#E8873A':'#3AD6A0')+';font-weight:800">'+AR(e.o)+'</td></tr>';
+      });
+      h+='</tbody></table>';
+    })();
+    h+='<div class="dGrid" style="margin-top:12px">';
+    h+=card(needSup,'قائم وله وصف تفصيلي','#4BC9F5');
+    h+=card(byZ['منى'],'قائم في منى','var(--gold,#C9A24B)');
+    h+=card(byZ['عرفات'],'قائم في عرفات','var(--gold,#C9A24B)');
+    h+=card(byZ['مزدلفة'],'قائم في مزدلفة','var(--gold,#C9A24B)');
     h+='</div>';
     if(!CR.length){
-      h+='<div class="dEmpty">لا تحديات مسجّلة — تُجمَع من نماذج المسح فور حفظها.</div>';
+      h+='<div class="dEmpty">لا تحديات مسجّلة بعد.<br>'
+        +'<span class="pMut">يكتبها المشرف في نموذج المسح — تصنيفًا ووصفًا حرًّا لما يحتاجه الموقع. '
+        +'وتظهر هنا فورًا: موضعها ونوعها ونصّها، وتُعدّ معالَجة حين يُركَّب الموقع.</span></div>';
     } else {
       h+='<table class="dT"><thead><tr><th>الموقع</th><th>التحدي</th>'
         +'<th>ما يحتاجه</th><th>الحالة</th></tr></thead><tbody>';
