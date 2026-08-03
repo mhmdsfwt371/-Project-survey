@@ -139,6 +139,9 @@ try{
   });
   setInterval(function(){ try{ window.autoUpd(); }catch(e){} }, 45000);
   setInterval(function(){ try{ _updRepair(); }catch(e){} }, 4000);
+  /* V11.2: فحص دوري للنسخة والتطبيق مفتوح.
+     كان الفحص عند الإقلاع والعودة فقط — فمن يبقى فاتحًا لا يعلم بنسخة جديدة. */
+  setInterval(function(){ try{ window.nskCheckUpd(true); }catch(e){} }, 120000);
 }catch(e){}
 /* ===== V10.3: مساحة الجهاز =====
    الفني يصوّر تسع صور لكل موقع؛ عشرات المواقع تملأ حصّة المتصفح.
@@ -1412,7 +1415,7 @@ window.addEventListener('error', function(e){
   <header>
     <div class="hTop">
     <div class="t">
-      <div class="eyebrow">متابعة المشروع ١٤٤٨هـ <span style="color:var(--muted);letter-spacing:0;font-weight:600">· نسخة V11.1</span></div>
+      <div class="eyebrow">متابعة المشروع ١٤٤٨هـ <span style="color:var(--muted);letter-spacing:0;font-weight:600">· نسخة V11.2</span></div>
       <h1 id="ttl">المسح الميداني</h1>
     </div>
     <button class="pill av" id="meBtn" type="button" title="الحساب">حسابي</button>
