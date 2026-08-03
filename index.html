@@ -1184,7 +1184,7 @@ window.addEventListener('error', function(e){
 <div id="app">
   <header>
     <div class="t">
-      <div class="eyebrow">متابعة المشروع ١٤٤٨هـ <span style="color:var(--muted);letter-spacing:0;font-weight:600">· نسخة V9.3</span></div>
+      <div class="eyebrow">متابعة المشروع ١٤٤٨هـ <span style="color:var(--muted);letter-spacing:0;font-weight:600">· نسخة V9.4</span></div>
       <h1 id="ttl">المسح الميداني</h1>
     </div>
     <button class="pill" id="modeBtn" type="button">المسح</button>
@@ -3121,10 +3121,10 @@ window.wipeDrafts = async function(){
       delete recs[id];
       try{ delete photos[id]; }catch(e){}
       if(window.NSKSYNC && NSKSYNC.del) await NSKSYNC.del('recs', id);
+      try{ await window.storage.delete('rec:'+id, false); }catch(e){}
       n++;
     }catch(e){}
   }
-  try{ save(); }catch(e){}
   try{ if(window.NSKSYNC) NSKSYNC.log('حذف '+n+' مسوّدة ناقصة'); }catch(e){}
   toast('حُذفت '+n+' مسوّدة ✓');
   try{ drawMgr(); }catch(e){}
@@ -4003,9 +4003,9 @@ window.nskGuide = function(role){
   if(ROLE) B.push('<div class="role">'+ROLE+'</div>');
 
   B.push('<h2>١ · ما هو النظام باختصار</h2>');
-  B.push('<p>'+(role==='min'
-    ? 'نظام واحد يتابع تركيب القارئات في المشاعر المقدسة، من زيارة الموقع حتى اعتماد تركيبه. يعمل على الجهاز كتطبيق، ويعمل بلا إنترنت ثم يرفع بياناته تلقائيًا أول ما تعود الشبكة.'
-    : 'نظام واحد يتابع تركيب القارئات في المشاعر المقدسة، من لحظة وقوف المشرف أمام المخيم حتى اعتماد المهندس لسيريال الجهاز. يعمل على الجهاز كتطبيق، ويعمل بلا إنترنت ثم يزامن نفسه تلقائيًا أول ما تعود الشبكة.')+'</p>');
+  B.push('<p>'+(role==='eng'
+    ? 'نظام واحد يتابع تركيب القارئات في المشاعر المقدسة، من لحظة وقوف المشرف أمام المخيم حتى اعتماد المهندس لسيريال الجهاز. يعمل على الجهاز كتطبيق، ويعمل بلا إنترنت ثم يزامن نفسه تلقائيًا أول ما تعود الشبكة.'
+    : 'نظام واحد يتابع تركيب القارئات في المشاعر المقدسة، من زيارة الموقع حتى اعتماد تركيبه. يعمل على الجهاز كتطبيق، ويعمل بلا إنترنت ثم يرفع بياناته تلقائيًا أول ما تعود الشبكة.')+'</p>');
   B.push(tbl(['العدد','الفئة','الملاحظة'],[
     [nG,'مخيمات','منى وعرفات ومزدلفة'],
     [nP,'ممرات ومحطات وكاميرات وبوابات','الجمرات وقطار المشاعر ومسجد نمرة'],
@@ -4165,6 +4165,9 @@ window.nskGuide = function(role){
   B.push('<p><b>كيف نتأكد أن الجهاز المركّب هو الصحيح؟</b> السيريال يُدخل عند التدقيق ويُطابق مع سجل الأجهزة، وأي سيريال مكرّر أو غير معروف يظهر لك تحذير عنه قبل الاعتماد.</p>');
 
   /* المهندس يرى فصول الأدوار الأخرى أيضًا — ليفهم ما يراه كل طرف */
+  B.push('<h2>تصدير التقارير</h2>');
+  B.push('<p>زر <b>«⬇ تصدير»</b> أعلى اللوحة يُخرج ما تراه: تقرير PDF بالرسوم للطباعة والرفع، '
+    +'أو ملف إكسل بالقيم التفصيلية، أو ملف JSON للتكامل. ويمكن اختيار الأقسام قبل التصدير.</p>');
   B.push('<h2>تبويب «متابعة» — الصورة التنفيذية</h2>');
   B.push('<p>ستة أقسام تنزل تحت بعضها، وهذا التبويب وحده هو ما تراه الجهة الوزارية.</p>');
   B.push(tbl(['القسم','ما يعرضه','متى تنظر إليه'],[
@@ -5139,7 +5142,11 @@ function _markSynced(kind, id, ok, err){
     r.synced=!!ok;
     r.syncAt=ok ? new Date().toISOString() : (r.syncAt||'');
     r.syncErr=ok ? '' : String(err||'');
-    try{ save(); }catch(e){}
+    /* الحفظ بالمفتاح الصحيح — save() لم تكن معرَّفة فكانت تفشل بصمت */
+    try{
+      var KP2={recs:'rec:', inss:'ins:', props:'new:'};
+      if(KP2[kind]) window.storage.set(KP2[kind]+id, JSON.stringify(r), false);
+    }catch(e){}
     try{ if(window.NSKDASH && NSKDASH.refresh) NSKDASH.refresh(); }catch(e){}
   }catch(e){}
 }
