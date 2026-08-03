@@ -1421,7 +1421,7 @@ window.addEventListener('error', function(e){
   <header>
     <div class="hTop">
     <div class="t">
-      <div class="eyebrow">متابعة المشروع ١٤٤٨هـ <span style="color:var(--muted);letter-spacing:0;font-weight:600">· نسخة V11.6</span></div>
+      <div class="eyebrow">متابعة المشروع ١٤٤٨هـ <span style="color:var(--muted);letter-spacing:0;font-weight:600">· نسخة V11.7</span></div>
       <h1 id="ttl">المسح الميداني</h1>
     </div>
     <button class="pill" id="thBtn" type="button" title="فاتح / داكن">🌓</button>
@@ -6149,7 +6149,7 @@ function zN(z){ z=String(z||''); return z.indexOf('عرف')>=0?'عرفات':z.in
 /* ==== تصدير اللوحة: أقسام مختارة → Excel / PDF ==== */
 var DXS=[['pace','الوتيرة والهدف'],['over','نظرة عامة (الرسوم الدائرية)'],['inst','التركيب والجدولة'],
  ['daily','معدل التركيب اليومي'],['survey','المسح الميداني'],
- ['chal','التحديات الميدانية'],['reg','حسب المشعر'],
+ ['chal','التحديات الميدانية'],['chalm','التحديات — أين وما هي'],['reg','حسب المشعر'],
  ['co','حسب شركة الخدمة'],['stuck','المتعذر والراكد'],['pipe','سلامة خط الإنتاج'],['assign','توزيع فرق التركيب'],['conote','إشعار الشركات'],['stock','عُهدة الأجهزة'],['qa','التدقيق والسيريالات'],['sys','سلامة البيانات'],
  ['team','إنتاجية الفريق'],['race','سباق المشرفين'],['ev','آخر الأحداث']];
 function dxSaved(){ try{ return JSON.parse(localStorage.getItem('nsk.dx2')||'null'); }catch(e){ return null; } }
@@ -7180,6 +7180,36 @@ function shareTeam(name){
     document.body.appendChild(ta); ta.select(); document.execCommand('copy'); document.body.removeChild(ta);
     toast('اتنسخ جدول '+name+' — الصقه في جروب الفريق'); }catch(e){}
 }
+/* ===== V11.7: تفاصيل التحديات — لكل موقع لا مجمَّعة =====
+   الوزارة سألت العام الماضي: أين التحدي؟ وما هو؟ وما المطلوب لحلّه؟
+   التصنيف وحده لا يجيب — فيُضمّ إليه وصف المشرف وموضع الموقع. */
+function chalRows(){
+  var C=window.NSKCORE, dbx=C.db(), recs=C.all('recs'), inss=C.all('inss');
+  var meta={};
+  dbx.d.forEach(function(r){ meta[r[0]]={z:C.szOf(r), sq:r[8]||'', sg:r[9]||'', co:r[27]||'', row:r}; });
+  var out=[];
+  Object.keys(recs).forEach(function(k){
+    var r=recs[k]||{}, m=meta[k]; if(!m) return;
+    var ch=(r.chal||[]).filter(function(x){ return x!=='لا توجد تحديات'; });
+    var note=String(r.chal_note||'').trim();
+    if(!ch.length && r.fit==='غير مناسب') ch=['غير مناسب — دون تحديد التحدي'];
+    if(!ch.length && !note) return;
+    var fx=(r.fix)||{};
+    var iv=inss[k]||{};
+    out.push({
+      id:k, z:m.z, sq:fx.square||m.sq, sg:fx.sign||m.sg, co:fx.co||m.co,
+      ch:ch, note:note, fit:r.fit||'', by:r.by||r._by||'—',
+      date:String(r.date||'').slice(0,10),
+      st:iv.status||'لم يبدأ',
+      solved:(iv.status==='مُركّب')
+    });
+  });
+  out.sort(function(a,b){
+    if(a.solved!==b.solved) return a.solved?1:-1;      /* المفتوح أولًا */
+    return String(b.date||'').localeCompare(String(a.date||''));
+  });
+  return out;
+}
 function pipeChecks(){
   var C=window.NSKCORE, dbx=C.db(), recs=C.all('recs'), inss=C.all('inss');
   var ready=[], schedNoSurvey=[], contra=[], instNoSurvey=0;
@@ -7247,7 +7277,7 @@ function copySummary(){
 }
 /* V4.9: تقسيم اللوحة لتبويبات — القسم يُخفى لا يُعاد بناؤه */
 var DTABS=[
-  ['watch','متابعة',      ['over','pace','inst','daily','reg','co'],      'الصورة التنفيذية — للوزارة والإدارة'],
+  ['watch','متابعة',      ['over','pace','inst','daily','reg','co','chalm'],      'الصورة التنفيذية — للوزارة والإدارة'],
   ['plan','تخطيط',        ['setup','pipe'],                                 'ما قبل التنفيذ: المواعيد والأزمنة وسلامة خط الإنتاج'],
   ['ops','تشغيل',         ['assign','conote','stock','me','survey','chal','stuck','qa','team','race'],
                                                                             'الميدان: التوزيع والإشعار والعُهدة والمسح والتدقيق'],
@@ -7393,6 +7423,41 @@ function render(){
   h+='<h2>المواعيد المستهدفة وأزمنة التركيب</h2>';
   h+='<p class="dTs">تُضبط مرة واحدة، وعليها يُبنى المطلوب يوميًا وتاريخ الاكتمال المتوقع وساعات العمل المتبقية.</p>';
   h+=setupHtml(c);
+  /* V11.7: التحديات في تبويب المتابعة — تراها الوزارة بتفاصيلها */
+  (function(){
+    var CR=chalRows();
+    h+='</section><section class="dSec" data-sec="chalm">';
+    h+='<h2>التحديات — أين وما هي وما المطلوب</h2>';
+    var open=CR.filter(function(x){ return !x.solved; });
+    var byZ={'منى':0,'عرفات':0,'مزدلفة':0};
+    open.forEach(function(x){ if(byZ[x.z]!=null) byZ[x.z]++; });
+    var needSup=open.filter(function(x){ return x.note; }).length;
+    h+='<div class="dGrid">';
+    h+=card(open.length,'تحدٍّ قائم', open.length?'#E8873A':'#3AD6A0');
+    h+=card(CR.length-open.length,'حُلَّ بالتركيب','#3AD6A0');
+    h+=card(needSup,'له وصف تفصيلي','#4BC9F5');
+    h+=card(byZ['منى']+'/'+byZ['عرفات']+'/'+byZ['مزدلفة'],'منى / عرفات / مزدلفة','var(--gold,#C9A24B)');
+    h+='</div>';
+    if(!CR.length){
+      h+='<div class="dEmpty">لا تحديات مسجّلة — تُجمَع من نماذج المسح فور حفظها.</div>';
+    } else {
+      h+='<table class="dT"><thead><tr><th>الموقع</th><th>التحدي</th>'
+        +'<th>ما يحتاجه</th><th>الحالة</th></tr></thead><tbody>';
+      CR.slice(0,60).forEach(function(x){
+        var loc=esc2(x.z)+(x.sq?(' · مربع '+esc2(x.sq)):'')+(x.sg?('<br><span class="pMut">شاخص '+esc2(x.sg)+'</span>'):'');
+        var tag=x.solved?'<span style="color:#3AD6A0">✓ حُلَّ</span>'
+                        :'<span style="color:#E8873A">قائم</span>';
+        h+='<tr><td>'+loc+(x.co?('<br><span class="pMut">'+esc2(x.co)+'</span>'):'')+'</td>'
+          +'<td>'+(x.ch.map(function(t){ return esc2(t); }).join('<br>')||'—')+'</td>'
+          +'<td>'+(x.note?esc2(x.note):'<span class="pMut">لم يُذكر</span>')+'</td>'
+          +'<td>'+tag+'<br><span class="pMut">'+esc2(x.date||'')+'</span></td></tr>';
+      });
+      h+='</tbody></table>';
+      if(CR.length>60) h+='<p class="dTs">…و'+AR(CR.length-60)+' موقعًا آخر — التصدير يحمل الجميع.</p>';
+      h+='<p class="dTs">«ما يحتاجه» نصّ يكتبه المشرف في الميدان: مقاس ناقص، أو جهة تُخاطَب، '
+        +'أو بديل مقترح. والتحدي يُعدّ محلولًا حين يُركَّب الموقع.</p>';
+    }
+  })();
   h+='</section><section class="dSec" data-sec="over">';
 
   h+='<h2>نظرة عامة</h2><div class="dChRow">';
