@@ -1224,7 +1224,12 @@ html[data-theme="light"] #msgEditor .meT{background:#fff}
 .pill.av{font-weight:700;font-size:12px;letter-spacing:0;flex:0 0 auto}
 /* V10.6: كان يقع خلف الأزرار العائمة — رُفع فوقها وأُبعد عن مسارها.
    الأزرار عند ١٢ و٦٦ بكسل من الأسفل، فيبدأ الشريط فوقهما. */
-#coBtn.on{border-color:var(--gold,#C9A24B);color:var(--gold,#C9A24B)}
+/* وضعا التلوين: زرّان متلاصقان، المفعَّل منهما مضيء */
+.segC{display:inline-flex;flex:0 0 auto;border:1px solid var(--line,#2c3a34);
+  border-radius:999px;overflow:hidden;background:var(--panel2,#1b1e22)}
+.segC .seg{background:transparent;border:0;color:var(--muted,#9AA1AB);
+  font:inherit;font-size:11px;font-weight:700;padding:5px 11px;cursor:pointer;white-space:nowrap}
+.segC .seg.on{background:var(--gold,#C9A24B);color:#0A0B0D}
 #coLegend{position:fixed;inset-inline-start:10px;
   inset-block-end:calc(196px + env(safe-area-inset-bottom,0px));
   z-index:9440;max-width:66vw;background:var(--panel,#141619);
@@ -1367,7 +1372,7 @@ window.addEventListener('error', function(e){
 <div id="app">
   <header>
     <div class="t">
-      <div class="eyebrow">متابعة المشروع ١٤٤٨هـ <span style="color:var(--muted);letter-spacing:0;font-weight:600">· نسخة V10.7</span></div>
+      <div class="eyebrow">متابعة المشروع ١٤٤٨هـ <span style="color:var(--muted);letter-spacing:0;font-weight:600">· نسخة V10.8</span></div>
       <h1 id="ttl">المسح الميداني</h1>
     </div>
     <div class="hAct">
@@ -1375,7 +1380,7 @@ window.addEventListener('error', function(e){
     <button class="pill" id="belPill" type="button" title="ما يخصّك" hidden>🔔</button>
     
     <button class="pill" id="goBtn" type="button">مواقع</button>
-      <button class="pill" id="coBtn" type="button" title="تلوين حسب الشركة">🎨</button>
+      <span class="segC"><button type="button" id="mcSt" class="seg on" title="تلوين حسب الحالة">حالة</button><button type="button" id="mcCo" class="seg" title="تلوين حسب الشركة">شركات</button></span>
     <button class="pill" id="thBtn" type="button" title="فاتح / داكن">🌓</button>
       <button class="pill av" id="meBtn" type="button" title="الحساب">حسابي</button>
       </div>
@@ -1519,7 +1524,7 @@ window.addEventListener('error', function(e){
     <button class="on" data-v="vMap" type="button">الخريطة</button>
     <button data-v="vList" type="button">المواقع</button>
     <button data-v="vMgr" type="button">السجلات</button>
-    <button data-v="vOut" type="button">النسخ والأدلة</button>
+    <button data-v="vOut" type="button">الأدوات</button>
   </nav>
 </div>
 <button id="fab" type="button" onclick="startNew()">＋ موقع غير مسجّل</button>
@@ -2007,6 +2012,17 @@ window.coLegend = function(){
       .sort(function(a,b){ return b.n-a.n; });
   }catch(e){ return []; }
 };
+window.setMapColor = function(on){
+  CO_LAYER=!!on;
+  try{ localStorage.setItem('nsk.colayer', CO_LAYER?'1':'0'); }catch(e){}
+  try{ drawMap(); }catch(e){}
+  try{ window.paintCoLegend(); }catch(e){}
+  try{
+    var a=document.getElementById('mcSt'), b=document.getElementById('mcCo');
+    if(a) a.classList.toggle('on', !CO_LAYER);
+    if(b) b.classList.toggle('on', CO_LAYER);
+  }catch(e){}
+};
 window.toggleCoLayer = function(){
   CO_LAYER=!CO_LAYER;
   try{ localStorage.setItem('nsk.colayer', CO_LAYER?'1':'0'); }catch(e){}
@@ -2034,7 +2050,7 @@ window.paintCoLegend = function(){
   h+='</div><button type="button" class="clX" aria-label="إغلاق">✕</button>';
   box.innerHTML=h;
   var x=box.querySelector('.clX');
-  if(x) x.onclick=function(){ window.toggleCoLayer(); };
+  if(x) x.onclick=function(){ window.setMapColor(false); };
 };
 function drawMap(){
   layer.clearLayers(); marks={};
@@ -4289,7 +4305,7 @@ window.nskGuide = function(role){
       ['رقم لا أفهم مصدره','كل قسم مشروح في هذا الدليل — وما تبقّى يوضّحه مكتب إدارة المشروع'],
       ['لا أستطيع تعديل شيء','هذا مقصود: حساب المتابعة يقرأ ولا يكتب']
     ] : [
-      ['التحديث لم يصلني','التطبيق يُحدِّث نفسه حين تنهي عملك — ولتعجيله افتح «النسخ والأدلة» واضغط «فحص التحديثات»'],
+      ['التحديث لم يصلني','التطبيق يُحدِّث نفسه حين تنهي عملك — ولتعجيله افتح «الأدوات» واضغط «فحص التحديثات»'],
       ['دقة الموقع ضعيفة','ينبّهك التطبيق بالرقم ويفتح الخريطة على موقعك لتصحّح النقطة'],
       ['لا أجد الشركة في القائمة','اطلب إضافتها من داخل القائمة، ويعتمدها المهندس فتظهر للجميع'],
       ['التطبيق يرفض حفظ التركيب','صورة ما بعد التركيب إلزامية لحالة «تم التركيب»'],
@@ -4369,7 +4385,7 @@ window.nskGuide = function(role){
     B.push('<p><b>خرجت قبل الحفظ — هل ضاع عملي؟</b><br>لا. ما كتبته محفوظ في المسوّدة. افتح الموقع مرة أخرى تجده.</p>');
     B.push('<p><b>الموقع على الأرض يخالف المسجّل في التطبيق؟</b><br>اضغط «تعديل» بجوار البند وصحّحه. ويظهر التصحيح للمكتب فورًا.</p>');
     B.push('<p><b>تحديد موقعي غير دقيق؟</b><br>يعرض التطبيق مقدار الدقة، ويفتح الخريطة على موقعك لتضبط النقطة بنفسك.</p>');
-    B.push('<p><b>لم يصلني التحديث؟</b><br>التطبيق يُحدِّث نفسه تلقائيًا حين تنهي عملك. ولتعجيله افتح «النسخ والأدلة» واضغط «🔄 فحص التحديثات الآن».</p>');
+    B.push('<p><b>لم يصلني التحديث؟</b><br>التطبيق يُحدِّث نفسه تلقائيًا حين تنهي عملك. ولتعجيله افتح «الأدوات» واضغط «🔄 فحص التحديثات الآن».</p>');
     B.push(COMMON());
     return wrap(B);
   }
@@ -4858,7 +4874,7 @@ body.nsk-sup #dCopy{display:none!important}
 #nskDash .dRB{height:9px;border-radius:99px;background:rgba(128,128,128,.18);position:relative;overflow:hidden;min-width:84px}
 #nskDash .dRB i{position:absolute;top:0;bottom:0;right:0;border-radius:99px}
 </style>
-<div id="fbSyncChip"></div>
+<div id="fbSyncChip" hidden style="display:none!important"></div>
 <button id="dashFab" type="button" style="display:none">📊 لوحة المتابعة</button>
 <div id="nskDash" dir="rtl"><div class="dWrap" id="dWrap"></div></div>
 
@@ -7888,8 +7904,21 @@ function render(){
   Array.prototype.forEach.call(document.querySelectorAll('#nskDash .tmSend'),function(b){
     b.onclick=function(){ window.sendTeam(b.getAttribute('data-t')); }; });
   var _ta=$i('tmAll'); if(_ta) _ta.onclick=function(){ window.sendAllTeams(); };
-  var _cb=document.getElementById('coBtn');
-  if(_cb && !_cb._w){ _cb._w=1; _cb.onclick=function(){ window.toggleCoLayer(); }; }
+  /* V10.8: وضعان صريحان لا مفتاح واحد — فلا يلتبس أيّهما يعمل الآن */
+  (function(){
+    var a=document.getElementById('mcSt'), b=document.getElementById('mcCo');
+    if(!a || !b || a._w) return; a._w=1;
+    function paint(){
+      try{
+        var on=(localStorage.getItem('nsk.colayer')==='1');
+        a.classList.toggle('on', !on);
+        b.classList.toggle('on', on);
+      }catch(e){}
+    }
+    a.onclick=function(){ window.setMapColor(false); paint(); };
+    b.onclick=function(){ window.setMapColor(true);  paint(); };
+    paint();
+  })();
   var _sy=$i('syRetry'); if(_sy) _sy.onclick=function(){ window.retrySync(); };
   var _lk=$i('lkBtn'); if(_lk) _lk.onclick=function(){
     var L=window.lockRead();
