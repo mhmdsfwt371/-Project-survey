@@ -70,18 +70,18 @@ function _updSafe(){
 /* يُطبَّق التحديث المؤجَّل أول لحظة أمان */
 /* عدّاد ظاهر: يُعلم المستخدم بما سيحدث ويتيح تأجيله — الصمت التام يربك */
 var _cdT=null;
+/* AR معرّفة داخل وحدة ولا تُرى من هنا — نسخة محلية مكافئة */
+function _updAR(n){ try{ return String(n).replace(/\d/g, function(d){ return '٠١٢٣٤٥٦٧٨٩'[+d]; }); }catch(e){ return String(n); } }
 window.autoUpd = function(){
   if(!_updPending) return;
   if(_cdT) return;                     /* عدّاد يعمل بالفعل */
   if(!_updSafe()) return;
   var left=8;
   var b=document.getElementById('updBar');
-  if(!b){
-    b=document.createElement('div'); b.id='updBar';
-    document.body.appendChild(b);
-  }
+  var fresh=!b;
+  if(!b){ b=document.createElement('div'); b.id='updBar'; }
   var draw=function(){
-    b.innerHTML='<span>تحديث إلى <b>'+_updPending+'</b> خلال '+AR(left)+'…</span>'
+    b.innerHTML='<span>تحديث إلى <b>'+_updPending+'</b> خلال '+_updAR(left)+'…</span>'
       +'<button type="button" id="updLater">لاحقًا</button>';
     var l=document.getElementById('updLater');
     if(l) l.onclick=function(){
@@ -92,7 +92,15 @@ window.autoUpd = function(){
       if(g) g.onclick=function(){ window.doUpdate(); };
     };
   };
-  draw();
+  /* يُملأ أولًا ثم يُضاف — فلا يظهر شريط فارغ إن تعثّر الرسم */
+  try{ draw(); }catch(e){
+    b.innerHTML='<span>نسخة <b>'+_updPending+'</b> جاهزة</span>'
+      +'<button type="button" id="updGo">حدّث الآن</button>';
+  }
+  if(fresh) document.body.appendChild(b);
+  var _g0=document.getElementById('updGo');
+  if(_g0) _g0.onclick=function(){ window.doUpdate(); };
+  if(!b.innerHTML){ b.remove(); return; }
   _cdT=setInterval(function(){
     left--;
     if(!_updSafe()){                   /* بدأ يعمل أثناء العدّ — أوقف */
@@ -1287,7 +1295,7 @@ window.addEventListener('error', function(e){
 <div id="app">
   <header>
     <div class="t">
-      <div class="eyebrow">متابعة المشروع ١٤٤٨هـ <span style="color:var(--muted);letter-spacing:0;font-weight:600">· نسخة V9.9</span></div>
+      <div class="eyebrow">متابعة المشروع ١٤٤٨هـ <span style="color:var(--muted);letter-spacing:0;font-weight:600">· نسخة V10.0</span></div>
       <h1 id="ttl">المسح الميداني</h1>
     </div>
     <div class="hAct">
