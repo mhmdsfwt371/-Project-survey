@@ -1423,7 +1423,7 @@ window.addEventListener('error', function(e){
   <header>
     <div class="hTop">
     <div class="t">
-      <div class="eyebrow">متابعة المشروع ١٤٤٨هـ <span style="color:var(--muted);letter-spacing:0;font-weight:600">· نسخة V12.8</span></div>
+      <div class="eyebrow">متابعة المشروع ١٤٤٨هـ <span style="color:var(--muted);letter-spacing:0;font-weight:600">· نسخة V12.9</span></div>
       <h1 id="ttl">المسح الميداني</h1>
     </div>
     <button class="pill ic" id="belPill" type="button" title="ما يخصّك" hidden>🔔</button>
@@ -5554,6 +5554,11 @@ function bindAccountPanel(p){
     uMsg('جارٍ تحميل المستخدمين…');
     try{
       const s=await getDocs(collection(db,'users'));
+      try{
+        window.NSK_USERS=s.docs.map(function(d){ var v=d.data()||{};
+          return {id:d.id, name:v.name||v.email||d.id, email:v.email||'',
+                  role:v.role||'', active:v.active!==false}; });
+      }catch(_e){}
       USERS=[]; s.forEach(d=>{ const x=d.data()||{};
         let role=x.role||'supervisor', active=x.active;
         if(String(x.email||'').toLowerCase()==='mohammed.safwat@afaqy.com'){ role='admin'; active=true; }
@@ -6397,7 +6402,7 @@ function dxXlsx(sel){
       h+='<button type="button" class="dBtn p" id="tmAll" style="margin-top:9px">📤 إرسال جداول كل الفرق ('+AR(rows.length)+')</button>';
       h+='<p class="dTs">الرسالة تحمل ملخّص المربعات وعددها ورابطًا يفتح «جدولي» بالخريطة والاتجاهات. '
         +'يُفتح واتساب على محادثة القائد والرسالة جاهزة — تبقى ضغطة الإرسال. '
-        +'والرقم يُقرأ من «أرقام المكتب» بمطابقة اسم الفريق باسم صاحب الرقم.</p>';
+        +'والرقم يُقرأ من «أرقام المكتب» بمطابقة اسم الفريق باسم صاحب الرقم. والفريق مرتبط بحساب قائده، فتظهر له نقاطه في «جدولي» فور الإسناد.</p>';
     })();
     var rws=[['المشعر','المربع','النقاط','الفريق']];
     AD3.sq.forEach(function(g){ var ks=Object.keys(g.tset); rws.push([g.z,g.sq,g.n,(ks.length===1?(ks[0]||'—'):'متعدد')]); });
@@ -6989,6 +6994,28 @@ function saveCtc(mut){
   }catch(e){}
 }
 function teamsObj(){ try{ return window.NSKCORE.get('settings','teams')||{}; }catch(e){ return {}; } }
+/* V12.9: أسماء الفرق التي يقودها المستخدم الحالي — بمعرّف حسابه لا باسمه */
+window.myTeams=function(){
+  try{
+    var u=window.NSK_USER||JSON.parse(localStorage.getItem('nsk.user')||'null')||{};
+    var uid=String(u.uid||u.id||'').trim(), em=String(u.email||'').trim().toLowerCase();
+    if(!uid && !em) return [];
+    var T=window.NSKCORE.get('settings','teams')||{};
+    var lead=T.lead||{};
+    return Object.keys(lead).filter(function(tn){
+      var v=lead[tn]||{};
+      return (uid && String(v.uid||'')===uid) ||
+             (em && String(v.email||'').toLowerCase()===em);
+    });
+  }catch(e){ return []; }
+};
+/* قائد الفريق ككائن حساب */
+window.teamLead=function(tn){
+  try{
+    var T=window.NSKCORE.get('settings','teams')||{};
+    return (T.lead||{})[tn]||null;
+  }catch(e){ return null; }
+};
 function saveTeams(mut){
   try{
     var C=window.NSKCORE, t=Object.assign({}, C.get('settings','teams')||{});
@@ -7756,9 +7783,25 @@ function render(){
     if(canE){
       h+='<div class="pTyStrip">';
       names.forEach(function(n){ h+='<label>'+esc2(n)+' <button type="button" class="tmDel" data-t="'+escA(n)+'">×</button></label>'; });
-      h+='<label><input id="tmNew" placeholder="اسم قائد الفريق" style="width:130px;text-align:start"> <button type="button" id="tmAdd" class="dBtn">إضافة</button></label>';
-      h+='</div>';
-      h+='<p class="dTs">اجعل اسم الفريق مطابقًا لاسم حساب قائده في التطبيق — ليظهر له زر «جدولي» تلقائيًا.</p>';
+      /* V12.9: القائد يُختار من حسابات التطبيق لا يُكتب — فالربط بالمعرّف لا بتطابق الحروف */
+      (function(){
+        var US=(window.NSK_USERS||[]).filter(function(u){
+          return u.active!==false && u.role!=='viewer'; });
+        h+='<label>قائد الفريق '
+          +'<select id="tmNew" style="min-width:150px;text-align:start">'
+          +'<option value="">— اختر حسابًا —</option>'
+          + US.map(function(u){
+              return '<option value="'+_dvEsc(u.id)+'" data-nm="'+_dvEsc(u.name)+'" '
+                +'data-em="'+_dvEsc(u.email)+'">'+_dvEsc(u.name)+'</option>'; }).join('')
+          +'</select> <button type="button" id="tmAdd" class="dBtn">إضافة</button></label>';
+        h+='</div>';
+        if(!US.length){
+          h+='<p class="dTs">لا حسابات متاحة بعد — تُنشأ من تبويب «النظام»، ثم تظهر هنا.</p>';
+        } else {
+          h+='<p class="dTs">اختر حساب القائد من القائمة — يُربط الفريق بحسابه، '
+            +'فتظهر له نقاطه في «جدولي» فور الإسناد. ولا يعتمد الربط على تطابق الأسماء.</p>';
+        }
+      })();
       var CT=((ctcObj().list)||[]);
       h+='<h2 style="font-size:.95em;margin-top:14px">أرقام المكتب — تظهر للفني في زر «📣 بلّغ» داخل النقطة</h2>';
       h+='<div class="pTyStrip">';
@@ -8219,8 +8262,18 @@ function render(){
     render();
   }; });
   var tAdd=$i('tmAdd'); if(tAdd) tAdd.onclick=function(){
-    var el=$i('tmNew'), v=_tnorm(el&&el.value); if(!v) return;
-    saveTeams(function(t){ if(t.list.indexOf(v)<0) t.list.push(v); });
+    var el=$i('tmNew'); if(!el) return;
+    var uid=String(el.value||'').trim();
+    if(!uid){ try{ toast('اختر حساب القائد أولًا',1); }catch(e){} return; }
+    var op=el.options[el.selectedIndex]||{};
+    var nm=_tnorm(op.getAttribute?op.getAttribute('data-nm'):'') || uid;
+    var em=(op.getAttribute?op.getAttribute('data-em'):'')||'';
+    saveTeams(function(t){
+      if(t.list.indexOf(nm)<0) t.list.push(nm);
+      /* V12.9: يُحفظ معرّف الحساب مع الفريق — الربط به لا بالاسم */
+      t.lead=t.lead||{};
+      t.lead[nm]={uid:uid, email:em, name:nm};
+    });
     render();
   };
   Array.prototype.forEach.call(document.querySelectorAll('#nskDash .tmDel'),function(b){ b.onclick=function(){
@@ -8971,12 +9024,17 @@ $i('dashFab').onclick=function(){ window.NSKDASH.open(); };
   function myRows(){
     try{
       var C=window.NSKCORE; if(!C||!user||user.role==='viewer') return [];
-      var me=myName(); if(!me) return [];
+      var me=myName();
+      /* V12.9: المطابقة بمعرّف الحساب أولًا، والاسم احتياطٌ للفرق القديمة.
+         كانت المطابقة بالاسم وحده — فحرف مختلف يُخفي جدول الفني كاملًا. */
+      var mine=window.myTeams?window.myTeams():[];
+      if(!me && !mine.length) return [];
       var dbx=C.db(), recs=C.all('recs'), inss=C.all('inss'), out=[];
       dbx.d.forEach(function(r){
         var id=r[0], ins=inss[id]; if(!ins) return;
         var st=ins.status||''; if(!(st==='مجدول'||st==='قيد التركيب')) return;
-        if(String(ins.team||'').trim()!==me) return;
+        var tm=String(ins.team||'').trim();
+        if(!(mine.indexOf(tm)>-1 || (me && tm===me))) return;
         var fx=((recs[id]||{}).fix)||{};
         out.push({id:id, z:C.szOf(r)||'', sq:String(fx.square||r[8]||'؟'),
           sg:String(fx.sign||r[9]||''), n:(r[1]||id), st:st,
