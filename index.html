@@ -1420,7 +1420,7 @@ window.addEventListener('error', function(e){
   <header>
     <div class="hTop">
     <div class="t">
-      <div class="eyebrow">متابعة المشروع ١٤٤٨هـ <span style="color:var(--muted);letter-spacing:0;font-weight:600">· نسخة V12.5</span></div>
+      <div class="eyebrow">متابعة المشروع ١٤٤٨هـ <span style="color:var(--muted);letter-spacing:0;font-weight:600">· نسخة V12.6</span></div>
       <h1 id="ttl">المسح الميداني</h1>
     </div>
     <button class="pill ic" id="belPill" type="button" title="ما يخصّك" hidden>🔔</button>
@@ -6202,19 +6202,40 @@ function miniBar(sch,ok,total){
 }
 function zN(z){ z=String(z||''); return z.indexOf('عرف')>=0?'عرفات':z.indexOf('مزد')>=0?'مزدلفة':z.indexOf('من')>=0?'منى':(z||'—'); }
 /* ==== تصدير اللوحة: أقسام مختارة → Excel / PDF ==== */
-var DXS=[['pace','الوتيرة والهدف'],['over','نظرة عامة (الرسوم الدائرية)'],['inst','التركيب والجدولة'],
- ['daily','معدل التركيب اليومي'],['survey','المسح الميداني'],
- ['chal','التحديات الميدانية'],['chalm','التحديات — أين وما هي'],['reg','حسب المشعر'],
- ['co','حسب شركة الخدمة'],['stuck','المتعذر والراكد'],['pipe','سلامة خط الإنتاج'],['assign','توزيع فرق التركيب'],['conote','إشعار الشركات'],['stock','عُهدة الأجهزة'],['qa','التدقيق والسيريالات'],['sys','سلامة البيانات'],
- ['team','إنتاجية الفريق'],['race','سباق المشرفين'],['ev','آخر الأحداث']];
+/* V12.6: أسماء التصدير مطابقة لعناوين اللوحة — كانت تُختصر فتُربك القارئ.
+   وترتيبها ترتيب ظهورها في اللوحة، وقسم «الإعدادات» كان غائبًا. */
+var DXS=[
+  ['over','نظرة عامة'],
+  ['pace','الوتيرة والهدف'],
+  ['chalm','التحديات — أين وما هي وما المطلوب'],
+  ['inst','التركيب والجدولة'],
+  ['daily','معدل التركيب اليومي — آخر ١٤ يوم'],
+  ['reg','حسب المشعر ونوع النقطة'],
+  ['co','حسب شركة الخدمة — الأقل إنجازًا أولًا'],
+  ['setup','المواعيد المستهدفة وأزمنة التركيب'],
+  ['pipe','سلامة خط الإنتاج — مسح ← جدولة ← تركيب'],
+  ['assign','توزيع فرق التركيب'],
+  ['conote','إشعار الشركات بمواعيد التركيب'],
+  ['stock','عُهدة الأجهزة — القارئات مع الفرق والمخزن'],
+  ['survey','المسح الميداني'],
+  ['chal','التحديات الميدانية — إفادة المشرفين'],
+  ['stuck','المتعذّر والمواقع الراكدة — بالعمر'],
+  ['qa','التدقيق الهندسي — اعتماد التركيبات والسيريالات'],
+  ['team','إنتاجية الفريق'],
+  ['race','سباق المشرفين'],
+  ['sys','سلامة البيانات — المشرف العام'],
+  ['ev','سجل الأحداث']
+];
 function dxSaved(){ try{ return JSON.parse(localStorage.getItem('nsk.dx2')||'null'); }catch(e){ return null; } }
 function dxOpen(){
   var ov=$i('dxOv');
   if(!ov){
     ov=document.createElement('div'); ov.id='dxOv';
     var saved=dxSaved();
+    /* V12.6: التصدير يتبع التبويبات — لا يُعرض قسم لا يراه المستخدم أصلًا */
     var DXR=DXS.filter(function(s){
       var ro=(user&&user.role)||'';
+      if(ro==='viewer') return ['over','pace','chalm','inst','daily','reg','co'].indexOf(s[0])>-1;
       if(ro==='supervisor') return ['over','daily','race'].indexOf(s[0])>-1;
       if(s[0]==='sys') return ro==='admin';
       return true;
