@@ -34,6 +34,55 @@ if ('serviceWorker' in navigator) {
   });
 }
 /* يقارن نسخة الملف على الخادم بالنسخة المشغّلة — ويعرض شريطًا صريحًا */
+/* ===== V9.5: التحديث التلقائي الآمن =====
+   لا يستطيع تطبيق ويب استبدال شيفرته وهو يعمل — لا بدّ من إعادة تحميل.
+   لكن إعادة التحميل نفسها يمكن أن تكون تلقائية، بشرط ألّا يضيع عمل.
+   فيُطبَّق التحديث وحده حين يكون التطبيق خاملًا وما من نموذج مفتوح،
+   ويُؤجَّل إلى لحظة أمان إن كان الفني يكتب. */
+var _updPending = '';
+function _updSafe(){
+  try{
+    /* نموذج مفتوح فيه بيانات؟ لا نلمس شيئًا */
+    var v=document.getElementById('vForm');
+    if(v && v.classList && v.classList.contains('on')){
+      var f=document.getElementById('nf')||document.getElementById('sf');
+      if(f){
+        var typed=false;
+        Array.prototype.forEach.call(f.querySelectorAll('[name]'),function(el){
+          if(String(el.value||'').trim()) typed=true;
+        });
+        if(typed) return false;
+      }
+    }
+    /* لوحة أو نافذة مفتوحة؟ */
+    if(document.getElementById('nskDash')) return false;
+    if(document.getElementById('msgEditor')) return false;
+    if(document.getElementById('docOv')) return false;
+    /* المستخدم يكتب الآن؟ */
+    var a=document.activeElement;
+    if(a && /^(INPUT|SELECT|TEXTAREA)$/.test(a.tagName||'')) return false;
+    /* تغييرات لم تُرفع بعد؟ ننتظر وصولها */
+    try{ if((window.unsyncedList&&window.unsyncedList()||[]).length) return false; }catch(e){}
+    return true;
+  }catch(e){ return false; }
+}
+/* يُطبَّق التحديث المؤجَّل أول لحظة أمان */
+window.autoUpd = function(){
+  if(!_updPending) return;
+  if(!_updSafe()) return;
+  try{ toast('يُحدَّث إلى '+_updPending+'…'); }catch(e){}
+  setTimeout(function(){ try{ window.doUpdate(true); }catch(e){} }, 700);
+};
+/* يُعاد الفحص عند العودة للتطبيق وعند كل خمول */
+try{
+  document.addEventListener('visibilitychange', function(){
+    if(!document.hidden){
+      try{ window.nskCheckUpd(true); }catch(e){}
+      setTimeout(function(){ try{ window.autoUpd(); }catch(e){} }, 1200);
+    }
+  });
+  setInterval(function(){ try{ window.autoUpd(); }catch(e){} }, 45000);
+}catch(e){}
 window.nskCheckUpd = function(silent){
   try{
     var cur=''; try{ cur=((document.querySelector('.eyebrow')||{}).textContent||'').match(/V[\d.]+/); cur=cur?cur[0]:''; }catch(e){}
@@ -42,11 +91,19 @@ window.nskCheckUpd = function(silent){
       var m=t.match(/nusuk-survey-v([\d.]+)/); if(!m) return;
       var srv='V'+m[1];
       if(srv===cur){ if(!silent){ try{ toast('أنت على أحدث نسخة '+cur+' ✓'); }catch(e){} } return; }
+      _updPending=srv;
+      /* آمن الآن؟ طبّقه بلا سؤال */
+      if(_updSafe()){
+        try{ toast('نسخة جديدة '+srv+' — يُحدَّث الآن…'); }catch(e){}
+        setTimeout(function(){ try{ window.doUpdate(true); }catch(e){} }, 900);
+        return;
+      }
+      /* غير آمن: اعرض الشريط ليختار، وسيُطبَّق وحده أول لحظة أمان */
       var b=document.getElementById('updBar');
       if(!b){
         b=document.createElement('div'); b.id='updBar';
-        b.innerHTML='<span>نسخة جديدة <b>'+srv+'</b> جاهزة — أنت على '+cur+'</span>'
-          +'<button type="button" id="updGo">تحديث الآن</button>';
+        b.innerHTML='<span>نسخة جديدة <b>'+srv+'</b> جاهزة — تُطبَّق تلقائيًا حين تنهي عملك</span>'
+          +'<button type="button" id="updGo">حدّث الآن</button>';
         document.body.appendChild(b);
         document.getElementById('updGo').onclick=function(){ window.doUpdate(); };
       }
@@ -54,8 +111,10 @@ window.nskCheckUpd = function(silent){
   }catch(e){}
 };
 /* يمسح الكاش ويسجّل عاملًا جديدًا ثم يعيد التحميل — تحديث قسري */
-window.doUpdate = async function(){
+window.doUpdate = async function(auto){
   var g=document.getElementById('updGo'); if(g){ g.disabled=true; g.textContent='جارٍ التحديث…'; }
+  /* حارس أخير: لا نعيد التحميل تلقائيًا إن تغيّر الحال في هذه اللحظة */
+  if(auto && !_updSafe()) return;
   try{
     if(window.caches){ var ks=await caches.keys(); await Promise.all(ks.map(function(k){ return caches.delete(k); })); }
   }catch(e){}
@@ -1184,7 +1243,7 @@ window.addEventListener('error', function(e){
 <div id="app">
   <header>
     <div class="t">
-      <div class="eyebrow">متابعة المشروع ١٤٤٨هـ <span style="color:var(--muted);letter-spacing:0;font-weight:600">· نسخة V9.4</span></div>
+      <div class="eyebrow">متابعة المشروع ١٤٤٨هـ <span style="color:var(--muted);letter-spacing:0;font-weight:600">· نسخة V9.5</span></div>
       <h1 id="ttl">المسح الميداني</h1>
     </div>
     <button class="pill" id="modeBtn" type="button">المسح</button>
@@ -4068,7 +4127,7 @@ window.nskGuide = function(role){
     B.push('<p><b>خرجت قبل الحفظ — هل ضاع عملي؟</b><br>لا. ما كتبته محفوظ في المسوّدة. افتح الموقع مرة أخرى تجده.</p>');
     B.push('<p><b>الموقع على الأرض يخالف المسجّل في التطبيق؟</b><br>اضغط «تعديل» بجوار البند وصحّحه. ويظهر التصحيح للمكتب فورًا.</p>');
     B.push('<p><b>تحديد موقعي غير دقيق؟</b><br>يعرض التطبيق مقدار الدقة، ويفتح الخريطة على موقعك لتضبط النقطة بنفسك.</p>');
-    B.push('<p><b>لم يصلني التحديث؟</b><br>افتح تبويب «النسخ والأدلة» واضغط «🔄 فحص التحديثات الآن».</p>');
+    B.push('<p><b>لم يصلني التحديث؟</b><br>التطبيق يُحدِّث نفسه تلقائيًا حين تنهي عملك. ولتعجيله افتح «النسخ والأدلة» واضغط «🔄 فحص التحديثات الآن».</p>');
     B.push(COMMON());
     return wrap(B);
   }
