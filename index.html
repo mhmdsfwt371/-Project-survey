@@ -54,8 +54,9 @@ function _updSafe(){
         if(typed) return false;
       }
     }
-    /* لوحة أو نافذة مفتوحة؟ */
-    if(document.getElementById('nskDash')) return false;
+    /* لوحة مفتوحة؟ العنصر ثابت في الصفحة ويُخفى بـ display — فالوجود وحده لا يكفي */
+    var dsh=document.getElementById('nskDash');
+    if(dsh && dsh.style && dsh.style.display==='block') return false;
     if(document.getElementById('msgEditor')) return false;
     if(document.getElementById('docOv')) return false;
     /* المستخدم يكتب الآن؟ */
@@ -67,11 +68,48 @@ function _updSafe(){
   }catch(e){ return false; }
 }
 /* يُطبَّق التحديث المؤجَّل أول لحظة أمان */
+/* عدّاد ظاهر: يُعلم المستخدم بما سيحدث ويتيح تأجيله — الصمت التام يربك */
+var _cdT=null;
 window.autoUpd = function(){
   if(!_updPending) return;
+  if(_cdT) return;                     /* عدّاد يعمل بالفعل */
   if(!_updSafe()) return;
-  try{ toast('يُحدَّث إلى '+_updPending+'…'); }catch(e){}
-  setTimeout(function(){ try{ window.doUpdate(true); }catch(e){} }, 700);
+  var left=8;
+  var b=document.getElementById('updBar');
+  if(!b){
+    b=document.createElement('div'); b.id='updBar';
+    document.body.appendChild(b);
+  }
+  var draw=function(){
+    b.innerHTML='<span>تحديث إلى <b>'+_updPending+'</b> خلال '+AR(left)+'…</span>'
+      +'<button type="button" id="updLater">لاحقًا</button>';
+    var l=document.getElementById('updLater');
+    if(l) l.onclick=function(){
+      clearInterval(_cdT); _cdT=null;
+      b.innerHTML='<span>نسخة <b>'+_updPending+'</b> جاهزة</span>'
+        +'<button type="button" id="updGo">حدّث الآن</button>';
+      var g=document.getElementById('updGo');
+      if(g) g.onclick=function(){ window.doUpdate(); };
+    };
+  };
+  draw();
+  _cdT=setInterval(function(){
+    left--;
+    if(!_updSafe()){                   /* بدأ يعمل أثناء العدّ — أوقف */
+      clearInterval(_cdT); _cdT=null;
+      b.innerHTML='<span>نسخة <b>'+_updPending+'</b> جاهزة — تُطبَّق حين تنهي عملك</span>'
+        +'<button type="button" id="updGo">حدّث الآن</button>';
+      var g2=document.getElementById('updGo');
+      if(g2) g2.onclick=function(){ window.doUpdate(); };
+      return;
+    }
+    if(left<=0){
+      clearInterval(_cdT); _cdT=null;
+      try{ window.doUpdate(true); }catch(e){}
+      return;
+    }
+    draw();
+  }, 1000);
 };
 /* يُعاد الفحص عند العودة للتطبيق وعند كل خمول */
 try{
@@ -93,11 +131,7 @@ window.nskCheckUpd = function(silent){
       if(srv===cur){ if(!silent){ try{ toast('أنت على أحدث نسخة '+cur+' ✓'); }catch(e){} } return; }
       _updPending=srv;
       /* آمن الآن؟ طبّقه بلا سؤال */
-      if(_updSafe()){
-        try{ toast('نسخة جديدة '+srv+' — يُحدَّث الآن…'); }catch(e){}
-        setTimeout(function(){ try{ window.doUpdate(true); }catch(e){} }, 900);
-        return;
-      }
+      if(_updSafe()){ try{ window.autoUpd(); }catch(e){} return; }
       /* غير آمن: اعرض الشريط ليختار، وسيُطبَّق وحده أول لحظة أمان */
       var b=document.getElementById('updBar');
       if(!b){
@@ -127,6 +161,7 @@ window.doUpdate = async function(auto){
   setTimeout(function(){ location.replace(location.pathname+'?v='+Date.now()); }, 350);
 };
 /* V9.2: حرفا الاسم في زر الحساب — دالة مستقلة تُستدعى عند الإقلاع وبعد الدخول */
+/* V9.7: الاسم كاملًا لا حرفاه — والعرض محدود بـ CSS فلا يزاحم أزرار العمل */
 window.paintMe=function(name){
   try{
     var mb=document.getElementById('meBtn'); if(!mb) return;
@@ -136,10 +171,11 @@ window.paintMe=function(name){
       nm=String(u.name||u.email||'').trim();
     }
     if(!nm){ try{ nm=String(localStorage.getItem('nsk.me')||'').trim(); }catch(e){} }
-    if(!nm){ mb.textContent='؟'; mb.title='الحساب'; return; }
-    var parts=nm.split(/[\s@._-]+/).filter(Boolean);
-    var ini=parts.length>1 ? (parts[0][0]+parts[1][0]) : nm.slice(0,2);
-    mb.textContent=String(ini||'؟').toUpperCase();
+    if(!nm){ try{ nm=String(localStorage.getItem('nsk-me')||'').trim(); }catch(e){} }
+    if(!nm){ mb.textContent='حسابي'; mb.title='الحساب'; return; }
+    /* البريد يُختصر إلى ما قبل @ */
+    if(nm.indexOf('@')>0 && nm.indexOf(' ')<0) nm=nm.split('@')[0];
+    mb.textContent=nm;
     mb.title='الحساب — '+nm;
   }catch(e){}
 };
@@ -1066,8 +1102,10 @@ textarea.in{min-height:74px;resize:vertical}
 html[data-theme="light"] #nskDash input[type="file"]{background:#fff}
 #nskDash .pTyStrip label{display:flex;align-items:center;gap:9px;flex-wrap:wrap;width:100%}
 #nskDash .pTyStrip label>span:first-child{flex:0 0 auto;font-size:12px}
-/* زر الحساب وحده في أقصى اليسار — يفصله فراغ عن أزرار العمل */
-.pill.av{margin-inline-start:auto}
+/* زر الحساب وحده في أقصى اليسار — يفصله فراغ عن أزرار العمل،
+   وعرضه محدود فلا يزاحمها مهما طال الاسم */
+.pill.av{margin-inline-start:auto;max-width:38vw;overflow:hidden;
+  text-overflow:ellipsis;white-space:nowrap}
 #msgEditor{position:fixed;inset:0;z-index:9900;background:rgba(0,0,0,.62);
   display:flex;align-items:flex-end;justify-content:center;padding:0}
 #msgEditor .meB{background:var(--panel,#141619);border:1px solid var(--line,#2c3a34);
@@ -1117,9 +1155,7 @@ html[data-theme="light"] #msgEditor .meT{background:#fff}
 #mgrTbl .mgDr #mgDrDel{border-color:rgba(224,82,82,.6);color:#E05252}
 #belPill.has{border-color:#4BC9F5;color:#4BC9F5}
 /* الاسم كان يشغل أعرض مساحة في الشريط وهو أقلّها استعمالًا */
-.pill.av{min-width:38px;width:38px;padding:0;border-radius:50%;
-  font-weight:800;font-size:12.5px;letter-spacing:0;display:inline-flex;
-  align-items:center;justify-content:center;flex:0 0 auto}
+.pill.av{font-weight:700;font-size:12px;letter-spacing:0;flex:0 0 auto}
 #nearBar{position:absolute;inset-inline:12px;bottom:calc(12px + env(safe-area-inset-bottom,0px));
   z-index:520;background:var(--panel,#141619);border:1px solid var(--line,#2c3a34);
   border-radius:12px;padding:10px 13px;display:flex;align-items:center;gap:10px;
@@ -1247,7 +1283,7 @@ window.addEventListener('error', function(e){
 <div id="app">
   <header>
     <div class="t">
-      <div class="eyebrow">متابعة المشروع ١٤٤٨هـ <span style="color:var(--muted);letter-spacing:0;font-weight:600">· نسخة V9.6</span></div>
+      <div class="eyebrow">متابعة المشروع ١٤٤٨هـ <span style="color:var(--muted);letter-spacing:0;font-weight:600">· نسخة V9.7</span></div>
       <h1 id="ttl">المسح الميداني</h1>
     </div>
     <button class="pill" id="modeBtn" type="button">المسح</button>
