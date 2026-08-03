@@ -1005,6 +1005,25 @@ html[data-theme="light"] #nskDash input[type="file"]{background:#fff}
 #nskDash .pTyStrip label>span:first-child{flex:0 0 auto;font-size:12px}
 /* زر الحساب وحده في أقصى اليسار — يفصله فراغ عن أزرار العمل */
 .pill.av{margin-inline-start:auto}
+#msgEditor{position:fixed;inset:0;z-index:9900;background:rgba(0,0,0,.62);
+  display:flex;align-items:flex-end;justify-content:center;padding:0}
+#msgEditor .meB{background:var(--panel,#141619);border:1px solid var(--line,#2c3a34);
+  border-radius:16px 16px 0 0;width:100%;max-width:560px;max-height:88vh;
+  display:flex;flex-direction:column;padding-bottom:env(safe-area-inset-bottom,0px)}
+#msgEditor .meH{display:flex;align-items:center;justify-content:space-between;gap:10px;
+  padding:13px 15px;border-bottom:1px solid var(--line,#2c3a34)}
+#msgEditor .meH b{font-size:13.5px;color:var(--gold,#C9A24B)}
+#msgEditor .meX{background:transparent;border:0;color:var(--muted,#9AA1AB);font-size:17px;cursor:pointer;padding:2px 6px}
+#msgEditor .meT{flex:1 1 auto;min-height:210px;margin:12px 15px 0;padding:12px;
+  background:rgba(255,255,255,.05);border:1px solid var(--line,#2c3a34);border-radius:10px;
+  color:inherit;font:inherit;font-size:13px;line-height:1.95;resize:vertical;direction:rtl}
+#msgEditor .meN{color:var(--muted,#9AA1AB);font-size:11px;line-height:1.75;padding:9px 15px 0}
+#msgEditor .meF{display:flex;gap:8px;padding:12px 15px 15px}
+#msgEditor .meF button{flex:0 0 auto;background:transparent;border:1px solid rgba(150,150,150,.5);
+  border-radius:9px;color:inherit;font:inherit;font-size:12px;padding:9px 14px;cursor:pointer}
+#msgEditor .meF .meGo{flex:1 1 auto;background:var(--gold,#C9A24B);border-color:var(--gold,#C9A24B);
+  color:#0A0B0D;font-weight:800}
+html[data-theme="light"] #msgEditor .meT{background:#fff}
 #nskDash .tmBox{border:1px solid rgba(150,150,150,.25);border-radius:10px;overflow:hidden;margin-top:8px}
 #nskDash .tmRow{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:9px 11px;font-size:12.5px}
 #nskDash .tmRow:nth-child(odd){background:rgba(150,150,150,.07)}
@@ -1165,7 +1184,7 @@ window.addEventListener('error', function(e){
 <div id="app">
   <header>
     <div class="t">
-      <div class="eyebrow">متابعة المشروع ١٤٤٨هـ <span style="color:var(--muted);letter-spacing:0;font-weight:600">· نسخة V9.2</span></div>
+      <div class="eyebrow">متابعة المشروع ١٤٤٨هـ <span style="color:var(--muted);letter-spacing:0;font-weight:600">· نسخة V9.3</span></div>
       <h1 id="ttl">المسح الميداني</h1>
     </div>
     <button class="pill" id="modeBtn" type="button">المسح</button>
@@ -6216,10 +6235,24 @@ function teamMsg(team){
   return {text:L.join('\n'), n:g.n};
 }
 /* زر واحد لكل فريق — يفتح واتساب على محادثة القائد والرسالة جاهزة */
-window.sendTeam=function(team){
+window.sendTeam=function(team, raw){
   var m=teamMsg(team);
   if(!m){ toast('لا نقاط مجدولة لهذا الفريق',1); return; }
   var ph=teamPhone(team);
+  if(!raw){
+    window.openMsgEd({
+      title:'جدول: '+team,
+      note:'أضف تعليمات اليوم إن شئت — موعد التجمّع أو ملاحظة على مربع بعينه.',
+      cta:(ph?'📱 إرسال واتساب':'💬 مشاركة'),
+      text:m.text,
+      onSend:function(edited){ window.sendTeam._go(team, ph, edited, m.n); }
+    });
+    return;
+  }
+  window.sendTeam._go(team, ph, m.text, m.n);
+};
+window.sendTeam._go=function(team, ph, text, n){
+  var m={text:text, n:n};
   if(ph){
     try{ window.open('https://wa.me/'+ph+'?text='+encodeURIComponent(m.text),'_blank'); }catch(e){}
     try{ if(window.NSKSYNC) NSKSYNC.log('إرسال جدول '+m.n+' نقطة إلى '+team); }catch(e){}
@@ -6246,7 +6279,7 @@ window.sendAllTeams=function(){
   var i=0;
   (function step(){
     if(i>=ready.length){ toast('اكتمل فتح '+ready.length+' محادثة ✓'); return; }
-    window.sendTeam(ready[i++]);
+    window.sendTeam(ready[i++], true);   /* خام: المحرّر يوقف التتابع */
     setTimeout(step, 1400);
   })();
 };
@@ -6265,11 +6298,59 @@ function coMsg(g){
   L.push('— '+((user&&(user.name||user.email))||'إدارة المشروع')+' · إدارة مشروع متابعة المشروع');
   return L.join('\n');
 }
+/* ===== V9.3: محرّر الرسالة قبل الإرسال =====
+   الرسالة الجاهزة تكفي أغلب الأيام، لكن تبقى حالات تحتاج سطرًا خاصًا:
+   تأجيل، أو شرط دخول، أو تنبيه على الكهرباء. فتُعرض للتعديل قبل الذهاب. */
+window.openMsgEd=function(opt){
+  var old=document.getElementById('msgEditor'); if(old) old.remove();
+  var ov=document.createElement('div'); ov.id='msgEditor';
+  ov.innerHTML='<div class="meB">'
+    +'<div class="meH"><b>'+esc2(opt.title||'الرسالة')+'</b>'
+      +'<button type="button" class="meX" aria-label="إغلاق">✕</button></div>'
+    +'<textarea class="meT" spellcheck="false"></textarea>'
+    +'<div class="meN">'+esc2(opt.note||'راجع الرسالة وعدّلها قبل الإرسال.')+'</div>'
+    +'<div class="meF">'
+      +'<button type="button" class="meRe">↺ النص الأصلي</button>'
+      +'<button type="button" class="meCp">نسخ</button>'
+      +'<button type="button" class="meGo p">'+esc2(opt.cta||'إرسال')+'</button>'
+    +'</div></div>';
+  document.body.appendChild(ov);
+  var ta=ov.querySelector('.meT');
+  ta.value=opt.text||'';
+  var close=function(){ ov.remove(); };
+  ov.querySelector('.meX').onclick=close;
+  ov.onclick=function(e){ if(e.target===ov) close(); };
+  ov.querySelector('.meRe').onclick=function(){ ta.value=opt.text||''; ta.focus(); };
+  ov.querySelector('.meCp').onclick=function(){
+    try{ ta.select(); document.execCommand('copy'); toast('نُسخت الرسالة ✓'); }catch(e){}
+  };
+  ov.querySelector('.meGo').onclick=function(){
+    var t=ta.value;
+    if(!String(t).trim()){ toast('الرسالة فارغة',1); return; }
+    close();
+    try{ opt.onSend(t); }catch(e){}
+  };
+  setTimeout(function(){ try{ ta.focus(); }catch(e){} }, 120);
+};
 function coNotify(co, mode){
   var S=coSched(), g=null;
   S.rows.forEach(function(x){ if(x.co===co) g=x; });
   if(!g){ try{ toast('لا توجد نقاط مجدولة لهذه الشركة',1); }catch(e){} return; }
   var t=coMsg(g);
+  /* يُعرض للتعديل أولًا — ثم يمضي بنفس المسار */
+  if(mode!=='raw'){
+    window.openMsgEd({
+      title:'رسالة إلى: '+g.co,
+      note:'أضف ما تشاء — تأجيلًا أو شرط دخول أو تنبيهًا على الكهرباء. والنص الأصلي يعود بضغطة.',
+      cta:(g.tel?'📱 إرسال واتساب':'💬 مشاركة'),
+      text:t,
+      onSend:function(edited){ coNotify._send(g, mode, edited); }
+    });
+    return;
+  }
+  coNotify._send(g, mode, t);
+}
+coNotify._send=function(g, mode, t){
   if(mode==='wa' && g.tel){
     try{ window.open('https://wa.me/'+g.tel+'?text='+encodeURIComponent(t),'_blank'); }catch(e){}
   } else if(navigator.share){
