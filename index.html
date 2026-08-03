@@ -1423,7 +1423,7 @@ window.addEventListener('error', function(e){
   <header>
     <div class="hTop">
     <div class="t">
-      <div class="eyebrow">متابعة المشروع ١٤٤٨هـ <span style="color:var(--muted);letter-spacing:0;font-weight:600">· نسخة V12.7</span></div>
+      <div class="eyebrow">متابعة المشروع ١٤٤٨هـ <span style="color:var(--muted);letter-spacing:0;font-weight:600">· نسخة V12.8</span></div>
       <h1 id="ttl">المسح الميداني</h1>
     </div>
     <button class="pill ic" id="belPill" type="button" title="ما يخصّك" hidden>🔔</button>
@@ -5065,6 +5065,20 @@ body.nsk-sup #dCopy{display:none!important}
 #nskDash .dBarRow{margin:12px 2px 2px}
 #nskDash tr.rgZ td{background:rgba(201,162,75,.10);border-top:1px solid rgba(201,162,75,.3)}
 #nskDash tr.rgT td:first-child{padding-inline-start:18px;color:var(--muted,#9AA1AB);font-size:.92em}
+/* بطاقات الوتيرة حسب المشعر — تحلّ محلّ جدول لا يتّسع للهاتف */
+#nskDash .rgCards{display:flex;flex-direction:column;gap:9px;margin:8px 0 4px}
+#nskDash .rgC{border:1px solid rgba(150,150,150,.25);border-radius:12px;padding:11px 12px}
+#nskDash .rgH{font-weight:800;font-size:13px;color:var(--gold,#C9A24B);margin-bottom:9px}
+#nskDash .rgG{display:grid;grid-template-columns:repeat(2,1fr);gap:8px}
+#nskDash .rgG span{display:flex;flex-direction:column;gap:2px;
+  background:rgba(150,150,150,.08);border-radius:9px;padding:7px 9px}
+#nskDash .rgG b{font-size:15px;font-weight:800;line-height:1.2}
+#nskDash .rgG em{font-style:normal;font-size:10.5px;color:var(--muted,#9AA1AB)}
+#nskDash .rgD{display:flex;align-items:center;gap:8px;flex-wrap:wrap;
+  margin-top:9px;padding-top:9px;border-top:1px solid rgba(150,150,150,.2);font-size:12px}
+#nskDash .rgD > span{color:var(--muted,#9AA1AB);flex:0 0 auto}
+#nskDash .rgD input{flex:1 1 130px;min-width:0}
+@media(min-width:520px){ #nskDash .rgG{grid-template-columns:repeat(4,1fr)} }
 #nskDash .chBar{height:9px;border-radius:999px;background:rgba(232,135,58,.28);overflow:hidden;margin:2px 0 4px}
 #nskDash .chBar i{display:block;height:100%;background:#3AD6A0;border-radius:999px;transition:width .3s}
 #nskDash .dBarLbl{display:flex;justify-content:space-between;color:var(--muted,#9AA1AB);font-size:12px;margin-bottom:5px}
@@ -5072,7 +5086,18 @@ body.nsk-sup #dCopy{display:none!important}
 #nskDash .dBarW{height:9px;border-radius:999px;background:rgba(128,128,128,.15);overflow:hidden}
 #nskDash .dBar{height:100%;border-radius:999px;transition:width .4s}
 #nskDash table.dT{width:100%;border-collapse:collapse;font-size:13px}
-#nskDash table.dT th{color:var(--muted,#9AA1AB);font-weight:400;text-align:right;padding:6px 8px;border-bottom:1px solid var(--line,#2c3a34)}
+#nskDash table/* V12.8: جداول اللوحة لا تفيض أفقيًا على الهاتف —
+   حشو أضيق وخط أصغر وكسر الكلمات الطويلة، فتُقرأ كاملةً بلا تمرير جانبي. */
+#nskDash .dT{table-layout:auto;width:100%;font-size:11.5px}
+#nskDash .dT th,#nskDash .dT td{padding:6px 5px;word-break:break-word;overflow-wrap:anywhere}
+#nskDash .dT th{font-size:10.5px;line-height:1.35}
+#nskDash .dT td:first-child,#nskDash .dT th:first-child{padding-inline-start:2px}
+@media(max-width:430px){
+  #nskDash .dT{font-size:10.5px}
+  #nskDash .dT th{font-size:9.5px}
+  #nskDash .dT th,#nskDash .dT td{padding:5px 3px}
+}
+.dT th{color:var(--muted,#9AA1AB);font-weight:400;text-align:right;padding:6px 8px;border-bottom:1px solid var(--line,#2c3a34)}
 #nskDash table.dT td{padding:8px;border-bottom:1px solid rgba(128,128,128,.1)}
 #nskDash .dEv{max-height:300px;overflow:auto;border:1px solid var(--line,#2c3a34);border-radius:12px}
 #nskDash .dEv .e{display:flex;gap:10px;padding:9px 12px;border-bottom:1px solid rgba(128,128,128,.08);font-size:12.5px}
@@ -6115,20 +6140,28 @@ function setupHtml(c){
   /* V2.1: الوتيرة حسب المشعر */
   var G=goalObj(), RT=regTypeStats(), DR=dailySvReg(7);
   h+='<div class="pSub2">الوتيرة حسب المشعر — موعد مستهدف لكل مشعر</div>';
-  h+='<table class="dT"><thead><tr><th>المشعر</th><th>متبقٍ للمسح</th><th>متوسط ٧ أيام</th><th>المطلوب يوميًا</th><th>الاكتمال المتوقع</th><th>الموعد المستهدف</th></tr></thead><tbody>';
+  /* V12.8: بطاقات بدل جدول من ستة أعمدة — كان يفيض أفقيًا على شاشة الهاتف */
+  h+='<div class="rgCards">';
   RT.forEach(function(g){
     var rdl=(G.regions||{})[g.z]||'';
     var pr=paceCalc(g.t, g.sv, rdl, DR.by[g.z]||DR.keys.map(function(k){return {lb:k,v:0};}));
     var f2=pr.finish?_dk(pr.finish):'';
-    h+='<tr><td>'+esc2(g.z)+'</td><td>'+AR(pr.rem)+'</td><td>'+AR(pr.avg7)+'</td>'
-      +'<td>'+(pr.req==null?'—':'<b>'+AR(pr.req)+'</b>')+'</td>'
-      +'<td>'+(f2?arS(f2.slice(8,10)+'/'+f2.slice(5,7)):'—')+'</td>'
-      +'<td>'+(canEdit
+    h+='<div class="rgC">'
+      +'<div class="rgH">'+esc2(g.z)+'</div>'
+      +'<div class="rgG">'
+        +'<span><b>'+AR(pr.rem)+'</b><em>متبقٍ للمسح</em></span>'
+        +'<span><b>'+AR(pr.avg7)+'</b><em>متوسط ٧ أيام</em></span>'
+        +'<span><b>'+(pr.req==null?'—':AR(pr.req))+'</b><em>المطلوب يوميًا</em></span>'
+        +'<span><b>'+(f2?arS(f2.slice(8,10)+'/'+f2.slice(5,7)):'—')+'</b><em>الاكتمال المتوقع</em></span>'
+      +'</div>'
+      +'<div class="rgD"><span>الموعد المستهدف</span>'
+      +(canEdit
         ?'<input type="date" class="pRgDl" data-z="'+escA(g.z)+'" value="'+escA(rdl)+'">'
           +(rdl?'<button type="button" class="dtClr" data-z="'+escA(g.z)+'">مسح</button>':'')
-        :(rdl?esc2(rdl):'—'))+'</td></tr>';
+        :'<b>'+(rdl?esc2(rdl):'—')+'</b>')
+      +'</div></div>';
   });
-  h+='</tbody></table>';
+  h+='</div>';
   /* V2.1: الأنواع + متوسط زمن التركيب */
   var TY={}, TOR=[];
   RT.forEach(function(g){ g.torder.forEach(function(ty){
