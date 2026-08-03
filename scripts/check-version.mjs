@@ -128,6 +128,27 @@ try {
       break;
     }
   }
+  /* دوال مساعدة معروفة تُعرَّف داخل وحدة ولا تُرى من الكتل العادية.
+     قائمة محددة لا فحص عام — الفحص العام على الثوابت يُنتج ضجيجًا لا يُحتمل. */
+  {
+    const MOD_ONLY = ['AR', 'arS', 'escA', 'esc2'];
+    for (const name of MOD_ONLY) {
+      const def = [...src.matchAll(new RegExp('(?:const|let|var|function)\\s+' + name + '\\b', 'g'))]
+        .map(m => blk(m.index)).filter(i => i !== null);
+      if (!def.length) continue;
+      const homes = new Set(def);
+      const rx = new RegExp('(?<![\\w.$])' + name + '\\s*\\(', 'g');
+      for (const u of src.matchAll(rx)) {
+        if (isMin(u.index)) continue;
+        const i = blk(u.index);
+        if (i === null || homes.has(i)) continue;
+        const pre = src.slice(Math.max(0, u.index - 12), u.index);
+        if (pre.includes('window.')) continue;
+        leaks.push(`${name}() دالة وحدة مُستدعاة في كتلة ${i} — استعمل نسخة محلية`);
+        break;
+      }
+    }
+  }
   if (leaks.length) {
     for (const l of leaks) fail.push(`مرجع عابر للنطاق — ${l} — صدّرها بـ window.`);
   } else ok.push('لا مراجع عابرة بين كتل السكربت ✓');

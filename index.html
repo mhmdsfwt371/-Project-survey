@@ -1415,7 +1415,7 @@ window.addEventListener('error', function(e){
   <header>
     <div class="hTop">
     <div class="t">
-      <div class="eyebrow">متابعة المشروع ١٤٤٨هـ <span style="color:var(--muted);letter-spacing:0;font-weight:600">· نسخة V11.2</span></div>
+      <div class="eyebrow">متابعة المشروع ١٤٤٨هـ <span style="color:var(--muted);letter-spacing:0;font-weight:600">· نسخة V11.3</span></div>
       <h1 id="ttl">المسح الميداني</h1>
     </div>
     <button class="pill av" id="meBtn" type="button" title="الحساب">حسابي</button>
@@ -2003,6 +2003,8 @@ function ptBadge(r){
 /* ===== V10.7: طبقة الشركات على الخريطة =====
    لكل شركة لون ثابت يُشتقّ من اسمها، فلا يتبدّل بين الجلسات ولا يحتاج جدولًا.
    والألوان من دائرة تدرّج متباعدة الأطياف لتُميَّز بالعين. */
+/* محوّل الأرقام العربية — محلي في هذه الكتلة، فـ AR معرّفة داخل وحدة لا تُرى من هنا */
+function _updAR(n){ try{ return String(n).replace(/[0-9]/g, function(d){ return '٠١٢٣٤٥٦٧٨٩'[+d]; }); }catch(e){ return String(n); } }
 var CO_LAYER = false;
 /* الأطياف تُوزَّع بالترتيب لا بالتجزئة: التجزئة تُقارب لونين إلى درجتين
    فلا تُميَّزان بالعين. فتُرتَّب الشركات ويُوزَّع الطيف عليها بالتساوي،
@@ -2111,7 +2113,7 @@ window.openCoFilt = function(){
       h+='<label class="cpI'+(on?' on':'')+'" data-co="'+_dvEsc(x.co)+'">'
         +'<input type="checkbox"'+(on?' checked':'')+'>'
         +'<i style="background:'+x.c+'"></i>'
-        +'<span>'+_dvEsc(x.co)+'</span><em>'+AR(x.n)+'</em></label>';
+        +'<span>'+_dvEsc(x.co)+'</span><em>'+_updAR(x.n)+'</em></label>';
     });
     list.innerHTML=h;
     Array.prototype.forEach.call(list.querySelectorAll('.cpI'),function(el){
@@ -2122,7 +2124,7 @@ window.openCoFilt = function(){
         el.classList.toggle('on', tmp.has(co));
         var cb=el.querySelector('input'); if(cb) cb.checked=tmp.has(co);
         var g=ov.querySelector('.cpGo');
-        if(g) g.textContent = tmp.size ? ('عرض '+AR(tmp.size)) : 'عرض';
+        if(g) g.textContent = tmp.size ? ('عرض '+_updAR(tmp.size)) : 'عرض';
       };
     });
   }
@@ -2139,7 +2141,7 @@ window.openCoFilt = function(){
     try{ drawMap(); }catch(e){} try{ window.paintCoChip(); }catch(e){}
   };
   var g0=ov.querySelector('.cpGo');
-  if(g0 && tmp.size) g0.textContent='عرض '+AR(tmp.size);
+  if(g0 && tmp.size) g0.textContent='عرض '+_updAR(tmp.size);
 };
 /* شريحة صغيرة تُظهر التصفية القائمة وتفتح المنتقي */
 window.paintCoChip = function(){
@@ -2151,7 +2153,7 @@ window.paintCoChip = function(){
     host.appendChild(c);
   }
   var n=CO_SEL.size;
-  c.textContent = n ? ('▾ '+AR(n)+' '+(n===1?'شركة':'شركات')) : '▾ كل الشركات';
+  c.textContent = n ? ('▾ '+_updAR(n)+' '+(n===1?'شركة':'شركات')) : '▾ كل الشركات';
   c.classList.toggle('on', n>0);
   c.onclick=function(){ window.openCoFilt(); };
 };
