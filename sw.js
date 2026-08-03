@@ -1,5 +1,5 @@
 /* Nusuk Survey — offline shell cache */
-const CACHE = 'nusuk-survey-v11.4';
+const CACHE = 'nusuk-survey-v11.5';
 const SHELL = [
   './',
   './index.html',
@@ -71,6 +71,14 @@ self.addEventListener('fetch', function (e) {
         });
       })
     );
+    return;
+  }
+
+  // sw.js نفسه: شبكة فقط، أبدًا من الكاش — فحص النسخة يعتمد عليه،
+  // وتقديمه من الكاش يعني أن التطبيق لا يرى نسخة جديدة أبدًا.
+  if (req.url.indexOf('sw.js') !== -1) {
+    e.respondWith(fetch(new Request(req.url, { cache: 'reload' }))
+      .catch(function () { return new Response('', { status: 504 }); }));
     return;
   }
 
