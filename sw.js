@@ -1,5 +1,5 @@
 /* Nusuk Survey — offline shell cache */
-const CACHE = 'nusuk-survey-v12.1';
+const CACHE = 'nusuk-survey-v12.2';
 const SHELL = [
   './',
   './index.html',
@@ -70,6 +70,22 @@ self.addEventListener('fetch', function (e) {
           return hit || caches.match('./index.html');
         });
       })
+    );
+    return;
+  }
+
+  // ملفات docs: شبكة أولًا — الأدلة تتغيّر مع كل نسخة، والكاش يقدّم قديمًا
+  if (req.url.indexOf('/docs/') !== -1) {
+    e.respondWith(
+      fetch(new Request(req.url, { cache: 'reload' }))
+        .then(function (res) {
+          if (res && res.status === 200) {
+            const copy = res.clone();
+            caches.open(CACHE).then(function (c) { c.put(req, copy); });
+          }
+          return res;
+        })
+        .catch(function () { return caches.match(req).then(function (h) { return h || new Response('', { status: 504 }); }); })
     );
     return;
   }

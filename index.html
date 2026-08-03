@@ -1420,7 +1420,7 @@ window.addEventListener('error', function(e){
   <header>
     <div class="hTop">
     <div class="t">
-      <div class="eyebrow">متابعة المشروع ١٤٤٨هـ <span style="color:var(--muted);letter-spacing:0;font-weight:600">· نسخة V12.1</span></div>
+      <div class="eyebrow">متابعة المشروع ١٤٤٨هـ <span style="color:var(--muted);letter-spacing:0;font-weight:600">· نسخة V12.2</span></div>
       <h1 id="ttl">المسح الميداني</h1>
     </div>
     <button class="pill ic" id="belPill" type="button" title="ما يخصّك" hidden>🔔</button>
@@ -4877,6 +4877,25 @@ window.applyDocRole = function(){
 $('#docEng').onclick = ()=>window.doGuide('eng');
 $('#docSup').onclick = ()=>window.doGuide('sup');
 $('#docMin').onclick = ()=>window.doGuide('min');
+/* V12.2: دليل النظام الكامل — يُربط هنا مع بقية أزرار الأدلة.
+   كان مربوطًا في دالة رسم اللوحة وهو زر في تبويب الأدوات، فلم يعمل. */
+(function(){
+  var b=$('#docFull'); if(!b) return;
+  b.onclick=function(){
+    try{
+      var url='docs/nusuk-user-manual.docx?v='+Date.now();
+      var a=document.createElement('a');
+      a.href=url; a.download='دليل-النظام-الكامل.docx';
+      a.rel='noopener'; document.body.appendChild(a); a.click();
+      setTimeout(function(){ try{ a.remove(); }catch(e){} }, 800);
+      try{ toast('يُنزَّل دليل النظام الكامل…'); }catch(e){}
+    }catch(e){
+      try{ window.open('docs/nusuk-user-manual.docx','_blank'); }catch(x){
+        try{ toast('تعذّر التنزيل — جرّب من المتصفح',1); }catch(y){}
+      }
+    }
+  };
+})();
 try{ window.applyDocRole(); }catch(e){}
 $('#mgBtn').onclick = ()=>{ const f=$('#mergeFile'); if(f&&f.click) f.click(); };
 $('#mergeFile').onchange = async ev=>{
@@ -8170,16 +8189,6 @@ function render(){
     if(qaReturn(R.getAttribute('data-id'), ni?ni.value:'')){ try{ toast('أُرجع للفريق ↩'); }catch(e){} render(); }
   }; });
   try{ if(window.wireFileInputs) window.wireFileInputs(document); }catch(e){}
-  var _df=document.getElementById('docFull');
-  if(_df && !_df._w){ _df._w=1; _df.onclick=function(){
-    try{
-      var a=document.createElement('a');
-      a.href='docs/nusuk-user-manual.docx';
-      a.download='دليل-النظام-الكامل.docx';
-      document.body.appendChild(a); a.click(); a.remove();
-      toast('يُنزَّل دليل النظام الكامل…');
-    }catch(e){ toast('تعذّر التنزيل',1); }
-  }; }
   Array.prototype.forEach.call(document.querySelectorAll('#nskDash .tmSend'),function(b){
     b.onclick=function(){ window.sendTeam(b.getAttribute('data-t')); }; });
   var _ta=$i('tmAll'); if(_ta) _ta.onclick=function(){ window.sendAllTeams(); };
