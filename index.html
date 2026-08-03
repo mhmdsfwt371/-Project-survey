@@ -127,11 +127,15 @@ window.doUpdate = async function(auto){
   setTimeout(function(){ location.replace(location.pathname+'?v='+Date.now()); }, 350);
 };
 /* V9.2: حرفا الاسم في زر الحساب — دالة مستقلة تُستدعى عند الإقلاع وبعد الدخول */
-window.paintMe=function(){
+window.paintMe=function(name){
   try{
     var mb=document.getElementById('meBtn'); if(!mb) return;
-    var u=window.NSK_USER||JSON.parse(localStorage.getItem('nsk.user')||'null')||{};
-    var nm=String(u.name||u.email||'').trim();
+    var nm=String(name||'').trim();
+    if(!nm){
+      var u=window.NSK_USER||JSON.parse(localStorage.getItem('nsk.user')||'null')||{};
+      nm=String(u.name||u.email||'').trim();
+    }
+    if(!nm){ try{ nm=String(localStorage.getItem('nsk.me')||'').trim(); }catch(e){} }
     if(!nm){ mb.textContent='؟'; mb.title='الحساب'; return; }
     var parts=nm.split(/[\s@._-]+/).filter(Boolean);
     var ini=parts.length>1 ? (parts[0][0]+parts[1][0]) : nm.slice(0,2);
@@ -1243,7 +1247,7 @@ window.addEventListener('error', function(e){
 <div id="app">
   <header>
     <div class="t">
-      <div class="eyebrow">متابعة المشروع ١٤٤٨هـ <span style="color:var(--muted);letter-spacing:0;font-weight:600">· نسخة V9.5</span></div>
+      <div class="eyebrow">متابعة المشروع ١٤٤٨هـ <span style="color:var(--muted);letter-spacing:0;font-weight:600">· نسخة V9.6</span></div>
       <h1 id="ttl">المسح الميداني</h1>
     </div>
     <button class="pill" id="modeBtn" type="button">المسح</button>
@@ -1542,20 +1546,20 @@ let current = null;
 
 async function loadMe(){
   try{ const r=await window.storage.get('me',false); if(r) me=r.value; }catch(e){}
-  if(me){ $('#meBtn').textContent = me; }
+  if(me){ try{ window.paintMe && window.paintMe(me); }catch(e){} }
   window.__setMe = function(n){
     if(!n) return;
     me = String(n).trim();
     try{ window.storage.set('me', me, false); }catch(e){}
-    try{ $('#meBtn').textContent = me; }catch(e){}
+    try{ window.paintMe && window.paintMe(me); }catch(e){}
   };
 }
 async function askMe(first){
   const v = prompt(first?'اكتب اسمك — سيُسجَّل مع كل مسح تحفظه:':'تعديل اسم الفني:', me||'');
-  if(v==null || !String(v).trim()) { if(first) $('#meBtn').textContent='حدّد اسمك'; return; }
+  if(v==null || !String(v).trim()) { if(first){ var _b=$('#meBtn'); if(_b){ _b.textContent='؟'; _b.title='حدّد اسمك'; } } return; }
   me = v.trim();
   try{ await window.storage.set('me', me, false); }catch(e){}
-  $('#meBtn').textContent = me;
+  try{ window.paintMe && window.paintMe(me); }catch(e){}
 }
 
 /* ---------------- storage ---------------- */
