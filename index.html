@@ -1092,7 +1092,7 @@ textarea.in{min-height:74px;resize:vertical}
 #updBar button{background:#0A0B0D;color:#F1EDE0;border:0;border-radius:999px;
   padding:7px 16px;font:inherit;font-weight:800;cursor:pointer}
 #updBar button:disabled{opacity:.6}
-#spaceBar{position:fixed;inset-block-end:calc(58px + env(safe-area-inset-bottom,0px));
+#spaceBar{position:fixed;inset-block-end:calc(184px + env(safe-area-inset-bottom,0px));
   inset-inline:10px;z-index:9500;background:#E8873A;color:#0A0B0D;border-radius:12px;
   display:flex;align-items:center;gap:9px;flex-wrap:wrap;padding:10px 13px;
   font-size:12px;font-weight:700;box-shadow:0 6px 20px rgba(0,0,0,.4)}
@@ -1222,10 +1222,13 @@ html[data-theme="light"] #msgEditor .meT{background:#fff}
 #belPill.has{border-color:#4BC9F5;color:#4BC9F5}
 /* الاسم كان يشغل أعرض مساحة في الشريط وهو أقلّها استعمالًا */
 .pill.av{font-weight:700;font-size:12px;letter-spacing:0;flex:0 0 auto}
-#nearBar{position:absolute;inset-inline:12px;bottom:calc(12px + env(safe-area-inset-bottom,0px));
-  z-index:520;background:var(--panel,#141619);border:1px solid var(--line,#2c3a34);
+/* V10.6: كان يقع خلف الأزرار العائمة — رُفع فوقها وأُبعد عن مسارها.
+   الأزرار عند ١٢ و٦٦ بكسل من الأسفل، فيبدأ الشريط فوقهما. */
+#nearBar{position:fixed;inset-inline:12px;
+  inset-block-end:calc(124px + env(safe-area-inset-bottom,0px));
+  z-index:9450;background:var(--panel,#141619);border:1px solid var(--gold,#C9A24B);
   border-radius:12px;padding:10px 13px;display:flex;align-items:center;gap:10px;
-  box-shadow:0 6px 20px rgba(0,0,0,.35);font-size:12.5px}
+  box-shadow:0 8px 24px rgba(0,0,0,.5);font-size:12.5px}
 #nearBar b{flex:1 1 auto;font-weight:600}
 #nearBar span{color:var(--muted,#9AA1AB);font-size:11.5px}
 #nearBar button{background:var(--gold,#C9A24B);border:0;border-radius:9px;color:#0A0B0D;
@@ -1349,7 +1352,7 @@ window.addEventListener('error', function(e){
 <div id="app">
   <header>
     <div class="t">
-      <div class="eyebrow">متابعة المشروع ١٤٤٨هـ <span style="color:var(--muted);letter-spacing:0;font-weight:600">· نسخة V10.5</span></div>
+      <div class="eyebrow">متابعة المشروع ١٤٤٨هـ <span style="color:var(--muted);letter-spacing:0;font-weight:600">· نسخة V10.6</span></div>
       <h1 id="ttl">المسح الميداني</h1>
     </div>
     <div class="hAct">
