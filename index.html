@@ -70,53 +70,63 @@ function _updSafe(){
 /* يُطبَّق التحديث المؤجَّل أول لحظة أمان */
 /* عدّاد ظاهر: يُعلم المستخدم بما سيحدث ويتيح تأجيله — الصمت التام يربك */
 var _cdT=null;
-/* AR معرّفة داخل وحدة ولا تُرى من هنا — نسخة محلية مكافئة */
-function _updAR(n){ try{ return String(n).replace(/\d/g, function(d){ return '٠١٢٣٤٥٦٧٨٩'[+d]; }); }catch(e){ return String(n); } }
+/* نص الشريط يُبنى بلا أي استدعاء خارجي — أي دالة غائبة تُفرغه */
+function _updBox(){
+  var b=document.getElementById('updBar');
+  if(!b){ b=document.createElement('div'); b.id='updBar'; document.body.appendChild(b); }
+  return b;
+}
+function _updHTML(msg, btnId, btnTxt){
+  return '<span>'+msg+'</span>'
+    +'<button type="button" id="'+btnId+'">'+btnTxt+'</button>'
+    +'<button type="button" id="updX" aria-label="إخفاء" '
+    +'style="background:transparent;color:#0A0B0D;font-weight:900;padding:6px 9px">✕</button>';
+}
+function _updWire(b){
+  var g=document.getElementById('updGo');
+  if(g) g.onclick=function(){ window.doUpdate(); };
+  var x=document.getElementById('updX');
+  if(x) x.onclick=function(){ b.remove(); };
+}
+/* الشريط الجاهز — يُستعمل في كل حالة عدا العدّ */
+function _updReady(extra){
+  var b=_updBox();
+  b.innerHTML=_updHTML('نسخة <b>'+_updPending+'</b> جاهزة'+(extra||''), 'updGo', 'حدّث الآن');
+  _updWire(b);
+  return b;
+}
+/* حارس ذاتي: شريط بلا زرّ لا يبقى — يُعاد بناؤه */
+function _updRepair(){
+  var b=document.getElementById('updBar'); if(!b) return;
+  if(!b.innerHTML || !b.querySelector('button')) { if(_updPending) _updReady(); else b.remove(); }
+}
 window.autoUpd = function(){
   if(!_updPending) return;
-  if(_cdT) return;                     /* عدّاد يعمل بالفعل */
-  if(!_updSafe()) return;
-  var left=8;
-  var b=document.getElementById('updBar');
-  var fresh=!b;
-  if(!b){ b=document.createElement('div'); b.id='updBar'; }
-  var draw=function(){
-    b.innerHTML='<span>تحديث إلى <b>'+_updPending+'</b> خلال '+_updAR(left)+'…</span>'
-      +'<button type="button" id="updLater">لاحقًا</button>';
-    var l=document.getElementById('updLater');
-    if(l) l.onclick=function(){
-      clearInterval(_cdT); _cdT=null;
-      b.innerHTML='<span>نسخة <b>'+_updPending+'</b> جاهزة</span>'
-        +'<button type="button" id="updGo">حدّث الآن</button>';
-      var g=document.getElementById('updGo');
-      if(g) g.onclick=function(){ window.doUpdate(); };
-    };
-  };
-  /* يُملأ أولًا ثم يُضاف — فلا يظهر شريط فارغ إن تعثّر الرسم */
-  try{ draw(); }catch(e){
-    b.innerHTML='<span>نسخة <b>'+_updPending+'</b> جاهزة</span>'
-      +'<button type="button" id="updGo">حدّث الآن</button>';
+  /* الحال غير آمن: أوقف أي عدّ جارٍ واعرض الزر اليدوي — لا خروج صامت */
+  if(!_updSafe()){
+    if(_cdT){ clearInterval(_cdT); _cdT=null; }
+    _updReady(' — تُطبَّق حين تنهي عملك');
+    return;
   }
-  if(fresh) document.body.appendChild(b);
-  var _g0=document.getElementById('updGo');
-  if(_g0) _g0.onclick=function(){ window.doUpdate(); };
-  if(!b.innerHTML){ b.remove(); return; }
+  if(_cdT) return;
+  var left=8;
+  var AD='٠١٢٣٤٥٦٧٨٩';
+  var b=_updBox();
+  var draw=function(){
+    var n=String(left).replace(/[0-9]/g, function(d){ return AD[+d]; });
+    b.innerHTML=_updHTML('تحديث إلى <b>'+_updPending+'</b> خلال '+n+'…', 'updLater', 'لاحقًا');
+    var l=document.getElementById('updLater');
+    if(l) l.onclick=function(){ clearInterval(_cdT); _cdT=null; _updReady(); };
+    var x=document.getElementById('updX');
+    if(x) x.onclick=function(){ clearInterval(_cdT); _cdT=null; b.remove(); };
+  };
+  try{ draw(); }catch(e){ _updReady(); return; }
+  _updRepair();
   _cdT=setInterval(function(){
     left--;
-    if(!_updSafe()){                   /* بدأ يعمل أثناء العدّ — أوقف */
-      clearInterval(_cdT); _cdT=null;
-      b.innerHTML='<span>نسخة <b>'+_updPending+'</b> جاهزة — تُطبَّق حين تنهي عملك</span>'
-        +'<button type="button" id="updGo">حدّث الآن</button>';
-      var g2=document.getElementById('updGo');
-      if(g2) g2.onclick=function(){ window.doUpdate(); };
-      return;
-    }
-    if(left<=0){
-      clearInterval(_cdT); _cdT=null;
-      try{ window.doUpdate(true); }catch(e){}
-      return;
-    }
-    draw();
+    if(!_updSafe()){ clearInterval(_cdT); _cdT=null; _updReady(' — تُطبَّق حين تنهي عملك'); return; }
+    if(left<=0){ clearInterval(_cdT); _cdT=null; try{ window.doUpdate(true); }catch(e){} return; }
+    try{ draw(); }catch(e){ clearInterval(_cdT); _cdT=null; _updReady(); }
   }, 1000);
 };
 /* يُعاد الفحص عند العودة للتطبيق وعند كل خمول */
@@ -128,6 +138,7 @@ try{
     }
   });
   setInterval(function(){ try{ window.autoUpd(); }catch(e){} }, 45000);
+  setInterval(function(){ try{ _updRepair(); }catch(e){} }, 4000);
 }catch(e){}
 window.nskCheckUpd = function(silent){
   try{
@@ -141,14 +152,7 @@ window.nskCheckUpd = function(silent){
       /* آمن الآن؟ طبّقه بلا سؤال */
       if(_updSafe()){ try{ window.autoUpd(); }catch(e){} return; }
       /* غير آمن: اعرض الشريط ليختار، وسيُطبَّق وحده أول لحظة أمان */
-      var b=document.getElementById('updBar');
-      if(!b){
-        b=document.createElement('div'); b.id='updBar';
-        b.innerHTML='<span>نسخة جديدة <b>'+srv+'</b> جاهزة — تُطبَّق تلقائيًا حين تنهي عملك</span>'
-          +'<button type="button" id="updGo">حدّث الآن</button>';
-        document.body.appendChild(b);
-        document.getElementById('updGo').onclick=function(){ window.doUpdate(); };
-      }
+      try{ _updReady(' — تُطبَّق تلقائيًا حين تنهي عملك'); }catch(e){}
     }).catch(function(){});
   }catch(e){}
 };
@@ -1295,7 +1299,7 @@ window.addEventListener('error', function(e){
 <div id="app">
   <header>
     <div class="t">
-      <div class="eyebrow">متابعة المشروع ١٤٤٨هـ <span style="color:var(--muted);letter-spacing:0;font-weight:600">· نسخة V10.1</span></div>
+      <div class="eyebrow">متابعة المشروع ١٤٤٨هـ <span style="color:var(--muted);letter-spacing:0;font-weight:600">· نسخة V10.2</span></div>
       <h1 id="ttl">المسح الميداني</h1>
     </div>
     <div class="hAct">
