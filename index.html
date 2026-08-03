@@ -1230,6 +1230,39 @@ html[data-theme="light"] #msgEditor .meT{background:#fff}
 .segC .seg{background:transparent;border:0;color:var(--muted,#9AA1AB);
   font:inherit;font-size:11px;font-weight:700;padding:5px 11px;cursor:pointer;white-space:nowrap}
 .segC .seg.on{background:var(--gold,#C9A24B);color:#0A0B0D}
+#coChip{position:fixed;inset-inline-start:12px;
+  inset-block-end:calc(184px + env(safe-area-inset-bottom,0px));z-index:9440;
+  background:var(--panel,#141619);border:1px solid var(--line,#2c3a34);
+  border-radius:999px;color:var(--cream,#F1EDE0);font:700 12px var(--ar,Tahoma,sans-serif);
+  padding:8px 15px;cursor:pointer;box-shadow:0 6px 18px rgba(0,0,0,.45)}
+#coChip.on{border-color:var(--gold,#C9A24B);color:var(--gold,#C9A24B)}
+#coFilt{position:fixed;inset:0;z-index:9800;background:rgba(0,0,0,.6);
+  display:flex;align-items:flex-end;justify-content:center}
+#coFilt .cpB{background:var(--panel,#141619);border:1px solid var(--line,#2c3a34);
+  border-radius:16px 16px 0 0;width:100%;max-width:540px;max-height:82vh;
+  display:flex;flex-direction:column;padding-bottom:env(safe-area-inset-bottom,0px)}
+#coFilt .cpH{display:flex;align-items:center;justify-content:space-between;
+  padding:13px 15px;border-bottom:1px solid var(--line,#2c3a34)}
+#coFilt .cpH b{font-size:13.5px;color:var(--gold,#C9A24B)}
+#coFilt .cpX{background:transparent;border:0;color:var(--muted,#9AA1AB);font-size:17px;cursor:pointer;padding:2px 6px}
+#coFilt .cpQ{margin:11px 15px 6px;padding:10px 12px;background:rgba(255,255,255,.05);
+  border:1px solid var(--line,#2c3a34);border-radius:10px;color:inherit;font:inherit;font-size:16px}
+#coFilt .cpL{flex:1 1 auto;overflow:auto;padding:4px 10px 8px}
+#coFilt .cpI{display:flex;align-items:center;gap:9px;padding:10px 10px;border-radius:9px;
+  cursor:pointer;font-size:12.5px}
+#coFilt .cpI:nth-child(odd){background:rgba(150,150,150,.06)}
+#coFilt .cpI.on{background:rgba(201,162,75,.16);outline:1px solid rgba(201,162,75,.5)}
+#coFilt .cpI input{width:17px;height:17px;flex:0 0 auto;accent-color:var(--gold,#C9A24B)}
+#coFilt .cpI i{width:12px;height:12px;border-radius:3px;flex:0 0 auto}
+#coFilt .cpI span{flex:1 1 auto;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#coFilt .cpI em{font-style:normal;color:var(--muted,#9AA1AB);font-size:11px;flex:0 0 auto}
+#coFilt .cpE{padding:22px;text-align:center;color:var(--muted,#9AA1AB);font-size:12px}
+#coFilt .cpF{display:flex;gap:8px;padding:11px 15px 15px;border-top:1px solid var(--line,#2c3a34)}
+#coFilt .cpF button{flex:0 0 auto;background:transparent;border:1px solid rgba(150,150,150,.5);
+  border-radius:10px;color:inherit;font:inherit;font-size:12.5px;padding:10px 15px;cursor:pointer}
+#coFilt .cpF .cpGo{flex:1 1 auto;background:var(--gold,#C9A24B);border-color:var(--gold,#C9A24B);
+  color:#0A0B0D;font-weight:800}
+html[data-theme="light"] #coFilt .cpQ{background:#fff}
 #coLegend{position:fixed;inset-inline-start:10px;
   inset-block-end:calc(196px + env(safe-area-inset-bottom,0px));
   z-index:9440;max-width:66vw;background:var(--panel,#141619);
@@ -1372,7 +1405,7 @@ window.addEventListener('error', function(e){
 <div id="app">
   <header>
     <div class="t">
-      <div class="eyebrow">متابعة المشروع ١٤٤٨هـ <span style="color:var(--muted);letter-spacing:0;font-weight:600">· نسخة V10.8</span></div>
+      <div class="eyebrow">متابعة المشروع ١٤٤٨هـ <span style="color:var(--muted);letter-spacing:0;font-weight:600">· نسخة V10.9</span></div>
       <h1 id="ttl">المسح الميداني</h1>
     </div>
     <div class="hAct">
@@ -2014,9 +2047,10 @@ window.coLegend = function(){
 };
 window.setMapColor = function(on){
   CO_LAYER=!!on;
+  try{ if(!CO_LAYER){ CO_SEL=new Set(); _coSave(); } }catch(e){}
   try{ localStorage.setItem('nsk.colayer', CO_LAYER?'1':'0'); }catch(e){}
   try{ drawMap(); }catch(e){}
-  try{ window.paintCoLegend(); }catch(e){}
+  try{ window.paintCoChip(); }catch(e){}
   try{
     var a=document.getElementById('mcSt'), b=document.getElementById('mcCo');
     if(a) a.classList.toggle('on', !CO_LAYER);
@@ -2030,7 +2064,94 @@ window.toggleCoLayer = function(){
   try{ window.paintCoLegend(); }catch(e){}
 };
 try{ CO_LAYER = (localStorage.getItem('nsk.colayer')==='1'); }catch(e){}
+/* ===== V10.9: منتقي الشركات =====
+   القائمة الجانبية كانت تحجب الخريطة وتُظهر ما لا يُحتاج.
+   الأصل: كل الشركات ملوّنة بلا قائمة. فإن اختار المستخدم شركةً أو أكثر
+   اقتصرت الخريطة عليها وحدها — فيرى توزيعها وجدولتها نقيًّا. */
+var CO_SEL = new Set();
+try{
+  var _cs=JSON.parse(localStorage.getItem('nsk.cosel')||'[]');
+  if(Array.isArray(_cs)) CO_SEL=new Set(_cs);
+}catch(e){}
+function _coSave(){
+  try{ localStorage.setItem('nsk.cosel', JSON.stringify([].slice.call(CO_SEL))); }catch(e){}
+}
+window.coSelected = function(){ return [].slice.call(CO_SEL); };
+window.openCoFilt = function(){
+  var old=document.getElementById('coFilt'); if(old) old.remove();
+  try{ window.resetCoColors(); }catch(e){}
+  var L=window.coLegend();
+  var ov=document.createElement('div'); ov.id='coFilt';
+  ov.innerHTML='<div class="cpB">'
+    +'<div class="cpH"><b>اختر الشركات</b>'
+      +'<button type="button" class="cpX" aria-label="إغلاق">✕</button></div>'
+    +'<input type="search" class="cpQ" placeholder="ابحث باسم الشركة" spellcheck="false">'
+    +'<div class="cpL"></div>'
+    +'<div class="cpF">'
+      +'<button type="button" class="cpAll">كل الشركات</button>'
+      +'<button type="button" class="cpGo p">عرض</button>'
+    +'</div></div>';
+  document.body.appendChild(ov);
+  var list=ov.querySelector('.cpL'), q=ov.querySelector('.cpQ');
+  var tmp=new Set(CO_SEL);
+  function paint(){
+    var f=String(q.value||'').trim();
+    var R=f ? L.filter(function(x){ return x.co.indexOf(f)>-1; }) : L;
+    if(!R.length){ list.innerHTML='<div class="cpE">لا شركة بهذا الاسم</div>'; return; }
+    var h='';
+    R.forEach(function(x){
+      var on=tmp.has(x.co);
+      h+='<label class="cpI'+(on?' on':'')+'" data-co="'+_dvEsc(x.co)+'">'
+        +'<input type="checkbox"'+(on?' checked':'')+'>'
+        +'<i style="background:'+x.c+'"></i>'
+        +'<span>'+_dvEsc(x.co)+'</span><em>'+AR(x.n)+'</em></label>';
+    });
+    list.innerHTML=h;
+    Array.prototype.forEach.call(list.querySelectorAll('.cpI'),function(el){
+      el.onclick=function(ev){
+        ev.preventDefault();
+        var co=el.getAttribute('data-co');
+        if(tmp.has(co)) tmp.delete(co); else tmp.add(co);
+        el.classList.toggle('on', tmp.has(co));
+        var cb=el.querySelector('input'); if(cb) cb.checked=tmp.has(co);
+        var g=ov.querySelector('.cpGo');
+        if(g) g.textContent = tmp.size ? ('عرض '+AR(tmp.size)) : 'عرض';
+      };
+    });
+  }
+  paint();
+  q.oninput=paint;
+  ov.querySelector('.cpX').onclick=function(){ ov.remove(); };
+  ov.onclick=function(e){ if(e.target===ov) ov.remove(); };
+  ov.querySelector('.cpAll').onclick=function(){
+    CO_SEL=new Set(); _coSave(); ov.remove();
+    try{ drawMap(); }catch(e){} try{ window.paintCoChip(); }catch(e){}
+  };
+  ov.querySelector('.cpGo').onclick=function(){
+    CO_SEL=new Set(tmp); _coSave(); ov.remove();
+    try{ drawMap(); }catch(e){} try{ window.paintCoChip(); }catch(e){}
+  };
+  var g0=ov.querySelector('.cpGo');
+  if(g0 && tmp.size) g0.textContent='عرض '+AR(tmp.size);
+};
+/* شريحة صغيرة تُظهر التصفية القائمة وتفتح المنتقي */
+window.paintCoChip = function(){
+  var c=document.getElementById('coChip');
+  if(!CO_LAYER){ if(c) c.remove(); return; }
+  if(!c){
+    c=document.createElement('button'); c.id='coChip'; c.type='button';
+    var host=document.getElementById('vMap')||document.body;
+    host.appendChild(c);
+  }
+  var n=CO_SEL.size;
+  c.textContent = n ? ('▾ '+AR(n)+' '+(n===1?'شركة':'شركات')) : '▾ كل الشركات';
+  c.classList.toggle('on', n>0);
+  c.onclick=function(){ window.openCoFilt(); };
+};
 window.paintCoLegend = function(){
+  try{ window.paintCoChip(); }catch(e){}
+  return;
+  /* القائمة القديمة — أُبقيت معطَّلة للرجوع إليها إن لزم */
   try{ window.resetCoColors(); }catch(e){}
   var box=document.getElementById('coLegend');
   if(!CO_LAYER){ if(box) box.remove(); return; }
@@ -2070,8 +2191,12 @@ function drawMap(){
     if(typeof _la!=='number'||typeof _lo!=='number'||isNaN(_la)||isNaN(_lo)) return;
     const light = z<13 || !b.contains(P0);
     var c = colOf(r[0]);
-    /* طبقة الشركات: اللون يتبع الشركة لا الحالة */
-    if(CO_LAYER){ var _co=window.coOf(r); if(_co) c=_coColor(_co); }
+    /* طبقة الشركات: اللون يتبع الشركة، وعند اختيار شركات تُخفى ما عداها */
+    if(CO_LAYER){
+      var _co=window.coOf(r);
+      if(CO_SEL.size && r[0]!==focusId && !CO_SEL.has(_co)) return;
+      if(_co) c=_coColor(_co);
+    }
     const isCor = catOf(r).k==='cor';
     const moved = !!((recs[r[0]]||{}).loc);
     const ds = light ? (COARSE?15:12) : (COARSE?22:17);
