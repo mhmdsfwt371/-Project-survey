@@ -1349,7 +1349,7 @@ window.addEventListener('error', function(e){
 <div id="app">
   <header>
     <div class="t">
-      <div class="eyebrow">متابعة المشروع ١٤٤٨هـ <span style="color:var(--muted);letter-spacing:0;font-weight:600">· نسخة V10.4</span></div>
+      <div class="eyebrow">متابعة المشروع ١٤٤٨هـ <span style="color:var(--muted);letter-spacing:0;font-weight:600">· نسخة V10.5</span></div>
       <h1 id="ttl">المسح الميداني</h1>
     </div>
     <div class="hAct">
@@ -5756,7 +5756,17 @@ function paceHtml(c){
   else if(P.rem===0) h+='<p class="pMsg pOkC">اكتمل مسح جميع النقاط 🎉</p>';
   else if(!fin) h+='<p class="pMsg pWarn">لا يوجد نشاط مسح خلال آخر ٧ أيام — لن يكتمل بالمعدل الحالي.</p>';
   else h+='<p class="pMsg '+(P.ok?'pOkC':'pWarn')+'">بالمعدل الحالي يكتمل المسح: '+fin+(P.ok?' — قبل الموعد المستهدف ✓':' — بعد الموعد المستهدف ⚠️')+'</p>';
-  if(canEdit) h+='<label class="pDl">الموعد المستهدف <input type="date" id="paceDl" value="'+escA(dl)+'">'
+  if(dl) h+='<p class="pMsg">الموعد المستهدف: '+esc2(dl)+'</p>';
+  else h+='<p class="pMsg pMut">لم يُحدَّد موعد مستهدف — يُضبط من تبويب «تخطيط».</p>';
+  /* V10.5: ما دون هذا السطر إعدادات تُضبط مرة واحدة، لا متابعة يومية.
+     فصُلت إلى setupHtml() في تبويب «تخطيط» — والوزارة ترى المتابعة فقط. */
+  return h;
+}
+function setupHtml(c){
+  var dl=goalDeadline(), P=paceCalc(c.total,c.svDone,dl,dailySv(7));
+  var canEdit=!!(user && (user.role==='admin'||user.role==='engineer'));
+  var h='';
+  if(canEdit) h+='<label class="pDl">الموعد المستهدف للمشروع <input type="date" id="paceDl" value="'+escA(dl)+'">'
     +(dl?'<button type="button" class="dtClr" id="paceDlX">مسح</button>':'')+'</label>';
   else if(dl) h+='<p class="pMsg">الموعد المستهدف: '+esc2(dl)+'</p>';
   /* V2.1: الوتيرة حسب المشعر */
@@ -6953,7 +6963,7 @@ function copySummary(){
 /* V4.9: تقسيم اللوحة لتبويبات — القسم يُخفى لا يُعاد بناؤه */
 var DTABS=[
   ['watch','متابعة',      ['over','pace','inst','daily','reg','co'],      'الصورة التنفيذية — للوزارة والإدارة'],
-  ['plan','تخطيط',        ['pipe','assign','conote','stock'],             'ما قبل التنفيذ: الجدولة والفرق والإشعار والعُهدة'],
+  ['plan','تخطيط',        ['setup','pipe','assign','conote','stock'],             'ما قبل التنفيذ: الجدولة والفرق والإشعار والعُهدة'],
   ['ops','تشغيل',         ['me','survey','chal','stuck','qa','team','race'],'الميدان اليوم: المسح والتحديات والتدقيق'],
   ['adm','النظام',        ['sys','ev'],                                   'سجل الأحداث وسلامة البيانات وإعادة الضبط']
 ];
@@ -7091,6 +7101,12 @@ function render(){
 
   h+='<section class="dSec" data-sec="pace">';
   h+='<h2>الوتيرة والهدف</h2>'+paceHtml(c);
+  /* V10.5: الإعدادات فُصلت — ضبطٌ يُجرى مرة، لا متابعة يومية.
+     ومكانها «تخطيط» لأن «متابعة» تراها الوزارة. */
+  h+='</section><section class="dSec" data-sec="setup">';
+  h+='<h2>المواعيد المستهدفة وأزمنة التركيب</h2>';
+  h+='<p class="dTs">تُضبط مرة واحدة، وعليها يُبنى المطلوب يوميًا وتاريخ الاكتمال المتوقع وساعات العمل المتبقية.</p>';
+  h+=setupHtml(c);
   h+='</section><section class="dSec" data-sec="over">';
 
   h+='<h2>نظرة عامة</h2><div class="dChRow">';
