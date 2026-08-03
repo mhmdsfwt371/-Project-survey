@@ -1244,6 +1244,23 @@ html[data-theme="light"] #msgEditor .meT{background:#fff}
 .pill.ic{flex:0 0 auto;max-width:none;min-width:38px;padding:5px 9px;
   overflow:visible;text-overflow:clip;text-align:center}
 #mcCo.on{background:var(--gold,#C9A24B);border-color:var(--gold,#C9A24B);color:#0A0B0D;font-weight:800}
+#tkOv{position:fixed;inset:0;z-index:9800;background:rgba(0,0,0,.6);
+  display:flex;align-items:flex-end;justify-content:center}
+#tkOv .tkB{background:var(--panel,#141619);border:1px solid var(--line,#2c3a34);
+  border-radius:16px 16px 0 0;width:100%;max-width:520px;max-height:78vh;
+  display:flex;flex-direction:column;padding-bottom:env(safe-area-inset-bottom,0px)}
+#tkOv .tkH{display:flex;align-items:center;justify-content:space-between;
+  padding:13px 15px;border-bottom:1px solid var(--line,#2c3a34)}
+#tkOv .tkH b{font-size:13.5px;color:var(--gold,#C9A24B)}
+#tkOv .tkX{background:transparent;border:0;color:var(--muted,#9AA1AB);font-size:17px;cursor:pointer;padding:2px 6px}
+#tkOv .tkL{flex:1 1 auto;overflow:auto;padding:10px 12px;display:flex;flex-direction:column;gap:7px}
+#tkOv .tkI{background:rgba(150,150,150,.08);border:1px solid rgba(150,150,150,.3);
+  border-radius:10px;color:inherit;font:inherit;font-size:13px;font-weight:700;
+  padding:13px 12px;cursor:pointer;text-align:start}
+#tkOv .tkI:active{background:var(--gold,#C9A24B);color:#0A0B0D}
+#tkOv .tkD{display:flex;align-items:center;gap:9px;flex-wrap:wrap;font-size:12px;
+  padding:11px 15px 15px;border-top:1px solid var(--line,#2c3a34);color:var(--muted,#9AA1AB)}
+#tkOv .tkD input{flex:1 1 140px;min-width:0;font-size:16px}
 #coChip{position:fixed;inset-inline-start:12px;
   inset-block-end:calc(184px + env(safe-area-inset-bottom,0px));z-index:9440;
   background:var(--panel,#141619);border:1px solid var(--line,#2c3a34);
@@ -1423,7 +1440,7 @@ window.addEventListener('error', function(e){
   <header>
     <div class="hTop">
     <div class="t">
-      <div class="eyebrow">متابعة المشروع ١٤٤٨هـ <span style="color:var(--muted);letter-spacing:0;font-weight:600">· نسخة V12.9</span></div>
+      <div class="eyebrow">متابعة المشروع ١٤٤٨هـ <span style="color:var(--muted);letter-spacing:0;font-weight:600">· نسخة V13.0</span></div>
       <h1 id="ttl">المسح الميداني</h1>
     </div>
     <button class="pill ic" id="belPill" type="button" title="ما يخصّك" hidden>🔔</button>
@@ -1862,9 +1879,58 @@ const layer = L.layerGroup().addTo(map);
 let marks = {};
 
 function posOf(r){ const l=(recs[r[0]]||{}).loc; return l?[l.a,l.o]:[r[5],r[6]]; }
+/* V13.0: الجدولة من الخريطة تسأل عن الفريق — كانت تجدول بلا صاحب
+   فلا تظهر النقطة في «جدولي» لأحد، ولا يعرف المكتب من ينفّذها. */
+function _teamNames(){
+  try{
+    var T=window.NSKCORE.get('settings','teams')||{};
+    return (T.list||[]).slice();
+  }catch(e){ return []; }
+}
+window.pickTeam = function(cb){
+  var L=_teamNames();
+  if(!L.length){
+    try{ toast('أنشئ فريقًا أولًا من «توزيع فرق التركيب»',1); }catch(e){}
+    return;
+  }
+  var old=document.getElementById('tkOv'); if(old) old.remove();
+  var ov=document.createElement('div'); ov.id='tkOv';
+  ov.innerHTML='<div class="tkB">'
+    +'<div class="tkH"><b>لمن تُسنَد هذه النقطة؟</b>'
+      +'<button type="button" class="tkX" aria-label="إلغاء">✕</button></div>'
+    +'<div class="tkL">'
+    + L.map(function(n){ return '<button type="button" class="tkI" data-t="'+_dvEsc(n)+'">'+_dvEsc(n)+'</button>'; }).join('')
+    +'</div>'
+    +'<label class="tkD">تاريخ التركيب <input type="date" id="tkDate"></label>'
+    +'</div>';
+  document.body.appendChild(ov);
+  ov.querySelector('.tkX').onclick=function(){ ov.remove(); };
+  ov.onclick=function(e){ if(e.target===ov) ov.remove(); };
+  Array.prototype.forEach.call(ov.querySelectorAll('.tkI'), function(b){
+    b.onclick=function(){
+      var d=document.getElementById('tkDate');
+      var team=b.getAttribute('data-t');
+      ov.remove();
+      try{ cb(team, (d&&d.value)||''); }catch(e){}
+    };
+  });
+};
 window.setFstat = async function(id,k){
   const rec = recs[id] || {status:'draft', v:{}, photos:{}, id:id};
+  const willSchedule = (k==='draft' && rec.fstat!=='draft' && appMode==='install');
+  if(willSchedule && !window._tkPick){
+    /* اسأل عن الفريق أولًا ثم أعد النداء بما اختير */
+    window.pickTeam(function(team, dt){
+      window._tkPick={team:team, dt:dt};
+      window.setFstat(id,k).then(function(){ window._tkPick=null; });
+    });
+    return;
+  }
   rec.fstat = rec.fstat===k ? (k==='done' ? '' : 'done') : k;
+  if(window._tkPick && rec.fstat==='draft'){
+    rec.team=window._tkPick.team;
+    if(window._tkPick.dt) rec.due=window._tkPick.dt;
+  }
   const now=new Date().toISOString().slice(0,16).replace('T',' ');
   rec.date=now; rec.by=me||rec.by||'';
   rec.log=(rec.log||[]).concat([{d:now, s:'الحالة: '+(rec.fstat?slbl(rec.fstat):'لم يُزر'), by:rec.by}]);
@@ -5089,7 +5155,10 @@ body.nsk-sup #dCopy{display:none!important}
 #nskDash table/* V12.8: جداول اللوحة لا تفيض أفقيًا على الهاتف —
    حشو أضيق وخط أصغر وكسر الكلمات الطويلة، فتُقرأ كاملةً بلا تمرير جانبي. */
 #nskDash .dT{table-layout:auto;width:100%;font-size:11.5px}
-#nskDash .dT th,#nskDash .dT td{padding:6px 5px;word-break:break-word;overflow-wrap:anywhere}
+/* V13.0: الكسر للنصّ في العمود الأول فقط — كان يكسر الأرقام نفسها (٩٤٦ → ٩٤ ثم ٦) */
+#nskDash .dT th,#nskDash .dT td{padding:6px 5px;white-space:nowrap}
+#nskDash .dT th:first-child,#nskDash .dT td:first-child{
+  white-space:normal;word-break:break-word;overflow-wrap:anywhere}
 #nskDash .dT th{font-size:10.5px;line-height:1.35}
 #nskDash .dT td:first-child,#nskDash .dT th:first-child{padding-inline-start:2px}
 @media(max-width:430px){
