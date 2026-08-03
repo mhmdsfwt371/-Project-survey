@@ -172,6 +172,7 @@ window.paintMe=function(name){
     }
     if(!nm){ try{ nm=String(localStorage.getItem('nsk.me')||'').trim(); }catch(e){} }
     if(!nm){ try{ nm=String(localStorage.getItem('nsk-me')||'').trim(); }catch(e){} }
+    if(!nm){ try{ if(typeof me==='string') nm=me.trim(); }catch(e){} }
     if(!nm){ mb.textContent='حسابي'; mb.title='الحساب'; return; }
     /* البريد يُختصر إلى ما قبل @ */
     if(nm.indexOf('@')>0 && nm.indexOf(' ')<0) nm=nm.split('@')[0];
@@ -1283,7 +1284,7 @@ window.addEventListener('error', function(e){
 <div id="app">
   <header>
     <div class="t">
-      <div class="eyebrow">متابعة المشروع ١٤٤٨هـ <span style="color:var(--muted);letter-spacing:0;font-weight:600">· نسخة V9.7</span></div>
+      <div class="eyebrow">متابعة المشروع ١٤٤٨هـ <span style="color:var(--muted);letter-spacing:0;font-weight:600">· نسخة V9.8</span></div>
       <h1 id="ttl">المسح الميداني</h1>
     </div>
     <button class="pill" id="modeBtn" type="button">المسح</button>
@@ -1291,7 +1292,7 @@ window.addEventListener('error', function(e){
     
     <button class="pill" id="goBtn" type="button">مواقع</button>
     <button class="pill" id="thBtn" type="button" title="فاتح / داكن">🌓</button>
-      <button class="pill av" id="meBtn" type="button" title="الحساب">؟</button>
+      <button class="pill av" id="meBtn" type="button" title="الحساب">حسابي</button>
   </header>
 
   <main>
@@ -1582,7 +1583,15 @@ let current = null;
 
 async function loadMe(){
   try{ const r=await window.storage.get('me',false); if(r) me=r.value; }catch(e){}
-  if(me){ try{ window.paintMe && window.paintMe(me); }catch(e){} }
+  /* V9.8: الاسم المحلي قد يخلو لأن الدخول صار بحساب — فيُؤخذ منه */
+  if(!me){
+    try{
+      const u=window.NSK_USER||JSON.parse(localStorage.getItem('nsk.user')||'null')||{};
+      const nm=String(u.name||u.email||'').trim();
+      if(nm){ me=nm; try{ window.storage.set('me', me, false); }catch(e){} }
+    }catch(e){}
+  }
+  try{ window.paintMe && window.paintMe(me); }catch(e){}
   window.__setMe = function(n){
     if(!n) return;
     me = String(n).trim();
@@ -1592,7 +1601,8 @@ async function loadMe(){
 }
 async function askMe(first){
   const v = prompt(first?'اكتب اسمك — سيُسجَّل مع كل مسح تحفظه:':'تعديل اسم الفني:', me||'');
-  if(v==null || !String(v).trim()) { if(first){ var _b=$('#meBtn'); if(_b){ _b.textContent='؟'; _b.title='حدّد اسمك'; } } return; }
+  /* الإلغاء لا يمحو ما هو قائم — يُعاد الرسم من المصادر المتاحة */
+  if(v==null || !String(v).trim()){ try{ window.paintMe && window.paintMe(me); }catch(e){} return; }
   me = v.trim();
   try{ await window.storage.set('me', me, false); }catch(e){}
   try{ window.paintMe && window.paintMe(me); }catch(e){}
@@ -4727,6 +4737,13 @@ body.nsk-sup #dCopy{display:none!important}
   window.NSKGATE={
     unlock:function(p){
       window.NSK_USER=p;
+  try{
+    if(!me){
+      var _nm=String(p.name||p.email||'').trim();
+      if(_nm){ me=_nm; try{ window.storage.set('me', me, false); }catch(e){} }
+    }
+    if(window.paintMe) window.paintMe(me||p.name||p.email);
+  }catch(e){}
       try{ if(window.applyDocRole) window.applyDocRole(); }catch(e){}
       try{ if(window.paintBell) window.paintBell(); }catch(e){}
       try{ if(p.role==='viewer') document.body.classList.add('nsk-viewer'); }catch(e){}
