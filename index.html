@@ -1349,7 +1349,7 @@ window.addEventListener('error', function(e){
 <div id="app">
   <header>
     <div class="t">
-      <div class="eyebrow">متابعة المشروع ١٤٤٨هـ <span style="color:var(--muted);letter-spacing:0;font-weight:600">· نسخة V10.3</span></div>
+      <div class="eyebrow">متابعة المشروع ١٤٤٨هـ <span style="color:var(--muted);letter-spacing:0;font-weight:600">· نسخة V10.4</span></div>
       <h1 id="ttl">المسح الميداني</h1>
     </div>
     <div class="hAct">
@@ -7590,7 +7590,18 @@ function render(){
     +'</div>';
   h+='<div id="evList"></div>';
   h+='</section>';
+  /* V10.4: إعادة الرسم كانت تُفقد موضع التمرير فيقفز المستخدم لأول الصفحة
+     كلما بدّل مفتاحًا. يُحفظ الموضع ويُعاد بعد الرسم في الإطار نفسه. */
+  var _sc=$i('nskDash'), _y=0, _wy=0;
+  try{ _y=_sc?_sc.scrollTop:0; _wy=window.scrollY||0; }catch(e){}
   $i('dWrap').innerHTML=h;
+  try{
+    if(_sc && _y) _sc.scrollTop=_y;
+    if(_wy) window.scrollTo(0,_wy);
+    requestAnimationFrame(function(){
+      try{ if(_sc && _y) _sc.scrollTop=_y; if(_wy) window.scrollTo(0,_wy); }catch(e){}
+    });
+  }catch(e){}
   Array.prototype.forEach.call(document.querySelectorAll('#nskDash .dtBtn'),function(b){
     b.onclick=function(){
       var t=b.getAttribute('data-t');
