@@ -1274,7 +1274,7 @@ html[data-theme="light"] #msgEditor .meT{background:#fff}
 #coFilt .cpE{padding:22px;text-align:center;color:var(--muted,#9AA1AB);font-size:12px}
 #coFilt .cpF{display:flex;gap:8px;padding:11px 15px 15px;border-top:1px solid var(--line,#2c3a34)}
 #coFilt .cpF button{flex:0 0 auto;background:transparent;border:1px solid rgba(150,150,150,.5);
-  border-radius:10px;color:inherit;font:inherit;font-size:12.5px;padding:10px 15px;cursor:pointer}
+  border-radius:10px;color:inherit;font:inherit;font-size:11.5px;padding:10px 11px;cursor:pointer}
 #coFilt .cpF .cpGo{flex:1 1 auto;background:var(--gold,#C9A24B);border-color:var(--gold,#C9A24B);
   color:#0A0B0D;font-weight:800}
 html[data-theme="light"] #coFilt .cpQ{background:#fff}
@@ -1421,9 +1421,10 @@ window.addEventListener('error', function(e){
   <header>
     <div class="hTop">
     <div class="t">
-      <div class="eyebrow">متابعة المشروع ١٤٤٨هـ <span style="color:var(--muted);letter-spacing:0;font-weight:600">· نسخة V11.5</span></div>
+      <div class="eyebrow">متابعة المشروع ١٤٤٨هـ <span style="color:var(--muted);letter-spacing:0;font-weight:600">· نسخة V11.6</span></div>
       <h1 id="ttl">المسح الميداني</h1>
     </div>
+    <button class="pill" id="thBtn" type="button" title="فاتح / داكن">🌓</button>
     <button class="pill av" id="meBtn" type="button" title="الحساب">حسابي</button>
     </div>
     <div class="hAct">
@@ -1432,7 +1433,6 @@ window.addEventListener('error', function(e){
     
     <button class="pill" id="goBtn" type="button">مواقع</button>
       <span class="segC"><button type="button" id="mcSt" class="seg on" title="تلوين حسب الحالة">حالة</button><button type="button" id="mcCo" class="seg" title="تلوين حسب الشركة">شركات</button></span>
-    <button class="pill" id="thBtn" type="button" title="فاتح / داكن">🌓</button>
       </div>
     </header>
 
@@ -2103,12 +2103,13 @@ window.openCoFilt = function(){
     +'<input type="search" class="cpQ" placeholder="ابحث باسم الشركة" spellcheck="false">'
     +'<div class="cpL"></div>'
     +'<div class="cpF">'
+      +'<button type="button" class="cpClr">مسح التحديد</button>'
       +'<button type="button" class="cpAll">كل الشركات</button>'
       +'<button type="button" class="cpGo p">عرض</button>'
     +'</div></div>';
   document.body.appendChild(ov);
   var list=ov.querySelector('.cpL'), q=ov.querySelector('.cpQ');
-  var tmp=new Set(CO_SEL);
+  var tmp=new Set(CO_SEL);   /* قابلة لإعادة الإسناد عند المسح */
   function paint(){
     var f=String(q.value||'').trim();
     var R=f ? L.filter(function(x){ return x.co.indexOf(f)>-1; }) : L;
@@ -2138,6 +2139,12 @@ window.openCoFilt = function(){
   q.oninput=paint;
   ov.querySelector('.cpX').onclick=function(){ ov.remove(); };
   ov.onclick=function(e){ if(e.target===ov) ov.remove(); };
+  /* مسح كل العلامات دفعةً — بلا إغلاق، ليختار من جديد */
+  ov.querySelector('.cpClr').onclick=function(){
+    tmp=new Set();
+    paint();
+    var g=ov.querySelector('.cpGo'); if(g) g.textContent='عرض';
+  };
   ov.querySelector('.cpAll').onclick=function(){
     CO_SEL=new Set(); _coSave(); ov.remove();
     try{ drawMap(); }catch(e){} try{ window.paintCoChip(); }catch(e){}
