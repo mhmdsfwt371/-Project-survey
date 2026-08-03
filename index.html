@@ -1420,7 +1420,7 @@ window.addEventListener('error', function(e){
   <header>
     <div class="hTop">
     <div class="t">
-      <div class="eyebrow">متابعة المشروع ١٤٤٨هـ <span style="color:var(--muted);letter-spacing:0;font-weight:600">· نسخة V12.2</span></div>
+      <div class="eyebrow">متابعة المشروع ١٤٤٨هـ <span style="color:var(--muted);letter-spacing:0;font-weight:600">· نسخة V12.3</span></div>
       <h1 id="ttl">المسح الميداني</h1>
     </div>
     <button class="pill ic" id="belPill" type="button" title="ما يخصّك" hidden>🔔</button>
@@ -1534,8 +1534,10 @@ window.addEventListener('error', function(e){
             border-top:1px solid rgba(150,150,150,.25);padding-top:10px">
             <div style="font-size:10.5px;color:var(--muted);margin-bottom:7px">
         📕 دليل النظام الكامل ونسخ Word — للأدمن والمهندسين فقط</div>
-      <button class="btn p" id="docFull" type="button" style="margin-bottom:9px">
-        📕 دليل النظام الكامل — كل المسارات والأدوار</button>
+      <button class="btn p" id="docFull" type="button" style="margin-bottom:6px">
+        📕 دليل النظام الكامل — Word</button>
+      <button class="btn s" id="docFullPdf" type="button" style="margin-bottom:9px">
+        📄 دليل النظام الكامل — PDF</button>
             <button class="btn s" id="gdWEng" type="button">⬇ Word — دليل المهندس</button>
             <button class="btn s" id="gdWSup" type="button" style="margin-top:7px">⬇ Word — دليل الفني</button>
             <button class="btn s" id="gdWMin" type="button" style="margin-top:7px">⬇ Word — دليل الوزارة</button>
@@ -4879,7 +4881,23 @@ $('#docSup').onclick = ()=>window.doGuide('sup');
 $('#docMin').onclick = ()=>window.doGuide('min');
 /* V12.2: دليل النظام الكامل — يُربط هنا مع بقية أزرار الأدلة.
    كان مربوطًا في دالة رسم اللوحة وهو زر في تبويب الأدوات، فلم يعمل. */
+/* تنزيل ملفات الأدلة الجاهزة — Word وPDF */
+function _dlDoc(file, name){
+  try{
+    var a=document.createElement('a');
+    a.href=file+'?v='+Date.now(); a.download=name;
+    a.rel='noopener'; document.body.appendChild(a); a.click();
+    setTimeout(function(){ try{ a.remove(); }catch(e){} }, 800);
+    try{ toast('يُنزَّل '+name+'…'); }catch(e){}
+  }catch(e){
+    try{ window.open(file,'_blank'); }catch(x){
+      try{ toast('تعذّر التنزيل — جرّب من المتصفح',1); }catch(y){}
+    }
+  }
+}
 (function(){
+  var pf=$('#docFullPdf');
+  if(pf) pf.onclick=function(){ _dlDoc('docs/nusuk-user-manual.pdf','دليل-النظام-الكامل.pdf'); };
   var b=$('#docFull'); if(!b) return;
   b.onclick=function(){
     try{
