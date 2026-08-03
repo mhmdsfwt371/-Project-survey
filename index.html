@@ -145,6 +145,26 @@ try{
   /* V11.2: فحص دوري للنسخة والتطبيق مفتوح.
      كان الفحص عند الإقلاع والعودة فقط — فمن يبقى فاتحًا لا يعلم بنسخة جديدة. */
   setInterval(function(){ try{ window.nskCheckUpd(true); }catch(e){} }, 120000);
+  /* V13.1: دفع دوري لما لم يُرفع — كان ينتظر ضغطة «زامن الآن»،
+     فيبقى العمل على الجهاز وحده والمستخدم يظنّه وصل. */
+  setInterval(function(){
+    try{
+      if(!navigator.onLine) return;
+      var n=0;
+      try{ n=(window.unsyncedList&&window.unsyncedList()||[]).length; }catch(e){}
+      if(!n) return;
+      if(window.retrySync) window.retrySync();
+      else if(window.NSKSYNC && NSKSYNC.flush) NSKSYNC.flush();
+    }catch(e){}
+  }, 30000);
+  /* وفورًا عند عودة الشبكة */
+  try{
+    window.addEventListener('online', function(){
+      setTimeout(function(){
+        try{ if(window.retrySync) window.retrySync(); }catch(e){}
+      }, 1500);
+    });
+  }catch(e){}
 }catch(e){}
 /* ===== V10.3: مساحة الجهاز =====
    الفني يصوّر تسع صور لكل موقع؛ عشرات المواقع تملأ حصّة المتصفح.
@@ -1440,7 +1460,7 @@ window.addEventListener('error', function(e){
   <header>
     <div class="hTop">
     <div class="t">
-      <div class="eyebrow">متابعة المشروع ١٤٤٨هـ <span style="color:var(--muted);letter-spacing:0;font-weight:600">· نسخة V13.0</span></div>
+      <div class="eyebrow">متابعة المشروع ١٤٤٨هـ <span style="color:var(--muted);letter-spacing:0;font-weight:600">· نسخة V13.1</span></div>
       <h1 id="ttl">المسح الميداني</h1>
     </div>
     <button class="pill ic" id="belPill" type="button" title="ما يخصّك" hidden>🔔</button>
@@ -1915,6 +1935,26 @@ window.pickTeam = function(cb){
     };
   });
 };
+/* ===== V13.1: بثّ واحد يهزّ النظام كله =====
+   كان كل إجراء يحدّث ما يخطر بباله: الخريطة والقائمة فقط، فتبقى الأدوات
+   واللوحة والجرس على أرقام قديمة — ويبدو الإلغاء وكأنه لم يحدث.
+   الآن: كل إجراء يُغيّر بيانات ينادي nskSync() وهي تنادي الجميع. */
+window.nskSync = function(){
+  var F=['drawMap','drawList','drawPend','drawMgr','drawOut','drawSync',
+         'drawQ','drawUsers','paintBell','paintMin','paintNear','paintCoChip'];
+  F.forEach(function(fn){
+    try{ if(typeof window[fn]==='function') window[fn](); }catch(e){}
+  });
+  /* الرسّامون المحلّيون غير المصدَّرين */
+  try{ if(typeof drawOut==='function') drawOut(); }catch(e){}
+  try{ if(typeof drawSync==='function') drawSync(); }catch(e){}
+  try{ if(typeof drawPend==='function') drawPend(); }catch(e){}
+  try{ if(typeof drawMgr==='function') drawMgr(); }catch(e){}
+  try{ if(typeof drawList==='function') drawList(); }catch(e){}
+  try{ if(typeof drawQ==='function') drawQ(); }catch(e){}
+  try{ if(window.NSKDASH && NSKDASH.refresh) NSKDASH.refresh(); }catch(e){}
+  try{ document.dispatchEvent(new CustomEvent('nsk-data-changed')); }catch(e){}
+};
 window.setFstat = async function(id,k){
   const rec = recs[id] || {status:'draft', v:{}, photos:{}, id:id};
   const willSchedule = (k==='draft' && rec.fstat!=='draft' && appMode==='install');
@@ -1948,6 +1988,7 @@ window.setFstat = async function(id,k){
   map.closePopup(); drawMap(); drawList();
   toast(rec.fstat ? ('الحالة الآن: '+slbl(rec.fstat)) : 'رجعت الحالة: لم يُزر',
         0, SC[rec.fstat||'new']);
+  try{ window.nskSync(); }catch(e){}
 };
 let moveId=null, focusId=null;
 function renderMBar(){
@@ -3185,7 +3226,7 @@ window.openInstall = function(id){
         if(await saveRec(id, fr2)) recs[id]=fr2;
       }
     }
-    drawMap(); drawList(); drawMgr();
+    drawMap(); drawList(); try{ window.nskSync(); }catch(e){} try{ window.nskSync(); }catch(e){} drawMgr();
     toast('تم التحديث — '+rec.status);
     setTimeout(()=>show('vList'),700);
   };
@@ -3775,7 +3816,7 @@ function openNewForm(la,lo,ac,near,editId){
     try{ await window.storage.delete('new:'+editId,false); }catch(e){}
     if(window.NSKSYNC) NSKSYNC.del('props', editId);
     delete props[editId];
-    drawMap(); drawList(); drawOut(); drawMgr();
+    drawMap(); drawList(); try{ window.nskSync(); }catch(e){} try{ window.nskSync(); }catch(e){} drawOut(); drawMgr();
     toast('تم الحذف'); show('vList');
   };
   show('vForm');
@@ -3889,7 +3930,7 @@ async function saveNew(){
   if(_nb){ _nb.dataset.busy=''; _nb.disabled=false; }
   if(!_okp) return;
   props[id]=rec;
-  drawMap(); drawList(); drawOut(); drawMgr();
+  drawMap(); drawList(); try{ window.nskSync(); }catch(e){} try{ window.nskSync(); }catch(e){} drawOut(); drawMgr();
   toast(editId ? 'تم حفظ التعديل — '+id : 'تم الإرسال — '+id+' بانتظار اعتماد المكتب');
   setTimeout(()=>show('vList'),900);
 }
@@ -4391,7 +4432,7 @@ async function setMode(m){
   try{ await window.storage.set('mode', m, false); }catch(e){}
   statusFilter='';
   updFab();
-  drawMap(); drawList(); drawMgr();
+  drawMap(); drawList(); try{ window.nskSync(); }catch(e){} try{ window.nskSync(); }catch(e){} drawMgr();
 }
 $('#modeBtn').onclick=()=>setMode(appMode==='install'?'survey':'install');
 
@@ -4926,7 +4967,7 @@ window.mergeBackupText = async function(txt){
   await pass(recs,p.recs,saveRec);
   await pass(inss,p.inss,saveIns);
   await pass(props,p.props,saveProp);
-  drawMap(); drawList(); drawMgr(); drawOut(); drawSync();
+  drawMap(); drawList(); try{ window.nskSync(); }catch(e){} try{ window.nskSync(); }catch(e){} drawMgr(); drawOut(); drawSync();
   toast('اكتمل الدمج ✓ جديد '+add+' · محدَّث '+upd+' · مطابق '+same+
         (fail?' · فشل حفظ '+fail:''), fail?1:0);
 };
@@ -5041,7 +5082,7 @@ $('#thBtn').onclick=()=>setTheme(curTheme==='light'?'dark':'light');
   window.appMode = appMode;
   $('#modeBtn').textContent = appMode==='install' ? 'التركيب' : 'المسح';
   drawQ(); drawSync(); updFab();
-  drawMap(); drawList(); drawOut(); drawMgr();
+  drawMap(); drawList(); try{ window.nskSync(); }catch(e){} try{ window.nskSync(); }catch(e){} drawOut(); drawMgr();
   map.fitBounds(L.latLngBounds(DB.d.map(r=>[r[5],r[6]])).pad(.06));
   locate();
   window.__NSK_APP_READY = true;
