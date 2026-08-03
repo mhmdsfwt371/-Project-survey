@@ -1237,11 +1237,10 @@ html[data-theme="light"] #msgEditor .meT{background:#fff}
 /* V10.6: كان يقع خلف الأزرار العائمة — رُفع فوقها وأُبعد عن مسارها.
    الأزرار عند ١٢ و٦٦ بكسل من الأسفل، فيبدأ الشريط فوقهما. */
 /* وضعا التلوين: زرّان متلاصقان، المفعَّل منهما مضيء */
-.segC{display:inline-flex;flex:0 0 auto;border:1px solid var(--line,#2c3a34);
-  border-radius:999px;overflow:hidden;background:var(--panel2,#1b1e22)}
-.segC .seg{background:transparent;border:0;color:var(--muted,#9AA1AB);
-  font:inherit;font-size:11px;font-weight:700;padding:5px 11px;cursor:pointer;white-space:nowrap}
-.segC .seg.on{background:var(--gold,#C9A24B);color:#0A0B0D}
+/* أزرار الأيقونة: عرض ثابت بلا قصّ — كان الثيم يظهر «…» حين يضيق الصف */
+.pill.ic{flex:0 0 auto;max-width:none;min-width:38px;padding:5px 9px;
+  overflow:visible;text-overflow:clip;text-align:center}
+#mcCo.on{background:var(--gold,#C9A24B);border-color:var(--gold,#C9A24B);color:#0A0B0D;font-weight:800}
 #coChip{position:fixed;inset-inline-start:12px;
   inset-block-end:calc(184px + env(safe-area-inset-bottom,0px));z-index:9440;
   background:var(--panel,#141619);border:1px solid var(--line,#2c3a34);
@@ -1421,18 +1420,18 @@ window.addEventListener('error', function(e){
   <header>
     <div class="hTop">
     <div class="t">
-      <div class="eyebrow">متابعة المشروع ١٤٤٨هـ <span style="color:var(--muted);letter-spacing:0;font-weight:600">· نسخة V11.8</span></div>
+      <div class="eyebrow">متابعة المشروع ١٤٤٨هـ <span style="color:var(--muted);letter-spacing:0;font-weight:600">· نسخة V11.9</span></div>
       <h1 id="ttl">المسح الميداني</h1>
     </div>
-    <button class="pill" id="thBtn" type="button" title="فاتح / داكن">🌓</button>
+    <button class="pill ic" id="belPill" type="button" title="ما يخصّك" hidden>🔔</button>
     <button class="pill av" id="meBtn" type="button" title="الحساب">حسابي</button>
     </div>
     <div class="hAct">
       <button class="pill" id="modeBtn" type="button">المسح</button>
-    <button class="pill" id="belPill" type="button" title="ما يخصّك" hidden>🔔</button>
-    
+        
     <button class="pill" id="goBtn" type="button">مواقع</button>
-      <span class="segC"><button type="button" id="mcSt" class="seg on" title="تلوين حسب الحالة">حالة</button><button type="button" id="mcCo" class="seg" title="تلوين حسب الشركة">شركات</button></span>
+      <button class="pill" id="mcCo" type="button" title="تلوين حسب الشركة">شركات</button>
+      <button class="pill ic" id="thBtn" type="button" title="فاتح / داكن">🌓</button>
       </div>
     </header>
 
@@ -2104,7 +2103,6 @@ window.openCoFilt = function(){
     +'<div class="cpL"></div>'
     +'<div class="cpF">'
       +'<button type="button" class="cpClr">مسح التحديد</button>'
-      +'<button type="button" class="cpAll">كل الشركات</button>'
       +'<button type="button" class="cpGo p">عرض</button>'
     +'</div></div>';
   document.body.appendChild(ov);
@@ -2131,7 +2129,7 @@ window.openCoFilt = function(){
         el.classList.toggle('on', on2);
         var k=el.querySelector('.cpK'); if(k) k.textContent = on2 ? '✓' : '';
         var g=ov.querySelector('.cpGo');
-        if(g) g.textContent = tmp.size ? ('عرض '+_updAR(tmp.size)) : 'عرض';
+        if(g) g.textContent = tmp.size ? ('عرض '+_updAR(tmp.size)) : 'عرض الكل';
       };
     });
   }
@@ -2143,18 +2141,15 @@ window.openCoFilt = function(){
   ov.querySelector('.cpClr').onclick=function(){
     tmp=new Set();
     paint();
-    var g=ov.querySelector('.cpGo'); if(g) g.textContent='عرض';
+    var g=ov.querySelector('.cpGo'); if(g) g.textContent='عرض الكل';
   };
-  ov.querySelector('.cpAll').onclick=function(){
-    CO_SEL=new Set(); _coSave(); ov.remove();
-    try{ drawMap(); }catch(e){} try{ window.paintCoChip(); }catch(e){}
-  };
+  /* «عرض» بلا علامات = كل الشركات — فلا حاجة لزر ثانٍ يفعل الشيء نفسه */
   ov.querySelector('.cpGo').onclick=function(){
     CO_SEL=new Set(tmp); _coSave(); ov.remove();
     try{ drawMap(); }catch(e){} try{ window.paintCoChip(); }catch(e){}
   };
   var g0=ov.querySelector('.cpGo');
-  if(g0 && tmp.size) g0.textContent='عرض '+_updAR(tmp.size);
+  if(g0) g0.textContent = tmp.size ? ('عرض '+_updAR(tmp.size)) : 'عرض الكل';
 };
 /* شريحة صغيرة تُظهر التصفية القائمة وتفتح المنتقي */
 window.paintCoChip = function(){
@@ -4902,17 +4897,22 @@ window.setTheme=function(t){
 $('#thBtn').onclick=()=>setTheme(curTheme==='light'?'dark':'light');
 /* V11.1: زرّا التلوين يُربطان هنا مع بقية أزرار الخريطة.
    كانا مربوطين داخل دالة رسم اللوحة، فلا يعملان ما لم تُفتح اللوحة. */
+/* V11.9: زر واحد يبدّل — الأصل «مطفأ» أي ألوان الحالة الصفراء المعتادة */
 (function(){
-  var a=$('#mcSt'), b=$('#mcCo');
-  if(!a || !b) return;
+  var b=$('#mcCo');
+  if(!b) return;
   function sync(){
     var on=false;
     try{ on=(localStorage.getItem('nsk.colayer')==='1'); }catch(e){}
-    a.classList.toggle('on', !on);
     b.classList.toggle('on', on);
+    b.title = on ? 'إيقاف تلوين الشركات' : 'تلوين حسب الشركة';
   }
-  a.onclick=function(){ try{ window.setMapColor(false); }catch(e){} sync(); };
-  b.onclick=function(){ try{ window.setMapColor(true);  }catch(e){} sync(); };
+  b.onclick=function(){
+    var on=false;
+    try{ on=(localStorage.getItem('nsk.colayer')==='1'); }catch(e){}
+    try{ window.setMapColor(!on); }catch(e){}
+    sync();
+  };
   sync();
   window.syncMapColorBtns=sync;
 })();
