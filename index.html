@@ -1420,7 +1420,7 @@ window.addEventListener('error', function(e){
   <header>
     <div class="hTop">
     <div class="t">
-      <div class="eyebrow">متابعة المشروع ١٤٤٨هـ <span style="color:var(--muted);letter-spacing:0;font-weight:600">· نسخة V12.0</span></div>
+      <div class="eyebrow">متابعة المشروع ١٤٤٨هـ <span style="color:var(--muted);letter-spacing:0;font-weight:600">· نسخة V12.1</span></div>
       <h1 id="ttl">المسح الميداني</h1>
     </div>
     <button class="pill ic" id="belPill" type="button" title="ما يخصّك" hidden>🔔</button>
@@ -1533,7 +1533,9 @@ window.addEventListener('error', function(e){
           <div id="docWordRow" style="display:none;margin-top:10px;
             border-top:1px solid rgba(150,150,150,.25);padding-top:10px">
             <div style="font-size:10.5px;color:var(--muted);margin-bottom:7px">
-              نسخة Word للتحرير — للإدارة فقط</div>
+        📕 دليل النظام الكامل ونسخ Word — للأدمن والمهندسين فقط</div>
+      <button class="btn p" id="docFull" type="button" style="margin-bottom:9px">
+        📕 دليل النظام الكامل — كل المسارات والأدوار</button>
             <button class="btn s" id="gdWEng" type="button">⬇ Word — دليل المهندس</button>
             <button class="btn s" id="gdWSup" type="button" style="margin-top:7px">⬇ Word — دليل الفني</button>
             <button class="btn s" id="gdWMin" type="button" style="margin-top:7px">⬇ Word — دليل الوزارة</button>
@@ -8168,6 +8170,16 @@ function render(){
     if(qaReturn(R.getAttribute('data-id'), ni?ni.value:'')){ try{ toast('أُرجع للفريق ↩'); }catch(e){} render(); }
   }; });
   try{ if(window.wireFileInputs) window.wireFileInputs(document); }catch(e){}
+  var _df=document.getElementById('docFull');
+  if(_df && !_df._w){ _df._w=1; _df.onclick=function(){
+    try{
+      var a=document.createElement('a');
+      a.href='docs/nusuk-user-manual.docx';
+      a.download='دليل-النظام-الكامل.docx';
+      document.body.appendChild(a); a.click(); a.remove();
+      toast('يُنزَّل دليل النظام الكامل…');
+    }catch(e){ toast('تعذّر التنزيل',1); }
+  }; }
   Array.prototype.forEach.call(document.querySelectorAll('#nskDash .tmSend'),function(b){
     b.onclick=function(){ window.sendTeam(b.getAttribute('data-t')); }; });
   var _ta=$i('tmAll'); if(_ta) _ta.onclick=function(){ window.sendAllTeams(); };
