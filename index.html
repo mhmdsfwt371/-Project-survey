@@ -1224,6 +1224,21 @@ html[data-theme="light"] #msgEditor .meT{background:#fff}
 .pill.av{font-weight:700;font-size:12px;letter-spacing:0;flex:0 0 auto}
 /* V10.6: كان يقع خلف الأزرار العائمة — رُفع فوقها وأُبعد عن مسارها.
    الأزرار عند ١٢ و٦٦ بكسل من الأسفل، فيبدأ الشريط فوقهما. */
+#coBtn.on{border-color:var(--gold,#C9A24B);color:var(--gold,#C9A24B)}
+#coLegend{position:fixed;inset-inline-start:10px;
+  inset-block-end:calc(196px + env(safe-area-inset-bottom,0px));
+  z-index:9440;max-width:66vw;background:var(--panel,#141619);
+  border:1px solid var(--line,#2c3a34);border-radius:12px;padding:9px 11px;
+  box-shadow:0 8px 24px rgba(0,0,0,.5);font-size:11px}
+#coLegend b{display:block;font-size:11.5px;color:var(--gold,#C9A24B);margin-bottom:6px}
+#coLegend .clL{display:flex;flex-direction:column;gap:4px;max-height:34vh;overflow:auto}
+#coLegend .clI{display:flex;align-items:center;gap:6px;white-space:nowrap;
+  overflow:hidden;text-overflow:ellipsis}
+#coLegend .clI i{width:10px;height:10px;border-radius:3px;flex:0 0 auto}
+#coLegend .clI em{font-style:normal;color:var(--muted,#9AA1AB);font-size:10px}
+#coLegend .clMore{color:var(--muted,#9AA1AB);padding-inline-start:16px}
+#coLegend .clX{position:absolute;inset-block-start:4px;inset-inline-end:6px;
+  background:transparent;border:0;color:var(--muted,#9AA1AB);font-size:13px;cursor:pointer;padding:3px 5px}
 #nearBar{position:fixed;inset-inline:12px;
   inset-block-end:calc(124px + env(safe-area-inset-bottom,0px));
   z-index:9450;background:var(--panel,#141619);border:1px solid var(--gold,#C9A24B);
@@ -1352,7 +1367,7 @@ window.addEventListener('error', function(e){
 <div id="app">
   <header>
     <div class="t">
-      <div class="eyebrow">متابعة المشروع ١٤٤٨هـ <span style="color:var(--muted);letter-spacing:0;font-weight:600">· نسخة V10.6</span></div>
+      <div class="eyebrow">متابعة المشروع ١٤٤٨هـ <span style="color:var(--muted);letter-spacing:0;font-weight:600">· نسخة V10.7</span></div>
       <h1 id="ttl">المسح الميداني</h1>
     </div>
     <div class="hAct">
@@ -1360,6 +1375,7 @@ window.addEventListener('error', function(e){
     <button class="pill" id="belPill" type="button" title="ما يخصّك" hidden>🔔</button>
     
     <button class="pill" id="goBtn" type="button">مواقع</button>
+      <button class="pill" id="coBtn" type="button" title="تلوين حسب الشركة">🎨</button>
     <button class="pill" id="thBtn" type="button" title="فاتح / داكن">🌓</button>
       <button class="pill av" id="meBtn" type="button" title="الحساب">حسابي</button>
       </div>
@@ -1935,6 +1951,91 @@ function ptBadge(r){
   if(p==='خارج') return '<span style="'+s+'background:rgba(62,213,152,.14);border:1px solid #3ED598;color:#3ED598">حجاج خارج</span>';
   return '<span style="'+s+'background:rgba(154,167,162,.12);border:1px dashed #9AA7A2;color:#9AA7A2">التصنيف يُحدَّد ميدانيًا</span>';
 }
+/* ===== V10.7: طبقة الشركات على الخريطة =====
+   لكل شركة لون ثابت يُشتقّ من اسمها، فلا يتبدّل بين الجلسات ولا يحتاج جدولًا.
+   والألوان من دائرة تدرّج متباعدة الأطياف لتُميَّز بالعين. */
+var CO_LAYER = false;
+/* الأطياف تُوزَّع بالترتيب لا بالتجزئة: التجزئة تُقارب لونين إلى درجتين
+   فلا تُميَّزان بالعين. فتُرتَّب الشركات ويُوزَّع الطيف عليها بالتساوي،
+   وتتناوب الإضاءة فيزداد التباين بين المتجاورين. */
+var _coIdx=null;
+function _coRank(){
+  if(_coIdx) return _coIdx;
+  _coIdx={};
+  try{
+    var d=window.NSKCORE.db().d, by={};
+    d.forEach(function(r){ var c=window.coOf(r); if(c) by[c]=(by[c]||0)+1; });
+    Object.keys(by).sort(function(a,b){ return by[b]-by[a] || a.localeCompare(b,'ar'); })
+      .forEach(function(k,i){ _coIdx[k]=i; });
+  }catch(e){}
+  return _coIdx;
+}
+function _coColor(name){
+  var s=String(name||'').trim();
+  if(!s) return '#7A828C';
+  var R=_coRank(), n=Object.keys(R).length;
+  var i=(R[s]!=null) ? R[s] : null;
+  if(i===null){                       /* غير معروفة: تجزئة احتياطية */
+    var h=0;
+    for(var k=0;k<s.length;k++){ h=((h<<5)-h)+s.charCodeAt(k); h|=0; }
+    i=Math.abs(h)%Math.max(1,n||24); n=n||24;
+  }
+  if(!n) n=1;
+  /* توزيع ذهبي يُباعد المتجاورين */
+  var hue=Math.round((i*137.508)%360);
+  var lig=(i%2===0)?58:46;
+  var sat=(i%3===0)?74:64;
+  return 'hsl('+hue+','+sat+'%,'+lig+'%)';
+}
+window.resetCoColors=function(){ _coIdx=null; };
+window.coOf = function(r){
+  try{
+    var recs=window.NSKCORE.all('recs'), id=r[0];
+    var fx=((recs[id]||{}).fix)||{};
+    return String(fx.co || r[27] || '').trim();
+  }catch(e){ return String(r[27]||'').trim(); }
+};
+/* الشركات الظاهرة الآن مرتّبة بعدد مواقعها */
+window.coLegend = function(){
+  try{
+    var C=window.NSKCORE, d=C.db().d, by={};
+    d.forEach(function(r){
+      var co=window.coOf(r); if(!co) return;
+      by[co]=(by[co]||0)+1;
+    });
+    return Object.keys(by).map(function(k){ return {co:k, n:by[k], c:_coColor(k)}; })
+      .sort(function(a,b){ return b.n-a.n; });
+  }catch(e){ return []; }
+};
+window.toggleCoLayer = function(){
+  CO_LAYER=!CO_LAYER;
+  try{ localStorage.setItem('nsk.colayer', CO_LAYER?'1':'0'); }catch(e){}
+  try{ drawMap(); }catch(e){}
+  try{ window.paintCoLegend(); }catch(e){}
+};
+try{ CO_LAYER = (localStorage.getItem('nsk.colayer')==='1'); }catch(e){}
+window.paintCoLegend = function(){
+  try{ window.resetCoColors(); }catch(e){}
+  var box=document.getElementById('coLegend');
+  if(!CO_LAYER){ if(box) box.remove(); return; }
+  var L=window.coLegend();
+  if(!L.length){ if(box) box.remove(); return; }
+  if(!box){
+    box=document.createElement('div'); box.id='coLegend';
+    var host=document.getElementById('vMap')||document.body;
+    host.appendChild(box);
+  }
+  var h='<b>الشركات ('+L.length+')</b><div class="clL">';
+  L.slice(0,14).forEach(function(x){
+    h+='<span class="clI"><i style="background:'+x.c+'"></i>'
+      +_dvEsc(x.co)+' <em>'+x.n+'</em></span>';
+  });
+  if(L.length>14) h+='<span class="clI clMore">…و'+(L.length-14)+' شركة</span>';
+  h+='</div><button type="button" class="clX" aria-label="إغلاق">✕</button>';
+  box.innerHTML=h;
+  var x=box.querySelector('.clX');
+  if(x) x.onclick=function(){ window.toggleCoLayer(); };
+};
 function drawMap(){
   layer.clearLayers(); marks={};
   const z=map.getZoom(), b=map.getBounds().pad(.2);
@@ -1952,7 +2053,9 @@ function drawMap(){
     const _la=(P0&&(P0.lat!=null?P0.lat:P0[0])), _lo=(P0&&(P0.lng!=null?P0.lng:P0[1]));
     if(typeof _la!=='number'||typeof _lo!=='number'||isNaN(_la)||isNaN(_lo)) return;
     const light = z<13 || !b.contains(P0);
-    const c = colOf(r[0]);
+    var c = colOf(r[0]);
+    /* طبقة الشركات: اللون يتبع الشركة لا الحالة */
+    if(CO_LAYER){ var _co=window.coOf(r); if(_co) c=_coColor(_co); }
     const isCor = catOf(r).k==='cor';
     const moved = !!((recs[r[0]]||{}).loc);
     const ds = light ? (COARSE?15:12) : (COARSE?22:17);
@@ -6966,8 +7069,9 @@ function copySummary(){
 /* V4.9: تقسيم اللوحة لتبويبات — القسم يُخفى لا يُعاد بناؤه */
 var DTABS=[
   ['watch','متابعة',      ['over','pace','inst','daily','reg','co'],      'الصورة التنفيذية — للوزارة والإدارة'],
-  ['plan','تخطيط',        ['setup','pipe','assign','conote','stock'],             'ما قبل التنفيذ: الجدولة والفرق والإشعار والعُهدة'],
-  ['ops','تشغيل',         ['me','survey','chal','stuck','qa','team','race'],'الميدان اليوم: المسح والتحديات والتدقيق'],
+  ['plan','تخطيط',        ['setup','pipe'],                                 'ما قبل التنفيذ: المواعيد والأزمنة وسلامة خط الإنتاج'],
+  ['ops','تشغيل',         ['assign','conote','stock','me','survey','chal','stuck','qa','team','race'],
+                                                                            'الميدان: التوزيع والإشعار والعُهدة والمسح والتدقيق'],
   ['adm','النظام',        ['sys','ev'],                                   'سجل الأحداث وسلامة البيانات وإعادة الضبط']
 ];
 function tabOf(sec){
@@ -7784,6 +7888,8 @@ function render(){
   Array.prototype.forEach.call(document.querySelectorAll('#nskDash .tmSend'),function(b){
     b.onclick=function(){ window.sendTeam(b.getAttribute('data-t')); }; });
   var _ta=$i('tmAll'); if(_ta) _ta.onclick=function(){ window.sendAllTeams(); };
+  var _cb=document.getElementById('coBtn');
+  if(_cb && !_cb._w){ _cb._w=1; _cb.onclick=function(){ window.toggleCoLayer(); }; }
   var _sy=$i('syRetry'); if(_sy) _sy.onclick=function(){ window.retrySync(); };
   var _lk=$i('lkBtn'); if(_lk) _lk.onclick=function(){
     var L=window.lockRead();
