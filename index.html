@@ -140,6 +140,48 @@ try{
   setInterval(function(){ try{ window.autoUpd(); }catch(e){} }, 45000);
   setInterval(function(){ try{ _updRepair(); }catch(e){} }, 4000);
 }catch(e){}
+/* ===== V10.3: مساحة الجهاز =====
+   الفني يصوّر تسع صور لكل موقع؛ عشرات المواقع تملأ حصّة المتصفح.
+   وحين تمتلئ يفشل الحفظ — والفشل الصامت هنا يعني ضياع عمل يوم. */
+var _spaceWarn = 0;
+window._quotaHit = function(key){
+  var now=Date.now();
+  if(now-_spaceWarn < 20000) return;      /* لا نُغرق المستخدم بالتكرار */
+  _spaceWarn=now;
+  try{ toast('⚠️ مساحة الجهاز ممتلئة — ارفع بياناتك ثم صدّر نسخة احتياطية',1); }catch(e){}
+  try{ if(window.NSKSYNC) NSKSYNC.log('امتلاء مساحة الجهاز عند حفظ '+String(key||'')); }catch(e){}
+  try{ window.nskSpace(true); }catch(e){}
+};
+/* قياس المساحة وتحذير مبكّر قبل الامتلاء */
+window.nskSpace = async function(force){
+  try{
+    if(!navigator.storage || !navigator.storage.estimate) return null;
+    var e=await navigator.storage.estimate();
+    var used=e.usage||0, quota=e.quota||0;
+    var pct= quota ? Math.round(used/quota*100) : 0;
+    var info={usedMB:Math.round(used/1048576*10)/10, quotaMB:Math.round(quota/1048576),
+              pct:pct, low:(pct>=85)};
+    if((info.low||force) && (Date.now()-_spaceWarn>20000 || force)){
+      _spaceWarn=Date.now();
+      var bar=document.getElementById('spaceBar');
+      if(!bar){
+        bar=document.createElement('div'); bar.id='spaceBar';
+        document.body.appendChild(bar);
+      }
+      bar.innerHTML='<span>مساحة الجهاز '+info.pct+'٪ ('
+        +info.usedMB+' من '+info.quotaMB+' م.ب) — ارفع بياناتك ثم صدّر نسخة</span>'
+        +'<button type="button" id="spGo">زامن الآن</button>'
+        +'<button type="button" id="spX" aria-label="إخفاء">✕</button>';
+      var g=document.getElementById('spGo');
+      if(g) g.onclick=function(){ try{ if(window.NSKSYNC&&NSKSYNC.flush) NSKSYNC.flush(); }catch(e){}
+        try{ window.retrySync&&window.retrySync(); }catch(e){} };
+      var x=document.getElementById('spX');
+      if(x) x.onclick=function(){ bar.remove(); };
+    }
+    return info;
+  }catch(e){ return null; }
+};
+try{ setInterval(function(){ try{ window.nskSpace(false); }catch(e){} }, 120000); }catch(e){}
 window.nskCheckUpd = function(silent){
   try{
     var cur=''; try{ cur=((document.querySelector('.eyebrow')||{}).textContent||'').match(/V[\d.]+/); cur=cur?cur[0]:''; }catch(e){}
@@ -1050,6 +1092,14 @@ textarea.in{min-height:74px;resize:vertical}
 #updBar button{background:#0A0B0D;color:#F1EDE0;border:0;border-radius:999px;
   padding:7px 16px;font:inherit;font-weight:800;cursor:pointer}
 #updBar button:disabled{opacity:.6}
+#spaceBar{position:fixed;inset-block-end:calc(58px + env(safe-area-inset-bottom,0px));
+  inset-inline:10px;z-index:9500;background:#E8873A;color:#0A0B0D;border-radius:12px;
+  display:flex;align-items:center;gap:9px;flex-wrap:wrap;padding:10px 13px;
+  font-size:12px;font-weight:700;box-shadow:0 6px 20px rgba(0,0,0,.4)}
+#spaceBar span{flex:1 1 150px;line-height:1.6}
+#spaceBar button{background:#0A0B0D;color:#F1EDE0;border:0;border-radius:999px;
+  padding:6px 13px;font:inherit;font-weight:800;cursor:pointer;flex:0 0 auto}
+#spaceBar #spX{background:transparent;color:#0A0B0D;font-size:15px;padding:4px 7px}
 #mgrTbl .mgDr{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;
   background:rgba(232,135,58,.09);border:1px solid rgba(232,135,58,.35);border-radius:10px;
   padding:9px 12px;margin-bottom:10px;font-size:11.5px;line-height:1.7;color:var(--muted,#9AA1AB)}
@@ -1299,7 +1349,7 @@ window.addEventListener('error', function(e){
 <div id="app">
   <header>
     <div class="t">
-      <div class="eyebrow">متابعة المشروع ١٤٤٨هـ <span style="color:var(--muted);letter-spacing:0;font-weight:600">· نسخة V10.2</span></div>
+      <div class="eyebrow">متابعة المشروع ١٤٤٨هـ <span style="color:var(--muted);letter-spacing:0;font-weight:600">· نسخة V10.3</span></div>
       <h1 id="ttl">المسح الميداني</h1>
     </div>
     <div class="hAct">
@@ -1534,7 +1584,15 @@ var o=[];var l=Array.isArray(e);for(f=n.s.c;f<=n.e.c;++f)s[f]=ya(f);for(var c=n.
       .catch(function(e){ if(_mem) return memGet(k); throw e; }); },
     set:function(k,v){ return run('readwrite',function(s){ return s.put(v,k); })
       .then(function(){ return {key:k,value:v}; })
-      .catch(function(e){ if(_mem){ _mem.set(k,v); return {key:k,value:v}; } throw e; }); },
+      .catch(function(e){
+        /* امتلاء مساحة الجهاز: أخطر عطل ميداني — يفشل الحفظ بلا صوت */
+        var nm=String((e&&(e.name||e.message))||'');
+        if(/Quota|quota|NS_ERROR_DOM_QUOTA|storage/i.test(nm)){
+          try{ if(window._quotaHit) window._quotaHit(k); }catch(_e){}
+        }
+        if(_mem){ _mem.set(k,v); return {key:k,value:v}; }
+        throw e;
+      }); },
     delete:function(k){ return run('readwrite',function(s){ return s.delete(k); })
       .then(function(){ return {key:k,deleted:true}; })
       .catch(function(e){ if(_mem){ _mem.delete(k); return {key:k,deleted:true}; } throw e; }); },
