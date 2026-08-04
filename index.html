@@ -1331,16 +1331,6 @@ html[data-theme="light"] #coFilt .cpQ{background:#fff}
 #coLegend .clMore{color:var(--muted,#9AA1AB);padding-inline-start:16px}
 #coLegend .clX{position:absolute;inset-block-start:4px;inset-inline-end:6px;
   background:transparent;border:0;color:var(--muted,#9AA1AB);font-size:13px;cursor:pointer;padding:3px 5px}
-#nearBar{position:fixed;inset-inline:12px;
-  inset-block-end:calc(124px + env(safe-area-inset-bottom,0px));
-  z-index:9450;background:var(--panel,#141619);border:1px solid var(--gold,#C9A24B);
-  border-radius:12px;padding:10px 13px;display:flex;align-items:center;gap:10px;
-  box-shadow:0 8px 24px rgba(0,0,0,.5);font-size:12.5px}
-#nearBar b{flex:1 1 auto;font-weight:600}
-#nearBar span{color:var(--muted,#9AA1AB);font-size:11.5px}
-#nearBar button{background:var(--gold,#C9A24B);border:0;border-radius:9px;color:#0A0B0D;
-  font:inherit;font-size:12px;font-weight:800;padding:8px 15px;cursor:pointer;flex:0 0 auto}
-#nearBar .nbX{background:transparent;color:var(--muted,#9AA1AB);font-size:16px;padding:4px 6px;font-weight:400}
 #fProg{position:sticky;top:0;z-index:5;height:3px;background:rgba(150,150,150,.25)}
 #fProg i{display:block;height:100%;background:var(--gold,#C9A24B);width:0;transition:width .25s}
 .fld.miss{outline:2px solid #E05252;outline-offset:3px;border-radius:10px}
@@ -1460,7 +1450,7 @@ window.addEventListener('error', function(e){
   <header>
     <div class="hTop">
     <div class="t">
-      <div class="eyebrow">متابعة المشروع ١٤٤٨هـ <span style="color:var(--muted);letter-spacing:0;font-weight:600">· نسخة V13.1</span></div>
+      <div class="eyebrow">متابعة المشروع ١٤٤٨هـ <span style="color:var(--muted);letter-spacing:0;font-weight:600">· نسخة V13.2</span></div>
       <h1 id="ttl">المسح الميداني</h1>
     </div>
     <button class="pill ic" id="belPill" type="button" title="ما يخصّك" hidden>🔔</button>
@@ -1941,7 +1931,7 @@ window.pickTeam = function(cb){
    الآن: كل إجراء يُغيّر بيانات ينادي nskSync() وهي تنادي الجميع. */
 window.nskSync = function(){
   var F=['drawMap','drawList','drawPend','drawMgr','drawOut','drawSync',
-         'drawQ','drawUsers','paintBell','paintMin','paintNear','paintCoChip'];
+         'drawQ','drawUsers','paintBell','paintMin','paintCoChip'];
   F.forEach(function(fn){
     try{ if(typeof window[fn]==='function') window[fn](); }catch(e){}
   });
@@ -2455,7 +2445,6 @@ function askPos(cb, hiAcc){
   if(!navigator.geolocation){ if(cb) cb(false); return; }
   navigator.geolocation.getCurrentPosition(function(p){
     myPos=[p.coords.latitude,p.coords.longitude];
-      try{ if(window.paintNear) window.paintNear(); }catch(e){}
     myAcc=Math.round(p.coords.accuracy||0); myAt=Date.now();
     paintMe(); try{ drawList(); }catch(e){}
     if(cb) cb(true);
@@ -3302,49 +3291,6 @@ window.nskTell = function(id){
     done(); };
 };
 
-/* ---------------- أقرب نقطة لم تُزر (V8.8) ----------------
-   الفني يفتح التطبيق على ١٧٨٧ نقطة ولا شيء يقول له: ابدأ من هنا. */
-function _nearest(){
-  try{
-    if(!myPos) return null;
-    var C=window.NSKCORE, d=C.db().d, best=null, bd=Infinity;
-    for(var i=0;i<d.length;i++){
-      var r=d[i], id=r[0];
-      if(st(id)!=='new') continue;                 /* لم تُزر فقط */
-      var pos=posOf(r); if(!pos || pos[0]==null) continue;
-      var m=metres(myPos[0],myPos[1],pos[0],pos[1]);
-      if(m<bd){ bd=m; best={id:id,row:r,m:Math.round(m)}; }
-    }
-    return best;
-  }catch(e){ return null; }
-}
-window.paintNear=function(){
-  try{
-    var host=document.getElementById('vMap'); if(!host) return;
-    var bar=document.getElementById('nearBar');
-    var u=window.NSK_USER||{};
-    var off=false; try{ off=localStorage.getItem('nsk.near')==='off'; }catch(e){}
-    var show=(u.role==='supervisor'||u.role==='admin'||u.role==='engineer');
-    if(off || !show || appMode!=='survey'){ if(bar) bar.remove(); return; }
-    var n=_nearest();
-    if(!n){ if(bar) bar.remove(); return; }
-    var C=window.NSKCORE;
-    var sq=n.row[8]?('مربع '+n.row[8]):'', zn=C.szOf(n.row)||'';
-    var dist=n.m<1000 ? (n.m+' م') : ((n.m/1000).toFixed(1)+' كم');
-    if(!bar){
-      bar=document.createElement('div'); bar.id='nearBar';
-      host.appendChild(bar);
-    }
-    bar.innerHTML='<button type="button" class="nbX" title="إخفاء">×</button>'
-      +'<b>أقرب نقطة لم تُزر<br><span>'+_dvEsc([zn,sq].filter(Boolean).join(' · ')+' — '+dist)+'</span></b>'
-      +'<button type="button" class="nbGo">اذهب</button>';
-    bar.querySelector('.nbGo').onclick=function(){ try{ window.goMap(n.id); }catch(e){} };
-    bar.querySelector('.nbX').onclick=function(){
-      try{ localStorage.setItem('nsk.near','off'); }catch(e){}
-      bar.remove();
-    };
-  }catch(e){}
-};
 /* ---------------- propose a missing site ---------------- */
 function metres(a,b,c,d){
   const R=6371000, p=Math.PI/180;
