@@ -1450,7 +1450,7 @@ window.addEventListener('error', function(e){
   <header>
     <div class="hTop">
     <div class="t">
-      <div class="eyebrow">متابعة المشروع ١٤٤٨هـ <span style="color:var(--muted);letter-spacing:0;font-weight:600">· نسخة V13.2</span></div>
+      <div class="eyebrow">متابعة المشروع ١٤٤٨هـ <span style="color:var(--muted);letter-spacing:0;font-weight:600">· نسخة V13.3</span></div>
       <h1 id="ttl">المسح الميداني</h1>
     </div>
     <button class="pill ic" id="belPill" type="button" title="ما يخصّك" hidden>🔔</button>
@@ -9327,7 +9327,22 @@ html[data-theme="light"] #bellOv #blQ{background:#fff}
   border:1px solid rgba(75,201,245,.5);border-radius:999px;padding:1px 7px}
 #bellOv .blRow{border-inline-start-width:3px}
 #bellOv .bl-acts{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}
-#bellOv .nbAct{background:transparent;border:1px solid rgba(150,150,150,.45);border-radius:8px;
+#bellOv #lngOv{position:fixed;inset:0;z-index:9700;background:transparent}
+.lngBox{position:fixed;width:168px;background:var(--panel,#141619);
+  border:1px solid var(--line,#2A2E35);border-radius:12px;overflow:hidden;
+  box-shadow:0 10px 30px rgba(0,0,0,.45)}
+.lngIt{display:flex;align-items:center;gap:9px;width:100%;background:transparent;
+  border:0;border-bottom:1px solid var(--line,#2A2E35);color:var(--cream,#EDE7DA);
+  font:inherit;font-size:13px;padding:11px 13px;cursor:pointer;text-align:start}
+.lngIt:last-child{border-bottom:0}
+.lngIt.on{background:rgba(201,162,75,.14);font-weight:700}
+.lngIt:active{opacity:.6}
+.lngB{display:inline-flex;align-items:center;justify-content:center;min-width:30px;
+  height:22px;border-radius:6px;background:var(--panel2,#1B1E23);
+  border:1px solid var(--line,#2A2E35);font-size:11px;font-weight:700}
+.lngK{margin-inline-start:auto;color:var(--gold,#C9A24B)}
+[data-lang="ur"] body{font-family:"Noto Nastaliq Urdu","Jameel Noori Nastaleeq",Tahoma,Arial,sans-serif}
+.nbAct{background:transparent;border:1px solid rgba(150,150,150,.45);border-radius:8px;
   color:inherit;font:inherit;font-size:11.5px;padding:6px 10px;cursor:pointer}
 #bellOv .nbAct.wa{border-color:rgba(58,214,160,.6);color:#3AD6A0}
 #bellOv .nbAct:active{opacity:.6}
@@ -9548,5 +9563,384 @@ body.nsk-dash-on #fab{inset-block-end:calc(128px + env(safe-area-inset-bottom,0p
   body.dxPrint #nskDash *{print-color-adjust:exact;-webkit-print-color-adjust:exact}
 }
 </style>
+<script>
+/* ===== V13.3: طبقة اللغات — عربي · English · اردو =====
+   الترجمة تجري على شجرة الصفحة بعد كل رسم، لا داخل الشيفرة:
+   ١٧٠٤ نصًّا مبثوثة في ٤٤٧٨ موضعًا، وتعديلها في مكانها يمسّ منطق التطبيق كلّه.
+   القاموس مفتاحه النص العربي كما يظهر، فالإضافة إليه لا تلمس سطرًا من المنطق.
+   وأسماء المواقع بيانات لا واجهة — لا تُترجم أبدًا. */
+window.NSKI18N = (function(){
+  var LANGS = { ar:{n:'عربي', b:'ع', d:'rtl'}, en:{n:'English', b:'EN', d:'ltr'}, ur:{n:'اردو', b:'اردو', d:'rtl'} };
+  var AD = '٠١٢٣٤٥٦٧٨٩', UD = '۰۱۲۳۴۵۶۷۸۹', LD = '0123456789';
+  var lang = 'ar', busy = false, mo = null, tick = 0;
+  try{ var s = localStorage.getItem('nsk.lang'); if(LANGS[s]) lang = s; }catch(e){}
+
+  var D = {};   /* يُملأ أسفل الملف */
+
+  /* الأرقام: العربية ٠-٩ لاتينية في الإنجليزية، وأردية ۰-۹ في الأردية */
+  function digits(t){
+    if(lang === 'ar') return t;
+    var to = (lang === 'ur') ? UD : LD, o = '';
+    for(var i = 0; i < t.length; i++){
+      var k = AD.indexOf(t[i]);
+      o += (k >= 0) ? to[k] : t[i];
+    }
+    return o;
+  }
+  function tr(raw){
+    if(lang === 'ar' || !raw) return null;
+    var t = String(raw).trim(); if(!t) return null;
+    var hit = (D[lang] || {})[t];
+    if(hit != null) return hit;
+    /* لا ترجمة: أعِد الأرقام وحدها إن كان النص يحوي رقمًا عربيًا */
+    var d = digits(t);
+    return (d !== t) ? d : null;
+  }
+  /* الحفظ الأصلي: العقد الثابتة لا تُعاد كتابتها، فبدونه لا رجوع للعربية */
+  var ORIG = new WeakMap();
+  function put(node, val){
+    if(!ORIG.has(node)) ORIG.set(node, node.nodeValue);
+    node.nodeValue = val;
+  }
+  var SKIP = { SCRIPT:1, STYLE:1, TEXTAREA:1, CODE:1, PRE:1 };
+
+  function walk(root){
+    var w = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, {
+      acceptNode: function(n){
+        var p = n.parentNode;
+        if(!p || SKIP[p.nodeName]) return NodeFilter.FILTER_REJECT;
+        /* بلاطات الخريطة وأسماء شوارعها ليست من واجهتنا */
+        if(p.closest && p.closest('#map .leaflet-tile-pane')) return NodeFilter.FILTER_REJECT;
+        return n.nodeValue && n.nodeValue.trim() ? NodeFilter.FILTER_ACCEPT : NodeFilter.FILTER_REJECT;
+      }
+    });
+    var n, list = [];
+    while((n = w.nextNode())) list.push(n);
+    list.forEach(function(node){
+      /* الأصل أولًا دائمًا: الانتقال من إنجليزية إلى أردية يقرأ إنجليزيةً
+         لا مفتاح لها في القاموس — فبلا استرجاع تبقى الشاشة على لغتها الأولى. */
+      if(ORIG.has(node)) node.nodeValue = ORIG.get(node);
+      if(lang === 'ar') return;
+      var raw = node.nodeValue, t = raw.trim();
+      var v = tr(t);
+      if(v == null) return;
+      var a = raw.indexOf(t);
+      put(node, raw.slice(0, a) + v + raw.slice(a + t.length));
+    });
+    /* السمات المرئية */
+    ['title', 'placeholder', 'aria-label'].forEach(function(at){
+      Array.prototype.forEach.call(root.querySelectorAll('[' + at + ']'), function(el){
+        var key = '__i18n_' + at;
+        if(el[key] == null) el[key] = el.getAttribute(at);
+        else el.setAttribute(at, el[key]);            /* الأصل أولًا — كالنصوص */
+        if(lang === 'ar') return;
+        var v = tr(el[key]);
+        if(v != null) el.setAttribute(at, v);
+      });
+    });
+  }
+
+  function apply(){
+    if(busy) return;
+    busy = true;
+    try{
+      var h = document.documentElement;
+      h.setAttribute('lang', lang);
+      h.setAttribute('dir', LANGS[lang].d);
+      h.setAttribute('data-lang', lang);
+      walk(document.body);
+      var b = document.getElementById('lngPill');
+      if(b) b.textContent = LANGS[lang].b;
+    }catch(e){}
+    busy = false;
+  }
+  function schedule(){
+    if(lang === 'ar' || busy) return;
+    cancelAnimationFrame(tick);
+    tick = requestAnimationFrame(apply);
+  }
+  function set(L){
+    if(!LANGS[L]) return;
+    lang = L;
+    try{ localStorage.setItem('nsk.lang', L); }catch(e){}
+    /* العودة للعربية تُعيد الرسم من المصدر — أسلم من عكس القاموس */
+    if(L === 'ar'){
+      apply();
+      try{ if(window.nskSync) window.nskSync(); }catch(e){}
+      var b0 = document.getElementById('lngPill');
+      if(b0) b0.textContent = LANGS[L].b;
+      return;
+    }
+    apply();
+  }
+
+  function menu(anchor){
+    var old = document.getElementById('lngOv'); if(old){ old.remove(); return; }
+    var ov = document.createElement('div'); ov.id = 'lngOv';
+    var h = '<div class="lngBox">';
+    Object.keys(LANGS).forEach(function(k){
+      h += '<button type="button" class="lngIt' + (k === lang ? ' on' : '') + '" data-l="' + k + '">'
+         + '<span class="lngB">' + LANGS[k].b + '</span>' + LANGS[k].n
+         + (k === lang ? '<span class="lngK">✓</span>' : '') + '</button>';
+    });
+    ov.innerHTML = h + '</div>';
+    document.body.appendChild(ov);
+    var box = ov.querySelector('.lngBox');
+    try{
+      var r = anchor.getBoundingClientRect();
+      box.style.top = (r.bottom + 6) + 'px';
+      var w = 168, l = r.left + r.width / 2 - w / 2;
+      box.style.insetInlineStart = 'auto';
+      box.style.left = Math.max(8, Math.min(l, innerWidth - w - 8)) + 'px';
+    }catch(e){}
+    ov.onclick = function(e){ if(e.target === ov) ov.remove(); };
+    Array.prototype.forEach.call(ov.querySelectorAll('.lngIt'), function(b){
+      b.onclick = function(){ set(b.getAttribute('data-l')); ov.remove(); };
+    });
+  }
+
+  function boot(){
+    var bel = document.getElementById('belPill');
+    if(bel && !document.getElementById('lngPill')){
+      var b = document.createElement('button');
+      b.id = 'lngPill'; b.type = 'button'; b.className = 'pill ic';
+      b.setAttribute('title', 'اللغة');
+      b.textContent = LANGS[lang].b;
+      b.onclick = function(){ menu(b); };
+      bel.parentNode.insertBefore(b, bel);
+    }
+    try{
+      mo = new MutationObserver(schedule);
+      mo.observe(document.body, { childList: true, subtree: true, characterData: true });
+    }catch(e){}
+    document.addEventListener('nsk-data-changed', schedule);
+    if(lang !== 'ar') apply();
+  }
+  if(document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot);
+  else boot();
+
+  /* ============ القاموس ============
+     المصطلحات الثابتة (glossary) — تُلتزم في كل إضافة لاحقة:
+       شاخص = Signpost = سائن پوسٹ   ·   مربع = Square = مربع
+       المشعر = Zone = مشعر          ·   قارئ = Reader = ریڈر
+       مسح = Survey = سروے           ·   تركيب = Installation = تنصیب
+       متعذّر = Blocked = رکا ہوا     ·   التحديات = Challenges = چیلنجز    */
+  D.en = {
+    /* — الهوية والرأس — */
+    'متابعة المشروع ١٤٤٨هـ':'Project Tracking 1448 AH',
+    'متابعة المشروع — المسح الميداني ١٤٤٨هـ':'Project Tracking — Field Survey 1448 AH',
+    'المسح الميداني':'Field Survey', 'المسح الميداني — نُسُك ١٤٤٨':'Field Survey — Nusuk 1448',
+    'لوحة متابعة المشروع ١٤٤٨':'Project Tracking Dashboard 1448',
+    'حسابي':'My account', 'الحساب':'Account', 'اللغة':'Language',
+    'ما يخصّك':'Your alerts', 'فاتح / داكن':'Light / dark', 'تلوين حسب الشركة':'Colour by company',
+    /* — التبويبات — */
+    'الخريطة':'Map', 'المواقع':'Sites', 'السجلات':'Records', 'الأدوات':'Tools',
+    'المسح':'Survey', 'التركيب':'Installation', 'مواقع':'Sites', 'شركات':'Companies',
+    'متابعة':'Tracking', 'تخطيط':'Planning', 'تشغيل':'Operations', 'النظام':'System',
+    'الإدارة':'Administration', 'المستخدمون':'Users', 'نظرة عامة':'Overview',
+    /* — الحالات — */
+    'لم يُزر':'Not visited', 'تمت الزيارة':'Visited', 'موقع مسوح':'Surveyed site',
+    'مُركّب':'Installed', 'مجدول':'Scheduled', 'مجدول للتركيب':'Scheduled for installation',
+    'قيد التركيب':'Installing', 'تم التركيب':'Installation complete', 'متعذّر':'Blocked',
+    'لم يُجدول':'Not scheduled', 'لم يُجدول بعد':'Not scheduled yet', 'جاهز للتركيب':'Ready to install',
+    'جاهز للجدولة الآن':'Ready to schedule now', 'صالح للتركيب':'Fit for installation',
+    'مناسب':'Suitable', 'غير مناسب':'Unsuitable', 'مناسب بتعديل':'Suitable with modification',
+    'مسوّدة':'Draft', 'مكتمل':'Complete', 'لم تتم بعد':'Not done yet', 'مقترح':'Proposed',
+    'مقترح — بانتظار الاعتماد':'Proposed — awaiting approval', 'بانتظار التدقيق':'Awaiting review',
+    'بانتظار تحديد الموقع':'Awaiting location fix', 'غير مسجّل':'Unregistered',
+    'غير محدد':'Not specified', 'غير موجود':'None', 'يوجد':'Present', 'لا يوجد':'None',
+    'يحتاج مدني':'Needs civil works', 'تم التعديل':'Modified', 'تم الوصول':'Access gained',
+    'تم المسح':'Surveyed', 'أخرى':'Other', 'الكل':'All',
+    /* — حقول الموقع — */
+    'اسم الموقع':'Site name', 'معرّف الموقع':'Site ID', 'نوع الموقع':'Site type',
+    'رقم الشاخص':'Signpost no.', 'الشاخص':'Signpost', 'رقم المربع':'Square no.', 'المربع':'Square',
+    'المشعر':'Zone', 'المنطقة':'Region', 'الموقع':'Site', 'النوع':'Type', 'الفئة':'Category',
+    'الحالة':'Status', 'العدد':'Count', 'الإجمالي':'Total', 'القيمة':'Value', 'البند':'Item',
+    'الترتيب':'Rank', 'القسم':'Section', 'التاريخ':'Date', 'اليوم':'Today', 'الملخص':'Summary',
+    'شركة الخدمة':'Service company', 'تصنيف الحجاج':'Pilgrim category',
+    'مشغّل حجاج الداخل':'Domestic pilgrim operator', 'أخرى — غير مدرجة':'Other — not listed',
+    'الإحداثيات':'Coordinates', 'دقة القياس':'Measurement accuracy', 'حالة الوصول':'Access status',
+    'مصدر الكهرباء':'Power source', 'الدور والجهة':'Floor and side',
+    'عدد الهوائيات':'Antennas', 'عدد القارئات':'Readers', 'عدد الكاميرات':'Cameras',
+    'إجمالي الغرف':'Total rooms', 'إجمالي القارئات':'Total readers', 'أطقم مركّبة':'Kits installed',
+    'ملاحظات':'Notes', 'ملاحظة':'Note', 'ملاحظات المشرف':'Supervisor notes',
+    'الصور':'Photos', 'صورة':'Photo', 'عدد الصور':'Photos', 'قبل التركيب':'Before installation',
+    'لوحة رقم الموقع':'Site number plate', 'السيريال':'Serial', 'صلاحية الموقع':'Site validity',
+    'تاريخ المسح':'Survey date', 'تاريخ الجدولة':'Scheduled date', 'آخر تعديل':'Last modified',
+    'آخر تحديث':'Last update', 'بواسطة':'By', 'الحالة الميدانية':'Field status',
+    'حالة الميدان':'Field status', 'نوع العمل':'Work type',
+    /* — التحديات — */
+    'التحديات':'Challenges', 'التحدي':'Challenge', 'وصف التحدي':'Challenge description',
+    'سبب عدم المناسبة':'Reason unsuitable', 'لا توجد تحديات':'No challenges',
+    'مواقع لديها تحديات':'Sites with challenges', 'إجمالي بلاغات التحديات':'Total challenge reports',
+    'ارتفاع صعب الوصول':'Height hard to reach', 'لا يوجد مسار كابل':'No cable route',
+    'عائق إنشائي':'Structural obstruction', 'عدم وجود تخصيص':'No allocation',
+    'أخرى — اذكرها في وصف التحدي':'Other — state it in the description',
+    'غير مناسب — دون تحديد التحدي':'Unsuitable — challenge not stated',
+    /* — الأدوار — */
+    'الفريق':'Team', 'الفني المسند':'Assigned technician', 'المشرف':'Supervisor',
+    'مشرف':'Supervisor', 'مهندس':'Engineer', 'المهندس':'Engineer', 'الوزارة':'Ministry',
+    'أدمن':'Admin', 'سوبر أدمن':'Super admin', 'مشرف فأعلى':'Supervisor and above',
+    'المهندس والأدمن':'Engineer and admin', 'الصلاحية':'Permission', 'بلا فريق':'No team',
+    'بدون فريق':'No team', 'مشرف ميداني — مسح وتركيب':'Field supervisor — survey and installation',
+    'مهندس — صلاحية كاملة':'Engineer — full access', 'وزارة — متابعة وعرض فقط':'Ministry — view only',
+    'حساب متابعة — العرض فقط':'Tracking account — view only',
+    /* — الأفعال — */
+    'تحديث':'Refresh', 'تعديل':'Edit', 'إلغاء':'Cancel', 'إغلاق':'Close', 'أضف':'Add',
+    'مراجعة':'Review', 'عرض الكل':'Show all', 'حذف ':'Delete ', 'ركّب':'Install',
+    'دخول':'Sign in', 'تسجيل الخروج':'Sign out', 'إنشاء الحساب':'Create account',
+    'زامن الآن':'Sync now', 'الانتقال إلى موقع':'Go to site', 'اذهب إلى موقعي':'Go to my location',
+    'موقعي':'My location', 'اذهب':'Go',
+    /* — قائمة الأدوات — */
+    'إضافة مستخدم جديد':'Add new user', 'ابحث بالمعرّف أو الاسم…':'Search by ID or name…',
+    'بحث بالاسم أو الإيميل…':'Search by name or email…', 'البريد الإلكتروني':'Email',
+    'الإيميل':'Email', 'كلمة المرور':'Password', 'كلمة مرور (٦+ أحرف)':'Password (6+ characters)',
+    'الاسم (يظهر مع كل مسح)':'Name (shown with every survey)', 'الاتصال':'Phone',
+    'سجّل الدخول للمتابعة':'Sign in to continue', 'مهامي أنا فقط':'My tasks only',
+    'تذكرني — احفظ الإيميل وكلمة المرور على هذا الجهاز':'Remember me — save email and password on this device',
+    'اختر منطقة لينقلك التطبيق إليها على الخريطة.':'Pick a region and the app will take you to it on the map.',
+    'النسخ الاحتياطي والدمج':'Backup and merge', 'حالة الرفع':'Upload status',
+    'في انتظار الرفع':'Awaiting upload', 'آخر مزامنة ناجحة':'Last successful sync',
+    'حجم الصور المنتظرة':'Size of pending photos', 'جودة الصور':'Photo quality',
+    'ميجابايت':'MB', 'جارٍ التحميل…':'Loading…', 'جارٍ تحديد موقعك…':'Finding your location…',
+    'تصدير CSV':'Export CSV', 'تصدير إكسل (كل البيانات)':'Export Excel (all data)',
+    'تنزيل الصور منفصلة':'Download photos separately',
+    'مسح محلي لهذا الجهاز فقط':'Local wipe — this device only',
+    'ملفات المواقع بالصور — طباعة أو حفظ PDF':'Site files with photos — print or save as PDF',
+    'دليل الفني والمشرف — العمل الميداني':'Technician and supervisor guide — field work',
+    'دليل المهندس — إدارة المشروع':'Engineer guide — project management',
+    'دليل الوزارة — المتابعة':'Ministry guide — tracking',
+    /* — اللوحة — */
+    'الوتيرة والهدف':'Pace and target', 'التركيب والجدولة':'Installation and scheduling',
+    'معدل التركيب اليومي':'Daily installation rate', 'حسب المشعر ونوع النقطة':'By zone and point type',
+    'حسب شركة الخدمة':'By service company', 'حسب الشركة':'By company',
+    'سلامة خط الإنتاج':'Pipeline integrity', 'توزيع فرق التركيب':'Installation team allocation',
+    'عُهدة الأجهزة':'Device custody', 'إنتاجية الفريق':'Team productivity',
+    'سباق المشرفين':'Supervisor race', 'سجل الأحداث':'Event log', 'الحدث':'Event',
+    'مواقع مقترحة':'Proposed sites', 'موقع مقترح':'Proposed site', 'موقع مقترح جديد':'New proposed site',
+    'مواقع مقترحة مضافة':'Proposed sites added', 'عدد المواقع':'Site count',
+    'إجمالي المواقع':'Total sites', 'متبقٍ':'Remaining', 'متبقٍ للمسح':'Remaining to survey',
+    'المطلوب يوميًا':'Required per day', 'متوسط ٧ أيام':'7-day average', '٧ أيام':'7 days',
+    'نسبة المسح':'Survey rate', 'الموعد المستهدف':'Target date', 'ساعات التركيب':'Installation hours',
+    'دخل الجدولة':'Entered scheduling', 'دخل الجدولة بلا مسح':'Scheduled without survey',
+    'ماذا تفعل فيه':'What you do here', 'كل الشركات':'All companies',
+    'كل المناطق':'All regions', 'كل المستخدمين':'All users',
+    'تصحيحات على البيانات المسجّلة':'Corrections to recorded data',
+    /* — الرسائل — */
+    'لا توجد مواقع في القائمة الحالية':'No sites in the current list',
+    'لا توجد مواقع مسوحة بعد':'No sites surveyed yet',
+    'علّم نقطة واحدة على الأقل':'Select at least one point',
+    'اكتب اسم الشركة أولًا':'Enter the company name first',
+    'لم يُختر ملف':'No file chosen', 'اتنسخ ✓':'Copied ✓',
+    'تعذّر إنشاء الملف':'Could not create the file',
+    'تعذّر الحفظ — المساحة ممتلئة':'Could not save — storage full',
+    'تعذّر التنزيل — جرّب من المتصفح':'Download failed — try from the browser',
+    'مكتبة الإكسل غير جاهزة':'Excel library not ready'
+  };
+  D.ur = {
+    'متابعة المشروع ١٤٤٨هـ':'پروجیکٹ ٹریکنگ ۱۴۴۸ھ',
+    'متابعة المشروع — المسح الميداني ١٤٤٨هـ':'پروجیکٹ ٹریکنگ — فیلڈ سروے ۱۴۴۸ھ',
+    'المسح الميداني':'فیلڈ سروے', 'المسح الميداني — نُسُك ١٤٤٨':'فیلڈ سروے — نسک ۱۴۴۸',
+    'لوحة متابعة المشروع ١٤٤٨':'پروجیکٹ ٹریکنگ ڈیش بورڈ ۱۴۴۸',
+    'حسابي':'میرا اکاؤنٹ', 'الحساب':'اکاؤنٹ', 'اللغة':'زبان',
+    'ما يخصّك':'آپ کی اطلاعات', 'فاتح / داكن':'روشن / گہرا', 'تلوين حسب الشركة':'کمپنی کے مطابق رنگ',
+    'الخريطة':'نقشہ', 'المواقع':'مقامات', 'السجلات':'ریکارڈ', 'الأدوات':'ٹولز',
+    'المسح':'سروے', 'التركيب':'تنصیب', 'مواقع':'مقامات', 'شركات':'کمپنیاں',
+    'متابعة':'نگرانی', 'تخطيط':'منصوبہ بندی', 'تشغيل':'آپریشن', 'النظام':'سسٹم',
+    'الإدارة':'انتظامیہ', 'المستخدمون':'صارفین', 'نظرة عامة':'مجموعی جائزہ',
+    'لم يُزر':'دورہ نہیں ہوا', 'تمت الزيارة':'دورہ ہو گیا', 'موقع مسوح':'سروے شدہ مقام',
+    'مُركّب':'نصب شدہ', 'مجدول':'شیڈول شدہ', 'مجدول للتركيب':'تنصیب کے لیے شیڈول شدہ',
+    'قيد التركيب':'تنصیب جاری', 'تم التركيب':'تنصیب مکمل', 'متعذّر':'رکا ہوا',
+    'لم يُجدول':'شیڈول نہیں ہوا', 'لم يُجدول بعد':'ابھی شیڈول نہیں ہوا', 'جاهز للتركيب':'تنصیب کے لیے تیار',
+    'جاهز للجدولة الآن':'ابھی شیڈول کے لیے تیار', 'صالح للتركيب':'تنصیب کے قابل',
+    'مناسب':'موزوں', 'غير مناسب':'غیر موزوں', 'مناسب بتعديل':'ترمیم کے ساتھ موزوں',
+    'مسوّدة':'مسودہ', 'مكتمل':'مکمل', 'لم تتم بعد':'ابھی مکمل نہیں', 'مقترح':'تجویز کردہ',
+    'مقترح — بانتظار الاعتماد':'تجویز کردہ — منظوری کا منتظر', 'بانتظار التدقيق':'جانچ کا منتظر',
+    'بانتظار تحديد الموقع':'مقام متعین ہونے کا منتظر', 'غير مسجّل':'غیر رجسٹرڈ',
+    'غير محدد':'متعین نہیں', 'غير موجود':'موجود نہیں', 'يوجد':'موجود ہے', 'لا يوجد':'کوئی نہیں',
+    'يحتاج مدني':'سول کام درکار', 'تم التعديل':'ترمیم ہو گئی', 'تم الوصول':'رسائی حاصل',
+    'تم المسح':'سروے مکمل', 'أخرى':'دیگر', 'الكل':'سب',
+    'اسم الموقع':'مقام کا نام', 'معرّف الموقع':'مقام کی شناخت', 'نوع الموقع':'مقام کی قسم',
+    'رقم الشاخص':'سائن پوسٹ نمبر', 'الشاخص':'سائن پوسٹ', 'رقم المربع':'مربع نمبر', 'المربع':'مربع',
+    'المشعر':'مشعر', 'المنطقة':'علاقہ', 'الموقع':'مقام', 'النوع':'قسم', 'الفئة':'زمرہ',
+    'الحالة':'حالت', 'العدد':'تعداد', 'الإجمالي':'کل', 'القيمة':'قدر', 'البند':'مد',
+    'الترتيب':'درجہ', 'القسم':'حصہ', 'التاريخ':'تاریخ', 'اليوم':'آج', 'الملخص':'خلاصہ',
+    'شركة الخدمة':'خدماتی کمپنی', 'تصنيف الحجاج':'حجاج کا زمرہ',
+    'مشغّل حجاج الداخل':'داخلی حجاج آپریٹر', 'أخرى — غير مدرجة':'دیگر — فہرست میں نہیں',
+    'الإحداثيات':'کوآرڈینیٹس', 'دقة القياس':'پیمائش کی درستی', 'حالة الوصول':'رسائی کی حالت',
+    'مصدر الكهرباء':'بجلی کا ذریعہ', 'الدور والجهة':'منزل اور سمت',
+    'عدد الهوائيات':'اینٹینا کی تعداد', 'عدد القارئات':'ریڈر کی تعداد', 'عدد الكاميرات':'کیمرہ کی تعداد',
+    'إجمالي الغرف':'کل کمرے', 'إجمالي القارئات':'کل ریڈر', 'أطقم مركّبة':'نصب شدہ سیٹ',
+    'ملاحظات':'نوٹس', 'ملاحظة':'نوٹ', 'ملاحظات المشرف':'سپروائزر کے نوٹس',
+    'الصور':'تصاویر', 'صورة':'تصویر', 'عدد الصور':'تصاویر کی تعداد', 'قبل التركيب':'تنصیب سے پہلے',
+    'لوحة رقم الموقع':'مقام نمبر کی تختی', 'السيريال':'سیریل نمبر', 'صلاحية الموقع':'مقام کی اہلیت',
+    'تاريخ المسح':'سروے کی تاریخ', 'تاريخ الجدولة':'شیڈول کی تاریخ', 'آخر تعديل':'آخری ترمیم',
+    'آخر تحديث':'آخری اپ ڈیٹ', 'بواسطة':'بذریعہ', 'الحالة الميدانية':'میدانی حالت',
+    'حالة الميدان':'میدانی حالت', 'نوع العمل':'کام کی قسم',
+    'التحديات':'چیلنجز', 'التحدي':'چیلنج', 'وصف التحدي':'چیلنج کی تفصیل',
+    'سبب عدم المناسبة':'غیر موزوں ہونے کی وجہ', 'لا توجد تحديات':'کوئی چیلنج نہیں',
+    'مواقع لديها تحديات':'چیلنج والے مقامات', 'إجمالي بلاغات التحديات':'کل چیلنج رپورٹس',
+    'ارتفاع صعب الوصول':'بلندی تک رسائی مشکل', 'لا يوجد مسار كابل':'کیبل کا راستہ نہیں',
+    'عائق إنشائي':'تعمیراتی رکاوٹ', 'عدم وجود تخصيص':'تخصیص موجود نہیں',
+    'أخرى — اذكرها في وصف التحدي':'دیگر — تفصیل میں لکھیں',
+    'غير مناسب — دون تحديد التحدي':'غیر موزوں — چیلنج بیان نہیں ہوا',
+    'الفريق':'ٹیم', 'الفني المسند':'تفویض شدہ ٹیکنیشن', 'المشرف':'سپروائزر',
+    'مشرف':'سپروائزر', 'مهندس':'انجینئر', 'المهندس':'انجینئر', 'الوزارة':'وزارت',
+    'أدمن':'ایڈمن', 'سوبر أدمن':'سپر ایڈمن', 'مشرف فأعلى':'سپروائزر اور اس سے اوپر',
+    'المهندس والأدمن':'انجینئر اور ایڈمن', 'الصلاحية':'اختیار', 'بلا فريق':'ٹیم کے بغیر',
+    'بدون فريق':'ٹیم کے بغیر', 'مشرف ميداني — مسح وتركيب':'فیلڈ سپروائزر — سروے اور تنصیب',
+    'مهندس — صلاحية كاملة':'انجینئر — مکمل اختیار', 'وزارة — متابعة وعرض فقط':'وزارت — صرف نگرانی اور مشاہدہ',
+    'حساب متابعة — العرض فقط':'نگرانی اکاؤنٹ — صرف مشاہدہ',
+    'تحديث':'تازہ کریں', 'تعديل':'ترمیم', 'إلغاء':'منسوخ', 'إغلاق':'بند کریں', 'أضف':'شامل کریں',
+    'مراجعة':'نظرثانی', 'عرض الكل':'سب دکھائیں', 'حذف ':'حذف ', 'ركّب':'نصب کریں',
+    'دخول':'داخل ہوں', 'تسجيل الخروج':'باہر نکلیں', 'إنشاء الحساب':'اکاؤنٹ بنائیں',
+    'زامن الآن':'ابھی ہم آہنگ کریں', 'الانتقال إلى موقع':'مقام پر جائیں', 'اذهب إلى موقعي':'میرے مقام پر جائیں',
+    'موقعي':'میرا مقام', 'اذهب':'جائیں',
+    'إضافة مستخدم جديد':'نیا صارف شامل کریں', 'ابحث بالمعرّف أو الاسم…':'شناخت یا نام سے تلاش کریں…',
+    'بحث بالاسم أو الإيميل…':'نام یا ای میل سے تلاش کریں…', 'البريد الإلكتروني':'ای میل',
+    'الإيميل':'ای میل', 'كلمة المرور':'پاس ورڈ', 'كلمة مرور (٦+ أحرف)':'پاس ورڈ (۶+ حروف)',
+    'الاسم (يظهر مع كل مسح)':'نام (ہر سروے کے ساتھ ظاہر ہوگا)', 'الاتصال':'رابطہ نمبر',
+    'سجّل الدخول للمتابعة':'جاری رکھنے کے لیے داخل ہوں', 'مهامي أنا فقط':'صرف میرے کام',
+    'تذكرني — احفظ الإيميل وكلمة المرور على هذا الجهاز':'مجھے یاد رکھیں — ای میل اور پاس ورڈ اس ڈیوائس پر محفوظ کریں',
+    'اختر منطقة لينقلك التطبيق إليها على الخريطة.':'علاقہ منتخب کریں، ایپ آپ کو نقشے پر وہاں لے جائے گی۔',
+    'النسخ الاحتياطي والدمج':'بیک اپ اور انضمام', 'حالة الرفع':'اپ لوڈ کی حالت',
+    'في انتظار الرفع':'اپ لوڈ کا منتظر', 'آخر مزامنة ناجحة':'آخری کامیاب ہم آہنگی',
+    'حجم الصور المنتظرة':'زیرِ التوا تصاویر کا حجم', 'جودة الصور':'تصاویر کا معیار',
+    'ميجابايت':'میگابائٹ', 'جارٍ التحميل…':'لوڈ ہو رہا ہے…', 'جارٍ تحديد موقعك…':'آپ کا مقام معلوم ہو رہا ہے…',
+    'تصدير CSV':'CSV برآمد کریں', 'تصدير إكسل (كل البيانات)':'ایکسل برآمد کریں (تمام ڈیٹا)',
+    'تنزيل الصور منفصلة':'تصاویر الگ ڈاؤن لوڈ کریں',
+    'مسح محلي لهذا الجهاز فقط':'صرف اس ڈیوائس سے مقامی صفائی',
+    'ملفات المواقع بالصور — طباعة أو حفظ PDF':'تصاویر کے ساتھ مقامات کی فائلیں — پرنٹ یا PDF محفوظ کریں',
+    'دليل الفني والمشرف — العمل الميداني':'ٹیکنیشن اور سپروائزر گائیڈ — میدانی کام',
+    'دليل المهندس — إدارة المشروع':'انجینئر گائیڈ — پروجیکٹ انتظام',
+    'دليل الوزارة — المتابعة':'وزارت گائیڈ — نگرانی',
+    'الوتيرة والهدف':'رفتار اور ہدف', 'التركيب والجدولة':'تنصیب اور شیڈولنگ',
+    'معدل التركيب اليومي':'روزانہ تنصیب کی شرح', 'حسب المشعر ونوع النقطة':'مشعر اور نقطے کی قسم کے مطابق',
+    'حسب شركة الخدمة':'خدماتی کمپنی کے مطابق', 'حسب الشركة':'کمپنی کے مطابق',
+    'سلامة خط الإنتاج':'پیداواری سلسلے کی درستی', 'توزيع فرق التركيب':'تنصیب ٹیموں کی تقسیم',
+    'عُهدة الأجهزة':'آلات کی تحویل', 'إنتاجية الفريق':'ٹیم کی پیداواریت',
+    'سباق المشرفين':'سپروائزرز کا مقابلہ', 'سجل الأحداث':'واقعات کا ریکارڈ', 'الحدث':'واقعہ',
+    'مواقع مقترحة':'تجویز کردہ مقامات', 'موقع مقترح':'تجویز کردہ مقام', 'موقع مقترح جديد':'نیا تجویز کردہ مقام',
+    'مواقع مقترحة مضافة':'شامل کردہ تجویز کردہ مقامات', 'عدد المواقع':'مقامات کی تعداد',
+    'إجمالي المواقع':'کل مقامات', 'متبقٍ':'باقی', 'متبقٍ للمسح':'سروے کے لیے باقی',
+    'المطلوب يوميًا':'روزانہ درکار', 'متوسط ٧ أيام':'۷ دن کا اوسط', '٧ أيام':'۷ دن',
+    'نسبة المسح':'سروے کی شرح', 'الموعد المستهدف':'ہدف کی تاریخ', 'ساعات التركيب':'تنصیب کے گھنٹے',
+    'دخل الجدولة':'شیڈول میں داخل', 'دخل الجدولة بلا مسح':'سروے کے بغیر شیڈول میں داخل',
+    'ماذا تفعل فيه':'یہاں آپ کیا کرتے ہیں', 'كل الشركات':'تمام کمپنیاں',
+    'كل المناطق':'تمام علاقے', 'كل المستخدمين':'تمام صارفین',
+    'تصحيحات على البيانات المسجّلة':'درج شدہ ڈیٹا میں تصحیحات',
+    'لا توجد مواقع في القائمة الحالية':'موجودہ فہرست میں کوئی مقام نہیں',
+    'لا توجد مواقع مسوحة بعد':'ابھی تک کوئی مقام سروے نہیں ہوا',
+    'علّم نقطة واحدة على الأقل':'کم از کم ایک نقطہ منتخب کریں',
+    'اكتب اسم الشركة أولًا':'پہلے کمپنی کا نام لکھیں',
+    'لم يُختر ملف':'کوئی فائل منتخب نہیں', 'اتنسخ ✓':'نقل ہو گیا ✓',
+    'تعذّر إنشاء الملف':'فائل نہیں بن سکی',
+    'تعذّر الحفظ — المساحة ممتلئة':'محفوظ نہیں ہو سکا — جگہ بھری ہوئی ہے',
+    'تعذّر التنزيل — جرّب من المتصفح':'ڈاؤن لوڈ ناکام — براؤزر سے کوشش کریں',
+    'مكتبة الإكسل غير جاهزة':'ایکسل لائبریری تیار نہیں'
+  };
+  return { set:set, apply:apply, get:function(){ return lang; }, dict:D, langs:LANGS };
+})();
+</script>
 </body>
 </html>
